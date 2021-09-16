@@ -135,8 +135,6 @@ function makeMesh(pts, extent) {
     return mesh;
 }
 
-
-
 function generateGoodMesh(n, extent) {
     extent = extent || defaultExtent;
     var pts = generateGoodPoints(n, extent);
@@ -783,7 +781,6 @@ function visualizeBorders(h, cities, n) {
     var links = getBorders(h, getTerritories(h, cities, n));
     drawPaths('border', links);
 }
-
 
 function visualizeCities(svg, render) {
     var cities = render.cities;

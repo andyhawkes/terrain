@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta content="text/html; charset=UTF-8" name="Content-Type">
+    <title>
+        Generating fantasy maps
+    </title>
+
+    <script src="d3.v4.js"></script>
+    <script src="priority-queue.js"></script>
+    <script src="language.js"></script>
+    <script src="terrain.js"></script>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel&display=swap');
+
+        path,
+        line {
+            fill: none;
+            stroke: black;
+            stroke-linecap: round;
+        }
+    
+        .field {
+            stroke: none;
+            fill-opacity: 1.0;
+        }
+    
+        .slope {
+            stroke-width: 1;
+        }
+    
+        .river {
+            stroke-width: 2;
+        }
+    
+        .coast {
+            stroke-width: 4;
+        }
+    
+        .border {
+            stroke-width: 5;
+            stroke-dasharray: 4, 4;
+            stroke-linecap: butt;
+        }
+    
+        text {
+            font-family: "Cinzel", serif;
+            /* font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif; */
+            color: black;
+            stroke: white;
+            stroke-width: 5;
+            stroke-linejoin: round;
+            paint-order: stroke;
+        }
+    
+        text.region {
+            stroke-width: 10;
+            font-variant: small-caps;
+        }
+    
+        svg {
+            float: right;
+            background-color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="content">
+        <div class="note">
+            <h1>Generating fantasy maps</h1>
+
+            <h3>Grids</h3>
+            <div class="example" id="mesh">
+            </div>
+
+            <h3>Rough outlines</h3>
+            <div class="example" id="prim"></div>
+
+            <h3>Erosion</h3>
+            <div class="example" id="erode"></div>
+
+            <h3>Rendering terrain</h3>
+            <div class="example" id="phys"></div>
+
+            <h3>Cities, borders</h3>
+            <div class="example" id="city"></div>
+
+            <h3>Placing labels</h3>
+            <div class="example" id="final"></div>
+
+            <script src="terraincontrols.js"></script>
+        </div>
+    </div>
+</body>
+
+</html>
