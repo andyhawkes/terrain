@@ -1,12 +1,13 @@
 function addSVG(div) {
-    return div.insert("svg", ":first-child")
-        .attr("height", 400)
-        .attr("width", 400)
+    return div.insert("svg")
+        .attr("height", 800)
+        .attr("width", 800)
         .attr("viewBox", "-500 -500 1000 1000");
 }
 var meshDiv = d3.select("div#mesh");
 var meshSVG = addSVG(meshDiv);
 
+var pointCount = 65536;
 var meshPts = null;
 var meshVxs = null;
 var meshDual = false;
@@ -18,18 +19,30 @@ function meshDraw() {
     visualizePoints(meshSVG, meshDual ? meshVxs : meshPts);
 }
 
+function setPointCount(){
+    pointCount = d3.select("#gridPoints").property('value') !== '' ? d3.select("#gridPoints").property('value') : defaultParams.npts;
+}
+
+meshDiv.append("input")
+    .attr('id', 'gridPoints')
+    .attr('placeholder', 'Points (65536)')
+    // .attr('value', 65536)
+    .on("change", function () {
+        setPointCount();
+    });
+
 meshDiv.append("button")
-    .text("Generate random points")
+    .text("Generate map mesh")
     .on("click", function () {
         meshDual = false;
         meshVxs = null;
-        // meshPts = generatePoints(256);
-        meshPts = generatePoints(16384);
+        // meshPts = generatePoints(16384);
+        meshPts = generatePoints(pointCount);
         meshDraw();
     });
 
 meshDiv.append("button")
-    .text("Improve points")
+    .text("Improve mesh")
     .on("click", function () {
         meshPts = improvePoints(meshPts);
         meshVxs = null;
@@ -89,13 +102,20 @@ primDiv.append("button")
     });
 
 primDiv.append("button")
-    .text("Add five blobs")
+    .text("Add 5 blobs")
     .on("click", function () {
         primH = add(primH, mountains(primH.mesh, 5));
         primDraw();
     });
 
 primDiv.append("button")
+    .text("Add 10 blobs")
+    .on("click", function () {
+        primH = add(primH, mountains(primH.mesh, 10));
+        primDraw();
+    });
+
+    primDiv.append("button")
     .text("Normalize heightmap")
     .on("click", function () {
         primH = normalize(primH);
@@ -122,6 +142,8 @@ primDiv.append("button")
         primH = setSeaLevel(primH, 0.5);
         primDraw();
     });
+
+// Erosion
 
 var erodeDiv = d3.select("div#erode");
 var erodeSVG = addSVG(erodeDiv);
@@ -157,7 +179,7 @@ erodeDiv.append("button")
     });
 
 erodeDiv.append("button")
-    .text("Copy heightmap from above")
+    .text("Copy heightmap from outline")
     .on("click", function () {
         erodeH = primH;
         erodeDraw();
@@ -198,6 +220,8 @@ var erodeBut = erodeDiv.append("button")
         erodeDraw();
     });
 
+// Terrain
+
 var physDiv = d3.select("div#phys");
 var physSVG = addSVG(physDiv);
 var physH = erodeH;
@@ -237,7 +261,7 @@ physDiv.append("button")
     });
 
 physDiv.append("button")
-    .text("Copy heightmap from above")
+    .text("Copy heightmap from erosion")
     .on("click", function () {
         physH = erodeH;
         physDraw();
@@ -259,7 +283,6 @@ var physRiverBut = physDiv.append("button")
         physDraw();
     });
 
-
 var physSlopeBut = physDiv.append("button")
     .text("Show slope shading")
     .on("click", function () {
@@ -268,7 +291,6 @@ var physSlopeBut = physDiv.append("button")
         physDraw();
     });
 
-
 var physHeightBut = physDiv.append("button")
     .text("Hide heightmap")
     .on("click", function () {
@@ -276,6 +298,8 @@ var physHeightBut = physDiv.append("button")
         physHeightBut.text(physViewHeight ? "Hide heightmap" : "Show heightmap");
         physDraw();
     });
+
+// Cities
 
 var cityDiv = d3.select("div#city");
 var citySVG = addSVG(cityDiv);
@@ -287,7 +311,8 @@ function newCityRender(h) {
     return {
         params: defaultParams,
         h: h,
-        cities: []
+        cities: [],
+        poi: []
     };
 }
 var cityRender = newCityRender(physH);
@@ -304,6 +329,7 @@ function cityDraw() {
     drawPaths(citySVG, 'border', getBorders(cityRender));
     visualizeSlopes(citySVG, cityRender);
     visualizeCities(citySVG, cityRender);
+    visualizePOI(citySVG, cityRender);
 }
 
 cityDiv.append("button")
@@ -314,7 +340,7 @@ cityDiv.append("button")
     });
 
 cityDiv.append("button")
-    .text("Copy heightmap from above")
+    .text("Copy heightmap from terrain")
     .on("click", function () {
         cityRender = newCityRender(physH);
         cityDraw();
@@ -327,6 +353,13 @@ cityDiv.append("button")
         cityDraw();
     });
 
+// cityDiv.append("button")
+//     .text("Add new point of interest")
+//     .on("click", function () {
+//         placePOI(cityRender);
+//         cityDraw();
+//     });
+
 var cityViewBut = cityDiv.append("button")
     .text("Show territories")
     .on("click", function () {
@@ -335,18 +368,25 @@ var cityViewBut = cityDiv.append("button")
         cityDraw();
     });
 
+// Final map
+
 var finalDiv = d3.select("div#final");
-var finalSVG = addSVG(finalDiv);
+var finalMapDiv = d3.select('div#finalMap');
+var finalSVG = addSVG(finalMapDiv);
+var editableLabels = false;
+
 finalDiv.append("button")
-    .text("Copy map from above")
+    .text("Label map from terrain")
     .on("click", function () {
         drawMap(finalSVG, cityRender);
     });
 
-finalDiv.append("button")
-    .text("Generate new random map")
+var editableBut = finalDiv.append("button")
+    .text("Enable label editing")
     .on("click", function () {
-        doMap(finalSVG, defaultParams);
+        editableLabels = !editableLabels;
+        editableBut.text(editableLabels ? "Disable label editing" : "Enable label editing");
+        finalMapDiv.attr('contenteditable', editableLabels);
     });
 
 // finalDiv.append("button")
@@ -395,3 +435,110 @@ finalDiv.append("button")
 //     // link.remove();
 // }
 
+// Quick start options
+
+var quickDiv = d3.select("div#quick");
+
+quickDiv.append("button")
+    .text("Generate new random map")
+    .on("click", function () {
+        doMap(finalSVG, defaultParams);
+        goToTab('#final');
+    });
+
+quickDiv.append("h3")
+    .text('Custom settings');
+
+quickDiv.append("input")
+    .attr('id', 'npts')
+    .attr('placeholder', 'Grid points (65536)')
+    .attr('value', 16384)
+    .on("change, blur", function () {
+        buildCustomParams();
+    });
+
+quickDiv.append("input")
+    .attr('id', 'nterr')
+    .attr('placeholder', 'Territories (5)')
+    // .attr('value', 5)
+    .on("change, blur", function () {
+        buildCustomParams();
+    });
+
+quickDiv.append("input")
+    .attr('id', 'ncities')
+    .attr('placeholder', 'Cities (15)')
+    // .attr('value', 15)
+    .on("change, blur", function () {
+        buildCustomParams();
+    });
+
+quickDiv.append("button")
+    .text("Generate map from settings")
+    .on("click", function () {
+        buildCustomParams();
+        doMap(finalSVG, customParams);
+        goToTab('#final');
+    });
+
+quickDiv.append("button")
+    .text("Reset to defaults")
+    .on("click", function () {
+        resetCustomParams();
+    });
+
+var customParams = {};
+
+function buildCustomParams() {
+    customParams = Object.assign({}, defaultParams);
+    customParams.npts = d3.select("#npts").property('value') != '' ? d3.select("#npts").property('value') : defaultParams.npts;
+    customParams.ncities = d3.select("#ncities").property('value') != '' ? d3.select("#ncities").property('value') : defaultParams.ncities;
+    customParams.nterrs = d3.select("#nterr").property('value') != '' ? d3.select("#nterr").property('value') : defaultParams.nterrs;
+}
+
+function resetCustomParams() {
+    customParams = Object.assign({}, defaultParams);
+    d3.select("#npts").property('value', '');
+    d3.select("#ncities").property('value', '');
+    d3.select("#nterr").property('value', '');
+    console.log(customParams);
+}
+
+// Navigation
+
+var navLinks = document.querySelectorAll("nav a");
+
+for (var i = 0; i < navLinks.length; i++) {
+    navLinks[i].addEventListener('click', function (event) {
+        navLinks.forEach(function (i){
+            i.classList.remove('active');
+        });
+        this.classList.toggle('active');
+        event.preventDefault();
+        const anchor = event.target.closest("a");
+        if (!anchor) return;
+        navClick(anchor.getAttribute('href'));
+    });
+}
+
+function navClick(target) {
+    var examples = document.querySelectorAll('.example')
+    examples.forEach(function (i) {
+        i.classList.remove('active');
+    });
+    document.querySelector(target).classList.toggle("active");
+}
+
+function goToTab(target) {
+    navClick(target);
+    console.log(navLinks);
+    navLinks.forEach(function (i) {
+        const anchor = i.closest("a");
+        if (!anchor) return;
+        if (anchor.getAttribute('href') === target) {
+            i.classList.add('active');
+        } else {
+            i.classList.remove('active');
+        }
+    });
+}

@@ -504,6 +504,37 @@ function placeCities(render) {
     }
 }
 
+function POIScore(h, poi) {
+    var score = map(getFlux(h), Math.sqrt);
+    for (var i = 0; i < h.length; i++) {
+        if (h[i] <= 0 || isnearedge(h.mesh, i)) {
+            score[i] = -999999;
+            continue;
+        }
+        score[i] += 0.01 / (1e-9 + Math.abs(h.mesh.vxs[i][0]) - h.mesh.extent.width / 2)
+        score[i] += 0.01 / (1e-9 + Math.abs(h.mesh.vxs[i][1]) - h.mesh.extent.height / 2)
+        for (var j = 0; j < poi.length; j++) {
+            score[i] -= 0.02 / (distance(h.mesh, poi[j], i) + 1e-9);
+        }
+    }
+    return score;
+}
+function placePOI(render) {
+    render.poi = render.poi || [];
+    var score = POIScore(render.h, render.poi);
+    var newPOI = d3.scan(score, d3.descending);
+    render.poi.push(newPOI);
+}
+
+function placePOIS(render) {
+    var params = render.params;
+    var h = render.h;
+    var n = params.npoi;
+    for (var i = 0; i < n; i++) {
+        placePOI(render);
+    }
+}
+
 function contour(h, level) {
     level = level || 0;
     var edges = [];
@@ -770,7 +801,6 @@ function visualizeSlopes(svg, render) {
         .attr('y2', function (d) {return 1000*d[1][1]})
 }
 
-
 function visualizeContour(h, level) {
     level = level || 0;
     var links = contour(h, level);
@@ -801,6 +831,28 @@ function visualizeCities(svg, render) {
         .style('stroke-width', 5)
         .style('stroke-linecap', 'round')
         .style('stroke', 'black')
+        .raise();
+}
+
+function visualizePOI(svg, render) {
+    var poi = render.poi;
+    var h = render.h;
+    var n = render.params.nterrs;
+
+    var circs = svg.selectAll('circle.poi').data(poi);
+    circs.enter()
+        .append('circle')
+        .classed('poi', true);
+    circs.exit()
+        .remove();
+    svg.selectAll('circle.poi')
+        .attr('cx', function (d) { return 1000 * h.mesh.vxs[d][0] })
+        .attr('cy', function (d) { return 1000 * h.mesh.vxs[d][1] })
+        .attr('r', function (d, i) { return i >= n ? 4 : 10 })
+        .style('fill', 'white')
+        .style('stroke-width', 5)
+        .style('stroke-linecap', 'round')
+        .style('stroke', 'red')
         .raise();
 }
 
@@ -1024,8 +1076,8 @@ function drawLabels(svg, render) {
         .style('text-anchor', 'middle')
         .text(function (d) {return d.text})
         .raise();
-
 }
+
 function drawMap(svg, render) {
     render.rivers = getRivers(render.h, 0.01);
     render.coasts = contour(render.h, 0);
@@ -1036,6 +1088,7 @@ function drawMap(svg, render) {
     drawPaths(svg, 'border', render.borders);
     visualizeSlopes(svg, render);
     visualizeCities(svg, render);
+    // visualizePOI(svg, render);
     drawLabels(svg, render);
 }
 
@@ -1052,14 +1105,17 @@ function doMap(svg, params) {
     svg.selectAll().remove();
     render.h = params.generator(params);
     placeCities(render);
+    // placePOI(render);
     drawMap(svg, render);
 }
 
 var defaultParams = {
     extent: defaultExtent,
     generator: generateCoast,
-    npts: 16384,
+    // npts: 16384,
+    npts: 65536,
     ncities: 15,
+    // npoi: 5,
     nterrs: 5,
     fontsizes: {
         region: 40,
@@ -1068,3 +1124,4 @@ var defaultParams = {
     }
 }
 
+var poiSymbols = ['🛕', '🛖', '⚒', '🛡', '⚔', '🗡', '🏹', '⛏', '🪓', '⚖', '☠', '☤', '⚚', '☥', '♕', '♖', '♘', '♛', '♜', '♞', '⚐', '⚑', '⚓'];

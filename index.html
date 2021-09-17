@@ -4,9 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta content="text/html; charset=UTF-8" name="Content-Type">
-    <title>
-        Generating fantasy maps
-    </title>
+    <title>Fantasy map generator</title>
 
     <script src="d3.v4.js"></script>
     <script src="priority-queue.js"></script>
@@ -34,6 +32,7 @@
     
         .river {
             stroke-width: 2;
+            /* stroke: blue; */
         }
     
         .coast {
@@ -44,6 +43,7 @@
             stroke-width: 5;
             stroke-dasharray: 4, 4;
             stroke-linecap: butt;
+            /* stroke: red; */
         }
     
         text {
@@ -69,31 +69,51 @@
 </head>
 
 <body>
+    <header>
+        <h1>Fantasy map generator</h1>
+        <nav>
+            <ol>
+                <li><a href="#quick" class="active">Quick start</a></li>
+                <li><a href="#mesh">Map mesh</a></li>
+                <li><a href="#prim">Rough Outline</a></li>
+                <li><a href="#erode">Erosion</a></li>
+                <li><a href="#phys">Terrain</a></li>
+                <li><a href="#city">Cities & borders</a></li>
+                <li><a href="#final">Place labels</a></li>
+            </ol>
+        </nav>
+    </header>
     <div id="content">
-        <div class="note">
-            <h1>Generating fantasy maps</h1>
-
-            <h3>Grids</h3>
-            <div class="example" id="mesh">
-            </div>
-
-            <h3>Rough outlines</h3>
-            <div class="example" id="prim"></div>
-
-            <h3>Erosion</h3>
-            <div class="example" id="erode"></div>
-
-            <h3>Rendering terrain</h3>
-            <div class="example" id="phys"></div>
-
-            <h3>Cities, borders</h3>
-            <div class="example" id="city"></div>
-
-            <h3>Placing labels</h3>
-            <div class="example" id="final"></div>
-
-            <script src="terraincontrols.js"></script>
+        <div class="example active" id="quick">
+            <h2>Quick start</h2>
         </div>
+
+        <div class="example" id="mesh">
+            <h2>Map mesh</h2>
+        </div>
+
+        <div class="example" id="prim">
+            <h2>Rough outlines</h2>
+        </div>
+
+        <div class="example" id="erode">
+            <h2>Erosion</h2>
+        </div>
+
+        <div class="example" id="phys">
+            <h2>Rendering terrain</h2>
+        </div>
+
+        <div class="example" id="city">
+            <h2>Cities & borders</h2>
+        </div>
+
+        <div class="example" id="final">
+            <h2>Place labels</h2>
+            <div id="finalMap"></div>
+        </div>
+
+        <script src="terraincontrols.js"></script>
     </div>
 </body>
 
