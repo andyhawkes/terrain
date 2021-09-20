@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel&display=swap');
+
 body {
     font-family: sans-serif;
     background-color: #eee;
@@ -139,10 +141,6 @@ figcaption {
     text-align: center;
 }
 
-svg {
-    float: right;
-}
-
 div:focus-visible {
     outline: none;
     border: none;
@@ -151,3 +149,64 @@ div:focus-visible {
 div:focus-visible svg {
     outline: 2px solid red;
 }
+
+.labelNote span {
+    font-family: "Cinzel", serif;
+}
+
+svg {
+    float: right;
+}
+
+path,
+line {
+    fill: none;
+    stroke: black;
+    stroke-linecap: round;
+}
+
+.field {
+    stroke: none;
+    fill-opacity: 1.0;
+}
+
+.slope {
+    stroke-width: 1;
+}
+
+.river {
+    stroke-width: 2;
+    /* stroke: blue; */
+}
+
+.coast {
+    stroke-width: 4;
+}
+
+.border {
+    stroke-width: 5;
+    stroke-dasharray: 4, 4;
+    stroke-linecap: butt;
+    /* stroke: red; */
+}
+
+text {
+    font-family: "Cinzel", serif;
+    /* font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif; */
+    color: black;
+    stroke: white;
+    stroke-width: 5;
+    stroke-linejoin: round;
+    paint-order: stroke;
+}
+
+text.region {
+    stroke-width: 10;
+    font-variant: small-caps;
+}
+
+svg {
+    float: right;
+    background-color: white;
+}
+

@@ -10,62 +10,9 @@
     <script src="priority-queue.js"></script>
     <script src="language.js"></script>
     <script src="terrain.js"></script>
-    <link rel="stylesheet" href="style.css" />
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel&display=swap');
+    <script src="saveSvgAsPng.js"></script></script>
 
-        path,
-        line {
-            fill: none;
-            stroke: black;
-            stroke-linecap: round;
-        }
-    
-        .field {
-            stroke: none;
-            fill-opacity: 1.0;
-        }
-    
-        .slope {
-            stroke-width: 1;
-        }
-    
-        .river {
-            stroke-width: 2;
-            /* stroke: blue; */
-        }
-    
-        .coast {
-            stroke-width: 4;
-        }
-    
-        .border {
-            stroke-width: 5;
-            stroke-dasharray: 4, 4;
-            stroke-linecap: butt;
-            /* stroke: red; */
-        }
-    
-        text {
-            font-family: "Cinzel", serif;
-            /* font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif; */
-            color: black;
-            stroke: white;
-            stroke-width: 5;
-            stroke-linejoin: round;
-            paint-order: stroke;
-        }
-    
-        text.region {
-            stroke-width: 10;
-            font-variant: small-caps;
-        }
-    
-        svg {
-            float: right;
-            background-color: white;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
@@ -110,7 +57,9 @@
 
         <div class="example" id="final">
             <h2>Place labels</h2>
-            <div id="finalMap"></div>
+            <div id="finalMap">
+                <p class="labelNote"><strong>Note: </strong>Labels may not export in the <span>correct font</span></p>
+            </div>
         </div>
 
         <script src="terraincontrols.js"></script>

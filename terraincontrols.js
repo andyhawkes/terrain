@@ -1,8 +1,12 @@
-function addSVG(div) {
+function addSVG(div, id) {
+    if (id === null) {
+        id = 'svg' + (Math.random() * 1000);
+    }
     return div.insert("svg")
         .attr("height", 800)
         .attr("width", 800)
-        .attr("viewBox", "-500 -500 1000 1000");
+        .attr("viewBox", "-500 -500 1000 1000")
+        .attr('id', id);
 }
 var meshDiv = d3.select("div#mesh");
 var meshSVG = addSVG(meshDiv);
@@ -353,7 +357,21 @@ cityDiv.append("button")
         cityDraw();
     });
 
-// cityDiv.append("button")
+cityDiv.append("button")
+    .text("Add 5 cities")
+    .on("click", function () {
+        placeMultipleCities(cityRender, 5);
+        cityDraw();
+    });
+
+cityDiv.append("button")
+    .text("Add 10 cities")
+    .on("click", function () {
+        placeMultipleCities(cityRender, 10);
+        cityDraw();
+    });
+
+    // cityDiv.append("button")
 //     .text("Add new point of interest")
 //     .on("click", function () {
 //         placePOI(cityRender);
@@ -372,7 +390,7 @@ var cityViewBut = cityDiv.append("button")
 
 var finalDiv = d3.select("div#final");
 var finalMapDiv = d3.select('div#finalMap');
-var finalSVG = addSVG(finalMapDiv);
+var finalSVG = addSVG(finalMapDiv, 'finalMapSVG');
 var editableLabels = false;
 
 finalDiv.append("button")
@@ -389,51 +407,12 @@ var editableBut = finalDiv.append("button")
         finalMapDiv.attr('contenteditable', editableLabels);
     });
 
-// finalDiv.append("button")
-//     .text("Download png")
-//     .attr('id',"downloader")
-//     .on("click", function () {
-//         downloadImage();
-//     });
-
-// var downloadImage = function(){
-//     // Make image downloadable
-//     var svgElement = document.querySelector("#final svg")
-//     let { width, height } = svgElement.getBBox(); 
-//     let clonedSvgElement = svgElement.cloneNode(true);
-//     // true for deep clone
-//     let outerHTML = clonedSvgElement.outerHTML,
-//         blob = new Blob([outerHTML], { type: 'image/svg+xml;charset=utf-8' });
-//     let URL = window.URL || window.webkitURL || window;
-//     let blobURL = URL.createObjectURL(blob);
-//     console.log('Creating canvas');
-//     let canvas = document.createElement('canvas');
-//     canvas.width = width;
-//     canvas.height = height;
-//     console.log(canvas);
-//     console.log('Starting image generation')
-//     let image = new Image();
-//     // image.onload = () => {
-//         let context = canvas.getContext('2d');
-//         console.log('Drawing to image...');
-//         context.drawImage(image, 0, 0, width, height);
-//     // };
-//     image.src = blobURL;
-//     console.log(image);
-//     console.log('Getting PNG data');
-//     let png = canvas.toDataURL(); // default png
-//     // let jpeg = canvas.toDataURL('image/jpg');
-//     // let webp = canvas.toDataURL('image/webp');
-
-//     var link = document.createElement('a');
-//     link.download = "map.png";
-//     link.style.opacity = "0";
-//     document.body.append(link);
-//     link.href = png;
-// console.log(link);
-//     // link.click();
-//     // link.remove();
-// }
+finalDiv.append("button")
+    .text("Download as png")
+    .attr('id',"downloader")
+    .on("click", function () {
+        saveSvgAsPng(document.getElementById("finalMapSVG"), "map.png", { 'left': -500, 'top': -500 });
+    });
 
 // Quick start options
 

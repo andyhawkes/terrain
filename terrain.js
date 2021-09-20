@@ -504,6 +504,14 @@ function placeCities(render) {
     }
 }
 
+function placeMultipleCities(render, count) {
+    if (!count) return false;
+    var n = count;
+    for (var i = 0; i < n; i++) {
+        placeCity(render);
+    }
+}
+
 function POIScore(h, poi) {
     var score = map(getFlux(h), Math.sqrt);
     for (var i = 0; i < h.length; i++) {
