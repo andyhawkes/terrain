@@ -333,6 +333,7 @@ function cityDraw() {
     drawPaths(citySVG, 'border', getBorders(cityRender));
     visualizeSlopes(citySVG, cityRender);
     visualizeCities(citySVG, cityRender);
+    visualizeWrecks(citySVG, cityRender);
     visualizePOI(citySVG, cityRender);
 }
 
@@ -378,6 +379,13 @@ cityDiv.append("button")
 //         cityDraw();
 //     });
 
+cityDiv.append("button")
+    .text("Add new wreck")
+    .on("click", function () {
+        placeWreck(cityRender);
+        cityDraw();
+    });
+
 var cityViewBut = cityDiv.append("button")
     .text("Show territories")
     .on("click", function () {
@@ -421,6 +429,7 @@ var quickDiv = d3.select("div#quick");
 quickDiv.append("button")
     .text("Generate new random map")
     .on("click", function () {
+        createSVGsymbols();
         doMap(finalSVG, defaultParams);
         goToTab('#final');
     });
@@ -452,10 +461,19 @@ quickDiv.append("input")
         buildCustomParams();
     });
 
+quickDiv.append("input")
+    .attr('id', 'nwrecks')
+    .attr('placeholder', 'Wrecks (1)')
+    // .attr('value', 3)
+    .on("change, blur", function () {
+        buildCustomParams();
+    });
+
 quickDiv.append("button")
     .text("Generate map from settings")
     .on("click", function () {
         buildCustomParams();
+        createSVGsymbols();
         doMap(finalSVG, customParams);
         goToTab('#final');
     });
@@ -473,6 +491,8 @@ function buildCustomParams() {
     customParams.npts = d3.select("#npts").property('value') != '' ? d3.select("#npts").property('value') : defaultParams.npts;
     customParams.ncities = d3.select("#ncities").property('value') != '' ? d3.select("#ncities").property('value') : defaultParams.ncities;
     customParams.nterrs = d3.select("#nterr").property('value') != '' ? d3.select("#nterr").property('value') : defaultParams.nterrs;
+    customParams.nwrecks = d3.select("#nwrecks").property('value') != '' ? d3.select("#nwrecks").property('value') : defaultParams.nwrecks;
+
 }
 
 function resetCustomParams() {
@@ -510,7 +530,6 @@ function navClick(target) {
 
 function goToTab(target) {
     navClick(target);
-    console.log(navLinks);
     navLinks.forEach(function (i) {
         const anchor = i.closest("a");
         if (!anchor) return;
