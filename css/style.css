@@ -117,7 +117,8 @@ button:hover {
     color: white;
 }
 
-input {
+input,
+select {
     font-size: large;
     background-color: white;
     color: black;
@@ -127,14 +128,6 @@ input {
     margin-bottom: 0.5rem;
     float: left;
     clear: left;
-
-}
-
-select {
-    background-color: white;
-    border: solid 1px black;
-    font-size: medium;
-    margin-left: 0.5rem;
 }
 
 figcaption {
@@ -146,12 +139,9 @@ div:focus-visible {
     border: none;
 }
 
-div:focus-visible svg {
-    outline: 2px solid red;
-}
-
 .labelNote span {
-    font-family: "Cinzel", serif;
+    font-family: fantasy;
+    /* font-family: "Cinzel", serif; */
 }
 
 svg {
@@ -196,8 +186,8 @@ path.wreck {
 }
 
 text {
-    font-family: "Cinzel", serif;
-    /* font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif; */
+    /* font-family: fantasy; */
+    font-family: "Cinzel", "Palatino Linotype", "Book Antiqua", Palatino, serif;
     color: black;
     stroke: white;
     stroke-width: 5;
@@ -205,9 +195,65 @@ text {
     paint-order: stroke;
 }
 
+.labelStyle_default text {
+    font-family: "Cinzel", serif;
+}
+.labelStyle_cursive text {
+    font-family: cursive;
+}
+.labelStyle_monospace text {
+    font-family: monospace;
+}
+.labelStyle_fantasy text {
+    font-family: fantasy;
+}
+
 text.region {
     stroke-width: 10;
     font-variant: small-caps;
+}
+
+text.poi {
+    font-family: sans-serif;
+    fill: black;
+}
+
+[contenteditable=true] svg,
+.editable svg{
+    outline: 3px solid green;
+}
+
+.editable svg text:focus,
+.editable svg text:focus-visible,
+.editable svg text:focus-within {
+    outline: 1px solid green;
+}
+
+
+.editable::before {
+    content: 'Edit mode active - click a map label to edit it';
+    color: green;
+    font-weight: bold;
+}
+
+.deleteMode text.poi:hover,
+.deleteMode use.wreck:hover {
+    cursor: pointer;
+}
+
+.deleteMode svg{
+    outline: 3px solid red;
+}
+
+.deleteMode::before {
+    content: 'DANGER: Delete mode active - click a map marker to delete it';
+    color: red;
+    font-weight: bold;
+}
+
+.deleteMode text.poi:hover,
+.deleteMode use.wreck:hover {
+    cursor: pointer;
 }
 
 svg {

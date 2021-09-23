@@ -29,8 +29,8 @@ function setPointCount(){
 
 meshDiv.append("input")
     .attr('id', 'gridPoints')
-    .attr('placeholder', 'Points (65536)')
-    // .attr('value', 65536)
+    .attr('placeholder', 'Points (16384)')
+    // .attr('value', 16384)
     .on("change", function () {
         setPointCount();
     });
@@ -69,6 +69,7 @@ var primDiv = d3.select("div#prim");
 var primSVG = addSVG(primDiv);
 
 var primH = zero(generateGoodMesh(4096));
+// var primH = zero(generateGoodMesh(pointCount));
 
 function primDraw() {
     visualizeVoronoi(primSVG, primH, -1, 1);
@@ -119,7 +120,7 @@ primDiv.append("button")
         primDraw();
     });
 
-    primDiv.append("button")
+primDiv.append("button")
     .text("Normalize heightmap")
     .on("click", function () {
         primH = normalize(primH);
@@ -348,6 +349,7 @@ cityDiv.append("button")
     .text("Copy heightmap from terrain")
     .on("click", function () {
         cityRender = newCityRender(physH);
+        createSVGsymbols();
         cityDraw();
     });
 
@@ -372,12 +374,12 @@ cityDiv.append("button")
         cityDraw();
     });
 
-    // cityDiv.append("button")
-//     .text("Add new point of interest")
-//     .on("click", function () {
-//         placePOI(cityRender);
-//         cityDraw();
-//     });
+cityDiv.append("button")
+    .text("Add new point of interest")
+    .on("click", function () {
+        placePOI(cityRender);
+        cityDraw();
+    });
 
 cityDiv.append("button")
     .text("Add new wreck")
@@ -400,6 +402,7 @@ var finalDiv = d3.select("div#final");
 var finalMapDiv = d3.select('div#finalMap');
 var finalSVG = addSVG(finalMapDiv, 'finalMapSVG');
 var editableLabels = false;
+var deleteMode = false;
 
 finalDiv.append("button")
     .text("Label map from terrain")
@@ -413,7 +416,30 @@ var editableBut = finalDiv.append("button")
         editableLabels = !editableLabels;
         editableBut.text(editableLabels ? "Disable label editing" : "Enable label editing");
         finalMapDiv.attr('contenteditable', editableLabels);
+        finalMapDiv.classed("editable", !finalMapDiv.classed("editable"));
     });
+
+var deleteModeBut = finalDiv.append("button")
+    .text("Enable delete mode")
+    .on("click", function() {
+        toggleDeleteMode()
+    });
+
+let labelStyles = ['fantasy', 'cursive', 'monospace'];
+var styleSelect = finalDiv.append('select')
+    .attr('name', 'labelStyle')
+    .attr('id', 'labelStyle')
+    .on("change", function () {
+        setLabelStyle();
+    });
+styleSelect.append('option')
+    .attr('value', 'default')
+    .text('default font');
+for (var i=0; i<labelStyles.length; i++) {
+    styleSelect.append('option')
+        .attr('value', labelStyles[i])
+        .text(labelStyles[i] + ' font');
+};
 
 finalDiv.append("button")
     .text("Download as png")
@@ -469,6 +495,14 @@ quickDiv.append("input")
         buildCustomParams();
     });
 
+quickDiv.append("input")
+    .attr('id', 'npoi')
+    .attr('placeholder', 'Points of interest (1)')
+    // .attr('value', 3)
+    .on("change, blur", function () {
+        buildCustomParams();
+    });
+
 quickDiv.append("button")
     .text("Generate map from settings")
     .on("click", function () {
@@ -492,7 +526,7 @@ function buildCustomParams() {
     customParams.ncities = d3.select("#ncities").property('value') != '' ? d3.select("#ncities").property('value') : defaultParams.ncities;
     customParams.nterrs = d3.select("#nterr").property('value') != '' ? d3.select("#nterr").property('value') : defaultParams.nterrs;
     customParams.nwrecks = d3.select("#nwrecks").property('value') != '' ? d3.select("#nwrecks").property('value') : defaultParams.nwrecks;
-
+    customParams.npoi = d3.select("#npoi").property('value') != '' ? d3.select("#npoi").property('value') : defaultParams.npoi;
 }
 
 function resetCustomParams() {
@@ -500,6 +534,8 @@ function resetCustomParams() {
     d3.select("#npts").property('value', '');
     d3.select("#ncities").property('value', '');
     d3.select("#nterr").property('value', '');
+    d3.select("#nwrecks").property('value', '');
+    d3.select("#npoi").property('value', '');
     console.log(customParams);
 }
 
@@ -540,3 +576,32 @@ function goToTab(target) {
         }
     });
 }
+
+function setLabelStyle(){
+    var labelStyle = 'labelStyle_' + d3.select("#labelStyle").property('value')
+    console.log(labelStyle);
+    d3.select("#finalMapSVG").attr('class', labelStyle);
+}
+
+function toggleDeleteMode(){
+    deleteMode = !deleteMode;
+    deleteModeBut.text(deleteMode ? "Disable delete mode" : "Enable delete mode");
+    // finalMapDiv.attr('class', deleteMode ? 'deleteMode' : '');
+    finalMapDiv.classed("deleteMode", !finalMapDiv.classed("deleteMode"));
+
+    if(deleteMode) {
+        var deletable = d3.selectAll('text.poi, use.wreck');
+        deletable.on("click", function(d,i){
+            confirmDeletion(this);
+        });
+    } else {
+        var deletable = d3.selectAll('text.poi, use.wreck');
+        deletable.on("click", null);
+    }
+}
+
+function confirmDeletion(el) {
+    if(confirm('Delete this? Be sure, because this cannot be undone!')){
+         el.remove() ;
+    }
+};
