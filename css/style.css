@@ -146,7 +146,10 @@ div:focus-visible {
 
 svg {
     float: right;
+    background-color: white;
+    outline: 3px solid black;
 }
+
 
 path,
 line {
@@ -155,8 +158,17 @@ line {
     stroke-linecap: round;
 }
 
-path.wreck {
+path.wreck  {
     fill: black;
+    stroke: white;
+}
+path.ripples {
+    fill: white;
+    stroke: black;
+}
+
+.placedMarker {
+    fill: red;
     stroke: white;
 }
 
@@ -218,17 +230,7 @@ text.poi {
     fill: black;
 }
 
-[contenteditable=true] svg,
-.editable svg{
-    outline: 3px solid green;
-}
-
-.editable svg text:focus,
-.editable svg text:focus-visible,
-.editable svg text:focus-within {
-    outline: 1px solid green;
-}
-
+/* Label editing mode */
 
 .editable::before {
     content: 'Edit mode active - click a map label to edit it';
@@ -236,10 +238,79 @@ text.poi {
     font-weight: bold;
 }
 
-.deleteMode text.poi:hover,
-.deleteMode use.wreck:hover {
-    cursor: pointer;
+[contenteditable=true] svg,
+.editable svg{
+    outline: 3px solid green;
+    cursor: default;
 }
+
+.editable text.region:hover,
+.editable text.city:hover {
+    cursor: text;
+    fill: green;
+}
+
+.editable text.region:hover::after,
+.editable text.city:hover::after {
+  content: ' click to edit';
+  font-style: italic;
+  font-size: 12px;
+  color: green;
+}
+
+.editable text:focus,
+.editable text:focus-visible,
+.editable text:focus-within {
+    outline: 1px solid green;
+    color: green;
+}
+
+/* Clickable mode */
+
+.clickableMode svg{
+    outline: 3px solid blue;
+    cursor: copy;
+}
+
+.clickableMode::before {
+    content: 'Clickable mode active - click to add a treasure marker cross';
+    color: blue;
+    font-weight: bold;
+}
+
+/* Dragable mode */
+
+.dragableMode svg{
+    outline: 3px solid purple;
+}
+
+.dragableMode::before {
+    content: 'Dragable mode active - drag points of interest, wrecks, or treasure markers to reposition them';
+    color: purple;
+    font-weight: bold;
+}
+
+.dragableMode text.poi,
+.dragableMode use.wreck,
+.dragableMode path.wreck,
+.dragableMode path.placedMarker {
+    color: purple;
+    fill: purple;
+}
+.dragableMode path.ripples {
+    stroke: purple;
+}
+
+
+.dragableMode text.poi:hover,
+.dragableMode use.wreck:hover,
+.dragableMode path.wreck:hover,
+.dragableMode path.ripples:hover,
+.dragableMode path.placedMarker:hover {
+    cursor: grab;
+}
+
+/* Delete mode */
 
 .deleteMode svg{
     outline: 3px solid red;
@@ -251,13 +322,21 @@ text.poi {
     font-weight: bold;
 }
 
-.deleteMode text.poi:hover,
-.deleteMode use.wreck:hover {
-    cursor: pointer;
+.deleteMode text.poi,
+.deleteMode use.wreck,
+.deleteMode path.wreck,
+.deleteMode path.placedMarker {
+    color: red;
+    fill: red;
 }
 
-svg {
-    float: right;
-    background-color: white;
+.deleteMode path.ripples {
+    stroke: red;
+}
+
+.deleteMode text.poi:hover,
+.deleteMode use.wreck:hover,
+.deleteMode path.placedMarker:hover {
+    cursor: not-allowed;
 }
 

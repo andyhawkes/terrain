@@ -403,6 +403,8 @@ var finalMapDiv = d3.select('div#finalMap');
 var finalSVG = addSVG(finalMapDiv, 'finalMapSVG');
 var editableLabels = false;
 var deleteMode = false;
+var clickableMode = false;
+var dragableMode = false;
 
 finalDiv.append("button")
     .text("Label map from terrain")
@@ -423,6 +425,18 @@ var deleteModeBut = finalDiv.append("button")
     .text("Enable delete mode")
     .on("click", function() {
         toggleDeleteMode()
+    });
+
+var clickableModeBut = finalDiv.append("button")
+    .text("Enable clicky mode")
+    .on("click", function () {
+        toggleClickableMode()
+    });
+
+var dragableModeBut = finalDiv.append("button")
+    .text("Enable drag mode")
+    .on("click", function () {
+        toggleDragableMode()
     });
 
 let labelStyles = ['fantasy', 'cursive', 'monospace'];
@@ -588,14 +602,13 @@ function toggleDeleteMode(){
     deleteModeBut.text(deleteMode ? "Disable delete mode" : "Enable delete mode");
     // finalMapDiv.attr('class', deleteMode ? 'deleteMode' : '');
     finalMapDiv.classed("deleteMode", !finalMapDiv.classed("deleteMode"));
+    var deletable = d3.selectAll('text.poi, use.wreck, .placedMarker');
 
     if(deleteMode) {
-        var deletable = d3.selectAll('text.poi, use.wreck');
         deletable.on("click", function(d,i){
             confirmDeletion(this);
         });
     } else {
-        var deletable = d3.selectAll('text.poi, use.wreck');
         deletable.on("click", null);
     }
 }
@@ -605,3 +618,69 @@ function confirmDeletion(el) {
          el.remove() ;
     }
 };
+
+function toggleClickableMode() {
+    clickableMode = !clickableMode;
+    clickableModeBut.text(clickableMode ? "Disable clickable mode" : "Enable clickable mode");
+    finalMapDiv.classed("clickableMode", !finalMapDiv.classed("clickableMode"));
+    var clickable = d3.select('#finalMapSVG');
+
+    if (clickableMode) {
+        clickable.on("click", function (d, i) {
+            clickCoordinates(clickable, d3.mouse(this));
+        });
+    } else {
+        clickable.on("click", null);
+    }
+}
+
+function clickCoordinates(el, coords){
+    console.log('clicky');
+    console.log(coords);
+
+    // console.log('Drawing circle at', coords[0], coords[1]);
+    // el.append("circle")
+    //     .attr('class', 'placedMarker')
+    //     .attr("cx", coords[0])
+    //     .attr("cy", coords[1])
+    //     .attr("r", 20)
+    //     .style('fill', 'white')
+    //     .style('stroke-width', 5)
+    //     .style('stroke-linecap', 'round')
+    //     .style('stroke', 'red');
+
+    console.log('Drawing cross at', coords[0], coords[1]);
+    var cross = d3.symbol().type(d3.symbolCross).size(400);
+    el.append("path")
+        .attr("d", cross)
+        .attr('class', 'placedMarker')
+        .attr("transform", "translate(" + coords[0] + ","+ coords[1] + ") rotate(45)");
+   }
+
+var deltaX, deltaY;
+
+var dragHandler = d3.drag()
+    .on("start", function () {
+        var current = d3.select(this);
+        deltaX = current.attr("x") - d3.event.x;
+        deltaY = current.attr("y") - d3.event.y;
+        console.log('Drag started');
+    })
+    .on("drag", function () {
+        d3.select(this)
+            .attr("x", d3.event.x + deltaX)
+            .attr("y", d3.event.y + deltaY);
+    });
+
+function toggleDragableMode() {
+    dragableMode = !dragableMode;
+    dragableModeBut.text(dragableMode ? "Disable dragable mode" : "Enable dragable mode");
+    finalMapDiv.classed("dragableMode", !finalMapDiv.classed("dragableMode"));
+    var dragable = d3.selectAll("text.poi, use.wreck, path.placedMarker");
+
+    if (dragableMode) {
+        dragHandler(dragable);
+    } else {
+        dragable.on(".drag", null);
+    }
+}
