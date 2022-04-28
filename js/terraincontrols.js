@@ -439,7 +439,7 @@ var dragableModeBut = finalDiv.append("button")
         toggleDragableMode()
     });
 
-let labelStyles = ['fantasy', 'cursive', 'monospace'];
+let labelStyles = ['fantasy', 'cursive', 'monospace', 'rlyehian', 'cthulhu'];
 var styleSelect = finalDiv.append('select')
     .attr('name', 'labelStyle')
     .attr('id', 'labelStyle')

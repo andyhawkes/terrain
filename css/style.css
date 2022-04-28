@@ -1,5 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel&display=swap');
 
+@font-face {
+  font-family: 'Rlyehian';
+  src: url('../fonts/Rlyehian.ttf')  format('truetype');
+}
+@font-face {
+  font-family: 'RlyehianBase';
+  src: url('../fonts/RlyehianBase.ttf')  format('truetype');
+}
+
 body {
     font-family: sans-serif;
     background-color: #eee;
@@ -218,6 +227,12 @@ text {
 }
 .labelStyle_fantasy text {
     font-family: fantasy;
+}
+.labelStyle_rlyehian text {
+    font-family: "Rlyehian", fantasy;
+}
+.labelStyle_cthulhu text {
+    font-family: "RlyehianBase", fantasy;
 }
 
 text.region {
