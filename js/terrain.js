@@ -870,11 +870,12 @@ function visualizeCities(svg, render) {
     svg.selectAll('circle.city')
         .attr('cx', function (d) {return 1000*h.mesh.vxs[d][0]})
         .attr('cy', function (d) {return 1000*h.mesh.vxs[d][1]})
+        .attr('id', function (d, i) {return 'city' + i})
         .attr('r', function (d, i) {return i >= n ? 4 : 10})
-        .style('fill', 'white')
-        .style('stroke-width', 5)
-        .style('stroke-linecap', 'round')
-        .style('stroke', 'black')
+        // .style('fill', 'white')
+        // .style('stroke-width', 5)
+        // .style('stroke-linecap', 'round')
+        // .style('stroke', 'black')
         .raise();
 }
 
@@ -937,6 +938,7 @@ function visualizeWrecks(svg, render) {
     svg.selectAll('use.wreck')
         .attr('x', function (d) { return (1000 * h.mesh.vxs[d][0] ) - 32.5 })
         .attr('y', function (d) { return (1000 * h.mesh.vxs[d][1] ) - 45 })
+        .attr('id', function (d, i) { return 'wreck' + i })
         .attr('href', function () { return '#wreck' + Math.floor( Math.random() * wreckSymbols.length)} )
         // .attr('href', function () { return '#wreck1' })
         .raise();
@@ -959,6 +961,7 @@ function visualizePOI(svg, render) {
     svg.selectAll('text.poi')
         .attr('x', function (d) { return 1000 * h.mesh.vxs[d][0] })
         .attr('y', function (d) { return 1000 * h.mesh.vxs[d][1] })
+        .attr('id', function (d, i) { return 'poi' + i })
         // .attr('r', function (d, i) { return i >= n ? 4 : 10 })
         // .style('fill', 'white')
         // .style('stroke-width', 5)
@@ -1116,6 +1119,7 @@ function drawLabels(svg, render) {
     svg.selectAll('text.city')
         .attr('x', function (d) {return 1000*d.x})
         .attr('y', function (d) {return 1000*d.y})
+        .attr('id', function (d, i) {return 'city' + i})
         .style('font-size', function (d) {return d.size})
         .style('text-anchor', function (d) {return d.align})
         .text(function (d) {return d.text})
@@ -1186,6 +1190,7 @@ function drawLabels(svg, render) {
     svg.selectAll('text.region')
         .attr('x', function (d) {return 1000*d.x})
         .attr('y', function (d) {return 1000*d.y})
+        .attr('id', function (d, i) {return 'region' + i})
         .style('font-size', function (d) {return 1000*d.size})
         .style('text-anchor', 'middle')
         .text(function (d) {return d.text})

@@ -108,6 +108,16 @@ div.output {
     float: right;
 }
 
+#editControls {
+    float: left;
+    width: 200px;
+}
+
+#editControls .active {
+    background-color: #900;
+    color: #fff;
+}
+
 button {
     font-size: large;
     background-color: white;
@@ -159,9 +169,8 @@ svg {
     outline: 3px solid black;
 }
 
-
 path,
-line {
+line, circle {
     fill: none;
     stroke: black;
     stroke-linecap: round;
@@ -188,32 +197,43 @@ path.ripples {
 
 .slope {
     stroke-width: 1;
+    stroke: #333
 }
 
 .river {
     stroke-width: 2;
-    /* stroke: blue; */
+    stroke: #000066;
+    stroke: linear-gradient(in lab to right, white, #01E);
 }
 
 .coast {
     stroke-width: 4;
+    stroke: #003;
 }
 
 .border {
     stroke-width: 5;
     stroke-dasharray: 4, 4;
     stroke-linecap: butt;
-    /* stroke: red; */
+    stroke: #660000;
+}
+
+circle.city {
+    fill: #333;
+    fill-opacity: 0.25;
+    stroke: #333;
+    stroke-width: 5;
+    stroke-linecap: round;
 }
 
 text {
     /* font-family: fantasy; */
     font-family: "Cinzel", "Palatino Linotype", "Book Antiqua", Palatino, serif;
-    color: black;
-    stroke: white;
+    fill: #000;
     stroke-width: 5;
     stroke-linejoin: round;
     paint-order: stroke;
+    filter: drop-shadow(3px 3px 2px #fff);
 }
 
 .labelStyle_default text {
@@ -238,6 +258,7 @@ text {
 text.region {
     stroke-width: 10;
     font-variant: small-caps;
+    fill: #600
 }
 
 text.poi {
@@ -278,6 +299,7 @@ text.poi {
 .editable text:focus-within {
     outline: 1px solid green;
     color: green;
+    fill: green;
 }
 
 /* Clickable mode */
@@ -305,6 +327,8 @@ text.poi {
     font-weight: bold;
 }
 
+.dragableMode text.city,
+.dragableMode text.region,
 .dragableMode text.poi,
 .dragableMode use.wreck,
 .dragableMode path.wreck,
@@ -312,16 +336,17 @@ text.poi {
     color: purple;
     fill: purple;
 }
+.dragableMode circle.city,
 .dragableMode path.ripples {
     stroke: purple;
 }
-
 
 .dragableMode text.poi:hover,
 .dragableMode use.wreck:hover,
 .dragableMode path.wreck:hover,
 .dragableMode path.ripples:hover,
-.dragableMode path.placedMarker:hover {
+.dragableMode path.placedMarker:hover,
+.dragableMode circle.city:hover {
     cursor: grab;
 }
 
@@ -340,18 +365,29 @@ text.poi {
 .deleteMode text.poi,
 .deleteMode use.wreck,
 .deleteMode path.wreck,
-.deleteMode path.placedMarker {
+.deleteMode path.placedMarker,
+.deleteMode circle.city,
+.deleteMode text.city,
+.deleteMode text.region {
     color: red;
     fill: red;
 }
 
-.deleteMode path.ripples {
+.deleteMode path.ripples,
+.deleteMode circle.city{
     stroke: red;
 }
 
 .deleteMode text.poi:hover,
 .deleteMode use.wreck:hover,
-.deleteMode path.placedMarker:hover {
+.deleteMode path.placedMarker:hover,
+.deleteMode circle.city:hover,
+.deleteMode text.city:hover,
+.deleteMode text.region:hover {
     cursor: not-allowed;
 }
 
+.parchment #finalMapSVG {
+    background: white url(../images/parchment.jpg) no-repeat 50%;
+    background-size: 150%
+}

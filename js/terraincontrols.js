@@ -401,10 +401,12 @@ var cityViewBut = cityDiv.append("button")
 var finalDiv = d3.select("div#final");
 var finalMapDiv = d3.select('div#finalMap');
 var finalSVG = addSVG(finalMapDiv, 'finalMapSVG');
+var editControlsDiv = d3.select('div#editControls');
 var editableLabels = false;
 var deleteMode = false;
 var clickableMode = false;
 var dragableMode = false;
+var parchmentMode = false;
 
 finalDiv.append("button")
     .text("Label map from terrain")
@@ -412,31 +414,47 @@ finalDiv.append("button")
         drawMap(finalSVG, cityRender);
     });
 
-var editableBut = finalDiv.append("button")
-    .text("Enable label editing")
+var editableBut = editControlsDiv.append("button")
+    .text("text_fields")
+    .attr('class', 'material-symbols-outlined')
     .on("click", function () {
+        resetModes();
         editableLabels = !editableLabels;
-        editableBut.text(editableLabels ? "Disable label editing" : "Enable label editing");
+        editableBut.classed('active', !editableBut.classed("active"));
         finalMapDiv.attr('contenteditable', editableLabels);
         finalMapDiv.classed("editable", !finalMapDiv.classed("editable"));
     });
 
-var deleteModeBut = finalDiv.append("button")
-    .text("Enable delete mode")
+var deleteModeBut = editControlsDiv.append("button")
+    .text("delete_forever")
+    .attr('class', 'material-symbols-outlined')
     .on("click", function() {
-        toggleDeleteMode()
+        resetModes();
+        toggleDeleteMode();
     });
 
-var clickableModeBut = finalDiv.append("button")
-    .text("Enable clicky mode")
+var clickableModeBut = editControlsDiv.append("button")
+    .text("add_location")
+    .attr('class', 'material-symbols-outlined')
     .on("click", function () {
-        toggleClickableMode()
+        resetModes();
+        toggleClickableMode();
     });
 
-var dragableModeBut = finalDiv.append("button")
-    .text("Enable drag mode")
+var dragableModeBut = editControlsDiv.append("button")
+    .text("arrows_output")
+    .attr('class', 'material-symbols-outlined')
     .on("click", function () {
-        toggleDragableMode()
+        resetModes();
+        toggleDragableMode();
+    });
+
+var parchmentModeBut = editControlsDiv.append("button")
+    .text("map")
+    .attr('class', 'material-symbols-outlined')
+    .on("click", function () {
+        resetModes();
+        toggleParchmentMode();
     });
 
 let labelStyles = ['fantasy', 'cursive', 'monospace', 'rlyehian', 'cthulhu'];
@@ -456,10 +474,17 @@ for (var i=0; i<labelStyles.length; i++) {
 };
 
 finalDiv.append("button")
-    .text("Download as png")
+    .text("Download as PNG")
     .attr('id',"downloader")
     .on("click", function () {
         saveSvgAsPng(document.getElementById("finalMapSVG"), "map.png", { 'left': -500, 'top': -500 });
+    });
+
+finalDiv.append("button")
+    .text("Download as SVG")
+    .attr('id',"SVGdownloader")
+    .on("click", function () {
+        saveSvg(document.getElementById("finalMapSVG"), "map.svg", { 'left': -500, 'top': -500 });
     });
 
 // Quick start options
@@ -599,10 +624,9 @@ function setLabelStyle(){
 
 function toggleDeleteMode(){
     deleteMode = !deleteMode;
-    deleteModeBut.text(deleteMode ? "Disable delete mode" : "Enable delete mode");
-    // finalMapDiv.attr('class', deleteMode ? 'deleteMode' : '');
+    deleteModeBut.classed('active', !deleteModeBut.classed("active"));
     finalMapDiv.classed("deleteMode", !finalMapDiv.classed("deleteMode"));
-    var deletable = d3.selectAll('text.poi, use.wreck, .placedMarker');
+    var deletable = d3.selectAll('text.poi, use.wreck, .placedMarker, circle.city, text.city, text.region');
 
     if(deleteMode) {
         deletable.on("click", function(d,i){
@@ -621,7 +645,7 @@ function confirmDeletion(el) {
 
 function toggleClickableMode() {
     clickableMode = !clickableMode;
-    clickableModeBut.text(clickableMode ? "Disable clickable mode" : "Enable clickable mode");
+    clickableModeBut.classed('active', !clickableModeBut.classed("active"));
     finalMapDiv.classed("clickableMode", !finalMapDiv.classed("clickableMode"));
     var clickable = d3.select('#finalMapSVG');
 
@@ -664,23 +688,52 @@ var dragHandler = d3.drag()
         var current = d3.select(this);
         deltaX = current.attr("x") - d3.event.x;
         deltaY = current.attr("y") - d3.event.y;
-        console.log('Drag started');
+        deltaCX = current.attr("cx") - d3.event.x;
+        deltaCY = current.attr("cy") - d3.event.y;
+        // Move linked labels when moving city circles
+        if(current.node().tagName == "circle"){
+            var selecta = 'text#'+current.attr("id");
+            var linkedLabel = d3.select(selecta);
+            labelDeltaX = linkedLabel.attr("x") - d3.event.x;
+            labelDeltaY = linkedLabel.attr("y") - d3.event.y;
+        }
     })
     .on("drag", function () {
-        d3.select(this)
-            .attr("x", d3.event.x + deltaX)
-            .attr("y", d3.event.y + deltaY);
+        var current = d3.select(this);
+        current.attr("x", d3.event.x + deltaX)
+            .attr("y", d3.event.y + deltaY)
+            .attr("cx", d3.event.x + deltaCX)
+            .attr("cy", d3.event.y + deltaCY);
+        // Move linked labels when moving city circles
+        if(current.node().tagName == "circle"){
+            var selecta = 'text#'+current.attr("id");
+            var linkedLabel = d3.select(selecta);
+            linkedLabel.attr("x", d3.event.x + labelDeltaX)
+                .attr("y", d3.event.y + labelDeltaY);
+        }
     });
 
 function toggleDragableMode() {
     dragableMode = !dragableMode;
-    dragableModeBut.text(dragableMode ? "Disable dragable mode" : "Enable dragable mode");
+    dragableModeBut.classed('active', !dragableModeBut.classed("active"));
     finalMapDiv.classed("dragableMode", !finalMapDiv.classed("dragableMode"));
-    var dragable = d3.selectAll("text.poi, use.wreck, path.placedMarker");
+    var dragable = d3.selectAll("text.poi, use.wreck, path.placedMarker, circle.city, text.city, text.region");
 
     if (dragableMode) {
         dragHandler(dragable);
     } else {
         dragable.on(".drag", null);
     }
+}
+
+function toggleParchmentMode() {
+    parchmentMode = !parchmentMode;
+    parchmentModeBut.classed('active', !parchmentModeBut.classed("active"));
+    finalMapDiv.classed("parchment", !finalMapDiv.classed("parchment"));
+}
+
+function resetModes() {
+        // var controls = d3.selectAll('#editControls button')
+        // controls.classed('active', false);
+        finalMapDiv.classed('deleteMode, dragableMode, clickableMode', false);
 }
