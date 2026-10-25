@@ -81,17 +81,57 @@ test('edits are stored on the map, not lost on redraw', function () {
     var doc = new MapDocument();
     doc.dispatch('generate', {params: small}, 'seed');
     var wreck = doc.state.wrecks[0];
-    var city = doc.state.cities[1];
     doc.dispatch('moveItem', {id: wreck.id, pos: [0.1, 0.2]});
-    doc.dispatch('moveLabel', {id: city.id, kind: 'city', pos: [0, 0]});
     doc.dispatch('addMarker', {pos: [-0.1, 0.1]});
 
     assert.deepEqual(doc.state.wrecks[0].pos, [0.1, 0.2]);
-    var label = derive(doc.state).labels.cities[1];
-    assert.deepEqual([label.x, label.y], [0, 0]);
     assert.equal(doc.state.markers.length, 1);
     // Earlier snapshots are untouched
     assert.equal(doc.stateAt(1).wrecks[0].pos, undefined);
+});
+
+function labelOf(state, id) {
+    return derive(state).labels.cities.find(function (l) {return l.id === id});
+}
+
+test('moving a label does not move its city', function () {
+    var doc = new MapDocument();
+    doc.dispatch('generate', {params: small}, 'seed');
+    var city = doc.state.cities[1];
+    doc.dispatch('moveLabel', {id: city.id, kind: 'city', pos: [0, 0]});
+    var label = labelOf(doc.state, city.id);
+    assert.deepEqual([label.x, label.y], [0, 0]);
+    assert.deepEqual(doc.state.cities[1], Object.assign({}, city, {labelOffset: doc.state.cities[1].labelOffset}));
+    assert.equal(doc.state.cities[1].pos, undefined);
+});
+
+test('moving a city carries its label, and leaves the rest of the map alone', function () {
+    var doc = new MapDocument();
+    doc.dispatch('generate', {params: small}, 'seed');
+    var before = derive(doc.state);
+    var city = doc.state.cities[0];
+    var label = labelOf(doc.state, city.id);
+    var at = doc.state.h.mesh.vxs[city.vx];
+
+    doc.dispatch('moveItem', {id: city.id, pos: [at[0] + 0.05, at[1] - 0.02]});
+    var after = derive(doc.state);
+    var moved = labelOf(doc.state, city.id);
+    assert.ok(Math.abs(moved.x - (label.x + 0.05)) < 1e-12);
+    assert.ok(Math.abs(moved.y - (label.y - 0.02)) < 1e-12);
+    assert.equal(doc.state.cities[0].vx, city.vx);
+    assert.deepEqual(after.borders, before.borders);
+    assert.deepEqual(after.labels.regions, before.labels.regions);
+    after.labels.cities.forEach(function (l, i) {
+        if (l.id === city.id) return;
+        assert.deepEqual([l.x, l.y], [before.labels.cities[i].x, before.labels.cities[i].y]);
+    });
+
+    // A hand-placed label keeps its offset when the city moves again
+    doc.dispatch('moveLabel', {id: city.id, kind: 'city', pos: [moved.x + 0.01, moved.y]});
+    doc.dispatch('moveItem', {id: city.id, pos: [at[0], at[1]]});
+    var back = labelOf(doc.state, city.id);
+    assert.ok(Math.abs(back.x - (label.x + 0.01)) < 1e-12);
+    assert.ok(Math.abs(back.y - label.y) < 1e-12);
 });
 
 test('old snapshots are rebuilt by replaying', function () {

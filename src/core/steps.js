@@ -29,7 +29,9 @@ export function emptyState() {
         params: defaultParams,
         h: null,
         lang: null,
-        cities: [],   // {id, vx, name, regionName, labelPos?, regionLabelPos?}
+        // vx is the mesh vertex an item was placed on; pos, if set, is where it
+        // has been moved to. Territories are always computed from vx.
+        cities: [],   // {id, vx, name, regionName, pos?, labelOffset?, regionLabelPos?}
         wrecks: [],   // {id, vx, variant, pos?}
         poi: [],      // {id, vx, variant, pos?}
         markers: [],  // {id, pos}
@@ -52,20 +54,6 @@ export function findItem(state, id) {
 
 export function itemPos(state, item) {
     return item.pos || state.h.mesh.vxs[item.vx];
-}
-
-function nearestVertex(mesh, pos) {
-    var best = 0;
-    var bestd = Infinity;
-    for (var i = 0; i < mesh.vxs.length; i++) {
-        var v = mesh.vxs[i];
-        var d = (v[0] - pos[0]) * (v[0] - pos[0]) + (v[1] - pos[1]) * (v[1] - pos[1]);
-        if (d < bestd) {
-            bestd = d;
-            best = i;
-        }
-    }
-    return best;
 }
 
 function vxsOf(items) {
@@ -273,14 +261,13 @@ export var steps = {
             return Object.assign({}, state, {markers: markers, nextId: state.nextId + 1});
         }
     },
+    // Moving an item only moves its marker: the terrain, territories and
+    // other labels stay as they are. A city's label moves with it.
     moveItem: {
         label: 'Move',
         apply: function (state, args) {
-            return mapItem(state, args.id, function (item, list) {
-                // Cities live on mesh vertices, because territories are
-                // computed over the mesh; everything else moves freely.
-                if (list === 'cities') item.vx = nearestVertex(state.h.mesh, args.pos);
-                else item.pos = args.pos;
+            return mapItem(state, args.id, function (item) {
+                item.pos = args.pos;
                 return item;
             });
         }
@@ -305,11 +292,18 @@ export var steps = {
             });
         }
     },
+    // Moving a label never moves what it labels. City labels are stored as an
+    // offset from the city, so they follow it if the city moves later.
     moveLabel: {
         label: 'Move label',
         apply: function (state, args) {
             return mapItem(state, args.id, function (city) {
-                city[args.kind === 'region' ? 'regionLabelPos' : 'labelPos'] = args.pos;
+                if (args.kind === 'region') {
+                    city.regionLabelPos = args.pos;
+                } else {
+                    var at = itemPos(state, city);
+                    city.labelOffset = [args.pos[0] - at[0], args.pos[1] - at[1]];
+                }
                 return city;
             });
         }

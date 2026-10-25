@@ -351,14 +351,21 @@ finalSVG.on('click', function () {
 var dragStart;
 
 var dragHandler = d3.drag()
-    .on('start', function () {
-        var el = d3.select(this);
-        dragStart = {x: d3.event.x, y: d3.event.y, transform: el.attr('transform') || ''};
+    .on('start', function (d) {
+        // A city's label moves with it while dragging; a label moves alone
+        var nodes = [this];
+        if (d.kind === 'city') {
+            nodes = nodes.concat(finalSVG.selectAll('text.city').filter(function (l) {return l.id === d.id}).nodes());
+        }
+        var moving = d3.selectAll(nodes);
+        moving.each(function () {
+            this.__dragBase = this.getAttribute('transform') || '';
+        });
+        dragStart = {x: d3.event.x, y: d3.event.y, moving: moving};
     })
     .on('drag', function () {
-        var dx = d3.event.x - dragStart.x;
-        var dy = d3.event.y - dragStart.y;
-        d3.select(this).attr('transform', 'translate(' + dx + ',' + dy + ') ' + dragStart.transform);
+        var shift = 'translate(' + (d3.event.x - dragStart.x) + ',' + (d3.event.y - dragStart.y) + ') ';
+        dragStart.moving.attr('transform', function () {return shift + this.__dragBase});
     })
     .on('end', function (d) {
         var dx = (d3.event.x - dragStart.x) / R.SCALE;

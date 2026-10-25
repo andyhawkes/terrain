@@ -3,6 +3,7 @@
 import * as T from './terrain.js';
 import {placeLabels} from './labels.js';
 import {withSeed} from './random.js';
+import {itemPos} from './steps.js';
 
 var byHeightmap = new WeakMap();
 var byState = new WeakMap();
@@ -37,12 +38,17 @@ export function derive(state) {
         cities.map(function (c) {return c.regionName}),
         state.params.fontsizes,
         [layers.rivers, layers.coasts, borders]);
+    // Labels are placed around each city's original vertex, so moving a city
+    // doesn't reshuffle the other labels. The chosen placement becomes an
+    // offset that travels with the city, unless the label was moved by hand.
     labels.cities.forEach(function (label, i) {
-        label.id = cities[i].id;
-        if (cities[i].labelPos) {
-            label.x = cities[i].labelPos[0];
-            label.y = cities[i].labelPos[1];
-        }
+        var city = cities[i];
+        var vx = h.mesh.vxs[city.vx];
+        var offset = city.labelOffset || [label.x - vx[0], label.y - vx[1]];
+        var at = itemPos(state, city);
+        label.id = city.id;
+        label.x = at[0] + offset[0];
+        label.y = at[1] + offset[1];
     });
     labels.regions.forEach(function (label, i) {
         label.id = cities[i].id;

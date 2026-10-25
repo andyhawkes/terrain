@@ -39,7 +39,8 @@ export function makeD3Path(path) {
 function join(svg, layerName, tag, cls, data, key) {
     var sel = layer(svg, layerName).selectAll(tag + '.' + cls).data(data, key);
     sel.exit().remove();
-    return sel.enter().append(tag).classed(cls, true).merge(sel);
+    // Clear any temporary offset left over from dragging
+    return sel.enter().append(tag).classed(cls, true).merge(sel).attr('transform', null);
 }
 
 function byId(d) {

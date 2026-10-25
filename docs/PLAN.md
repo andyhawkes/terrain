@@ -100,4 +100,7 @@ Each phase leaves the app working.
 - **Desktop first.** Phone layouts aren't a goal for now.
 - **Zoom and pan are not a priority.**
 - **Build tools are fine** (Vite, npm).
+- **Editing tools only change what you touch.**
+  - Moving a feature (city, point of interest, wreck, marker) moves only its marker, and a city's label goes with it. Terrain, territories, borders and other labels stay as they are. Territories still come from the spot where the city was placed.
+  - Moving a label never moves what it labels. A city label is stored as an offset from its city, so it keeps following the city if the city moves later.
 - **Save files hold the step list, not the full mesh.** If replaying ever gets slow (e.g. many sculpting steps), a save can include a heightmap snapshot.
