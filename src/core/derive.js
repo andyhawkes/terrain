@@ -6,7 +6,9 @@ import {withSeed} from './random.js';
 import {itemPos} from './steps.js';
 
 var byHeightmap = new WeakMap();
-var byState = new WeakMap();
+// Keyed by the cities list; reused while the heightmap and params match,
+// so style-only changes don't recompute territories and labels.
+var byCities = new WeakMap();
 
 // Layers that depend only on the heightmap
 export function terrainLayers(h) {
@@ -24,8 +26,8 @@ export function terrainLayers(h) {
 }
 
 export function derive(state) {
-    var d = byState.get(state);
-    if (d) return d;
+    var cached = byCities.get(state.cities);
+    if (cached && cached.h === state.h && cached.params === state.params) return cached.d;
     var h = state.h;
     var cities = state.cities;
     var vxs = cities.map(function (c) {return c.vx});
@@ -57,7 +59,7 @@ export function derive(state) {
             label.y = cities[i].regionLabelPos[1];
         }
     });
-    d = Object.assign({terr: terr, borders: borders, labels: labels}, layers);
-    byState.set(state, d);
+    var d = Object.assign({terr: terr, borders: borders, labels: labels}, layers);
+    byCities.set(state.cities, {h: h, params: state.params, d: d});
     return d;
 }

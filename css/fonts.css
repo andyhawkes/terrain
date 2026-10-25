@@ -1,0 +1,12 @@
+/* Fonts bundled with the app, so exported maps can embed them. The Google
+   fonts come from @fontsource packages, imported in src/fonts.js. */
+
+@font-face {
+    font-family: 'Rlyehian';
+    src: url('../fonts/Rlyehian.ttf') format('truetype');
+}
+
+@font-face {
+    font-family: 'RlyehianBase';
+    src: url('../fonts/RlyehianBase.ttf') format('truetype');
+}

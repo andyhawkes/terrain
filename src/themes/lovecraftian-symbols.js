@@ -1,4 +1,4 @@
-// Marker symbols. These will move into themes in Phase 3.
+// Symbols for the Lovecraftian theme: POI glyphs, tentacle wrecks and their ripples.
 export var poiSymbols = '⚒⚔⚖☠☤⚚☥♖♜⚐⚑';
 // poiSymbols += '⚓♕♘♛♞';
 // poiSymbols += '🛕🛖🛡🗡🏹⛏🪓';

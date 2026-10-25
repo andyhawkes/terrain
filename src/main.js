@@ -1,5 +1,6 @@
 // The editor: one map document, shown in one map view, changed by the tools
 // on the left and the panels on the right.
+import './fonts.js';
 import * as d3 from 'd3';
 import {saveSvg, saveSvgAsPng} from 'save-svg-as-png';
 import {MapDocument} from './core/document.js';
@@ -9,6 +10,7 @@ import * as R from './render/svg.js';
 import {VIEWS, viewInfo, renderView} from './ui/views.js';
 import {createTools, TOOLS} from './ui/tools.js';
 import {createPanels} from './ui/panels.js';
+import {getTheme, fontChoice} from './themes/index.js';
 
 var doc = new MapDocument();
 var view = 'map';
@@ -22,6 +24,7 @@ var strip = d3.select('#toolstrip');
 function render() {
     renderView(svg, view, doc.state);
     tools.bind();
+    panels.update(doc.state);
     updateChrome();
 }
 
@@ -221,13 +224,44 @@ blank.append('div').attr('class', 'button-row')
 // Export: always the finished map, whatever view is showing
 
 var exportMenu = d3.select('#exportMenu');
-var exportOptions = {left: -500, top: -500, width: 1000, height: 1000};
+var exportOptions = {left: -500, top: -500, width: 1000, height: 1000, excludeUnusedCss: true};
+
+// The @font-face rules for the fonts the current theme uses, for embedding.
+// (Left to itself the exporter would embed every font on the page.)
+function exportFonts(style) {
+    var theme = getTheme(style.theme);
+    var font = fontChoice(theme, style);
+    var families = [font.label, font.region, theme.symbols.poi.font]
+        .filter(function (f) {return typeof f === 'string'})
+        .join(',').split(',')
+        .map(function (f) {return f.trim().replace(/^["']|["']$/g, '')});
+    var fonts = [];
+    Array.from(document.styleSheets).forEach(function (sheet) {
+        var rules;
+        try {
+            rules = sheet.cssRules;
+        } catch (e) {
+            return; // stylesheets from other origins can't be read
+        }
+        Array.from(rules).forEach(function (rule) {
+            if (!(rule instanceof CSSFontFaceRule)) return;
+            var family = rule.style.getPropertyValue('font-family').replace(/^["']|["']$/g, '');
+            var url = rule.style.getPropertyValue('src').match(/url\(["']?([^"')]+)["']?\)/);
+            if (families.indexOf(family) < 0 || !url) return;
+            var href = new URL(url[1], sheet.href || location.href).href;
+            fonts.push({text: rule.cssText, url: href,
+                format: /\.woff2/.test(href) ? 'font/woff2' : /\.woff/.test(href) ? 'font/woff' : 'font/ttf'});
+        });
+    });
+    return fonts;
+}
 
 function exportMap(save, name, options) {
     exportMenu.node().hidePopover();
     var previous = view;
     if (view !== 'map') setView('map');
-    save(svg.node(), name, Object.assign({}, exportOptions, options)).finally(function () {
+    var opts = Object.assign({fonts: exportFonts(doc.state.style)}, exportOptions, options);
+    save(svg.node(), name, opts).finally(function () {
         if (previous !== 'map') setView(previous);
     });
 }
@@ -282,7 +316,7 @@ openFile.on('change', function () {
 
 // --- Side panel ---
 
-var panelCtx = {act: act, svg: svg, setView: setView};
+var panelCtx = {act: act, doc: doc, svg: svg, setView: setView, updaters: []};
 var panels = createPanels(d3.select('#panelTabs'), d3.select('#panelBody'), panelCtx);
 
 // --- Keyboard shortcuts ---

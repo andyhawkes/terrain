@@ -436,49 +436,58 @@ input[type=checkbox] {
 
 /* --- Tool feedback on the map --- */
 
+#mapSVG {
+    background: white;
+}
+
 .tool-marker #mapSVG {
     cursor: crosshair;
 }
 
-.tool-label #mapSVG text.city:hover,
-.tool-label #mapSVG text.region:hover {
+.tool-label #mapSVG .city-label,
+.tool-label #mapSVG .region-label {
     cursor: text;
-    fill: var(--accent);
 }
 
-.tool-move #mapSVG text.city,
-.tool-move #mapSVG text.region,
-.tool-move #mapSVG text.poi,
-.tool-move #mapSVG use.wreck,
-.tool-move #mapSVG path.placedMarker,
-.tool-move #mapSVG circle.city {
+.tool-label #mapSVG .city-label:hover,
+.tool-label #mapSVG .region-label:hover {
+    filter: drop-shadow(0 0 3px var(--accent)) drop-shadow(0 0 2px var(--accent));
+}
+
+.tool-move #mapSVG .layer-city .city,
+.tool-move #mapSVG .layer-wreck .wreck,
+.tool-move #mapSVG .layer-poi .poi,
+.tool-move #mapSVG .layer-marker .placedMarker,
+.tool-move #mapSVG .city-label,
+.tool-move #mapSVG .region-label {
     cursor: grab;
 }
 
-.tool-move #mapSVG text.city:hover,
-.tool-move #mapSVG text.region:hover,
-.tool-move #mapSVG text.poi:hover,
-.tool-move #mapSVG use.wreck:hover,
-.tool-move #mapSVG path.placedMarker:hover {
-    fill: var(--move);
+.tool-move #mapSVG .layer-city .city:hover,
+.tool-move #mapSVG .layer-wreck .wreck:hover,
+.tool-move #mapSVG .layer-poi .poi:hover,
+.tool-move #mapSVG .layer-marker .placedMarker:hover,
+.tool-move #mapSVG .city-label:hover,
+.tool-move #mapSVG .region-label:hover {
+    filter: drop-shadow(0 0 3px var(--move)) drop-shadow(0 0 2px var(--move));
 }
 
-.tool-move #mapSVG circle.city:hover {
-    stroke: var(--move);
-}
-
-.tool-delete #mapSVG text.city:hover,
-.tool-delete #mapSVG text.region:hover,
-.tool-delete #mapSVG text.poi:hover,
-.tool-delete #mapSVG use.wreck:hover,
-.tool-delete #mapSVG path.placedMarker:hover {
+.tool-delete #mapSVG .layer-city .city,
+.tool-delete #mapSVG .layer-wreck .wreck,
+.tool-delete #mapSVG .layer-poi .poi,
+.tool-delete #mapSVG .layer-marker .placedMarker,
+.tool-delete #mapSVG .city-label,
+.tool-delete #mapSVG .region-label {
     cursor: pointer;
-    fill: var(--danger);
 }
 
-.tool-delete #mapSVG circle.city:hover {
-    cursor: pointer;
-    stroke: var(--danger);
+.tool-delete #mapSVG .layer-city .city:hover,
+.tool-delete #mapSVG .layer-wreck .wreck:hover,
+.tool-delete #mapSVG .layer-poi .poi:hover,
+.tool-delete #mapSVG .layer-marker .placedMarker:hover,
+.tool-delete #mapSVG .city-label:hover,
+.tool-delete #mapSVG .region-label:hover {
+    filter: drop-shadow(0 0 3px var(--danger)) drop-shadow(0 0 2px var(--danger));
 }
 
 /* --- Status bar contents --- */

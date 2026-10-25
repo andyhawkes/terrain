@@ -16,7 +16,7 @@ export var TOOLS = [
         hint: 'Click a marker or city to remove it, or a label to hide it.'}
 ];
 
-var DRAGGABLE = 'circle.city, use.wreck, text.poi, path.placedMarker, text.city, text.region';
+var DRAGGABLE = '.layer-city .city, .layer-wreck .wreck, .layer-poi .poi, .layer-marker .placedMarker, .city-label, .region-label';
 
 function labelKind(d) {
     return d.kind === 'regionLabel' ? 'region' : 'city';
@@ -71,7 +71,7 @@ export function createTools(doc, svg, stage, strip, onChange) {
             // A city's label moves with it while dragging; a label moves alone
             var nodes = [this];
             if (d.kind === 'city') {
-                nodes = nodes.concat(svg.selectAll('text.city').filter(function (l) {return l.id === d.id}).nodes());
+                nodes = nodes.concat(svg.selectAll('.city-label').filter(function (l) {return l.id === d.id}).nodes());
             }
             var moving = d3.selectAll(nodes);
             moving.each(function () {

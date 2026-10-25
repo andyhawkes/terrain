@@ -1,6 +1,8 @@
 // The right-hand panel: Build (shape the current map), Style (how it's
 // drawn) and Advanced (the mesh demo).
 import {meshDemo} from './views.js';
+import {THEMES, getTheme, fontChoice, backgroundChoice} from '../themes/index.js';
+import {TOGGLE_LAYERS} from '../render/svg.js';
 
 var nextId = 0;
 
@@ -114,41 +116,68 @@ function buildPanel(body, ctx) {
     s.select('.button-grid').style('margin-top', '8px');
 }
 
-var LAYERS = [
-    ['coast', 'Coastline'], ['river', 'Rivers'], ['border', 'Borders'], ['slope', 'Slope shading'],
-    ['city', 'Cities'], ['label', 'Labels'], ['wreck', 'Wrecks'], ['poi', 'Points of interest'],
-    ['marker', 'Markers']
-];
-
-var FONTS = [
-    ['default', 'Default (Cinzel)'], ['fantasy', 'Fantasy'], ['cursive', 'Cursive'],
-    ['monospace', 'Monospace'], ['rlyehian', 'R\'lyehian'], ['cthulhu', 'R\'lyehian base']
-];
-
+// The style belongs to the map, so changes are steps (and can be undone);
+// update() keeps the controls in sync with whatever the map currently has.
 function stylePanel(body, ctx) {
-    var svg = ctx.svg;
-    var s = section(body, 'Labels');
-    var row = s.append('div').attr('class', 'control-row');
-    row.append('label').attr('for', 'labelFont').text('Font');
-    var select = row.append('select').attr('id', 'labelFont');
-    FONTS.forEach(function (f) {
-        select.append('option').attr('value', f[0]).text(f[1]);
-    });
-    select.on('change', function () {
-        var value = this.value;
-        FONTS.forEach(function (f) {svg.classed('labelStyle_' + f[0], f[0] === value)});
-    });
-    s.append('p').style('margin', '8px 0 0').text('Fonts other than the default may not survive PNG export.');
+    function setStyle(changes) {
+        ctx.doc.dispatch('setStyle', changes);
+    }
 
-    s = section(body, 'Background');
-    checkbox(s.append('div').attr('class', 'check-list'), 'Parchment', false, function (on) {
-        svg.classed('parchment', on);
+    var s = section(body, 'Theme');
+    var themeSelect = s.append('div').attr('class', 'control-row')
+        .append('select').attr('id', 'themeSelect').attr('aria-label', 'Theme').style('flex', 1)
+        .on('change', function () {setStyle({theme: this.value})});
+    THEMES.forEach(function (t) {
+        themeSelect.append('option').attr('value', t.id).text(t.name);
     });
+    var themeDescription = s.append('p').style('margin', '8px 0 0');
+
+    s = section(body, 'Lettering');
+    var row = s.append('div').attr('class', 'control-row');
+    row.append('label').attr('for', 'fontSelect').text('Font');
+    var fontSelect = row.append('select').attr('id', 'fontSelect')
+        .on('change', function () {setStyle({font: this.value})});
+
+    row = s.append('div').attr('class', 'control-row');
+    row.append('label').attr('for', 'backgroundSelect').text('Background');
+    var backgroundSelect = row.append('select').attr('id', 'backgroundSelect')
+        .on('change', function () {setStyle({background: this.value})});
 
     s = section(body, 'Layers');
     var list = s.append('div').attr('class', 'check-list');
-    LAYERS.forEach(function (l) {
-        checkbox(list, l[1], true, function (on) {svg.classed('hide-' + l[0], !on)});
+    var boxes = {};
+    TOGGLE_LAYERS.forEach(function (l) {
+        var label = list.append('label');
+        boxes[l[0]] = label.append('input')
+            .attr('type', 'checkbox')
+            .on('change', function () {
+                var hidden = ctx.doc.state.style.hidden.filter(function (h) {return h !== l[0]});
+                if (!this.checked) hidden.push(l[0]);
+                setStyle({hidden: hidden});
+            });
+        label.append('span').text(l[1]);
+    });
+
+    function options(select, items, value) {
+        var opts = select.selectAll('option').data(items, function (d) {return d.id});
+        opts.exit().remove();
+        opts.enter().append('option').merge(opts)
+            .attr('value', function (d) {return d.id})
+            .text(function (d) {return d.name});
+        select.property('value', value);
+        select.property('disabled', items.length < 2);
+    }
+
+    ctx.updaters.push(function (state) {
+        var style = state.style;
+        var theme = getTheme(style.theme);
+        themeSelect.property('value', theme.id);
+        themeDescription.text(theme.description);
+        options(fontSelect, theme.fonts, fontChoice(theme, style).id);
+        options(backgroundSelect, theme.backgrounds, backgroundChoice(theme, style).id);
+        TOGGLE_LAYERS.forEach(function (l) {
+            boxes[l[0]].property('checked', style.hidden.indexOf(l[0]) < 0);
+        });
     });
 }
 
@@ -210,5 +239,10 @@ export function createPanels(tabs, body, ctx) {
         });
     }
     show('build');
-    return {show: show};
+    return {
+        show: show,
+        update: function (state) {
+            ctx.updaters.forEach(function (fn) {fn(state)});
+        }
+    };
 }

@@ -74,10 +74,13 @@ Each phase leaves the app working.
 - [x] Save and Open map files, which were planned for Phase 6. They fit the top bar and were simple once the step history existed.
 
 ### Phase 3: Themes
-- A theme format, and a renderer that uses it.
-- Simple and Lovecraftian themes. Lovecraftian takes over the current styling: R'lyehian fonts, tentacle wrecks, parchment background.
-- A Plotter theme with stroke-only SVG export.
-- Later: pirate, military, high fantasy.
+- [x] A theme format (`src/themes/`; `simple.js` documents every field) and a renderer that uses it. The theme's stylesheet is written into the SVG, so exports carry it.
+- [x] The style is part of the map: theme, font, background and hidden layers are a step, so they can be undone, are saved in map files and carry over to new maps.
+- [x] **Simple** (the default), **Lovecraftian** (the original look: parchment, IM Fell type, tentacle wrecks) and **Plotter**.
+- [x] Plotter: strokes only, single-stroke Hershey lettering, borders drawn as separate dashes, slope hatching cleared from under labels.
+- [x] Fonts are bundled (`@fontsource`), and exports embed only the current theme's fonts, so labels keep their font in PNG/SVG.
+- Later: pirate, military, high fantasy, and theme-specific naming styles.
+- Later, for plotting: clear rivers and borders from under labels too, optimise pen travel, set a physical paper size.
 
 ### Phase 4: Tools
 - One tool controller with clear hints for the active tool. Esc returns to Select.

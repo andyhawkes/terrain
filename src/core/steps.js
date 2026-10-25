@@ -20,6 +20,16 @@ export var defaultParams = {
     }
 };
 
+// How the map is drawn: a theme id plus the user's choices within it.
+// font and background are ids from the theme (null means its default);
+// hidden lists layers that are switched off.
+export var defaultStyle = {
+    theme: 'simple',
+    font: null,
+    background: null,
+    hidden: []
+};
+
 // Upper bound for "variant" numbers, which pick a symbol from whatever set
 // the renderer (and later the theme) provides.
 var VARIANTS = 1000000;
@@ -27,6 +37,7 @@ var VARIANTS = 1000000;
 export function emptyState() {
     return {
         params: defaultParams,
+        style: defaultStyle,
         h: null,
         lang: null,
         // vx is the mesh vertex an item was placed on; pos, if set, is where it
@@ -73,6 +84,7 @@ function withHeightmap(state, h) {
 function newTerrain(state, h, params) {
     return Object.assign(emptyState(), {
         params: params || state.params,
+        style: state.style,
         h: h,
         lang: state.lang,
         nextId: state.nextId
@@ -143,7 +155,7 @@ export var steps = {
         label: 'Generate random map',
         apply: function (state, args) {
             var params = Object.assign({}, defaultParams, args.params);
-            var s = Object.assign(emptyState(), {params: params});
+            var s = Object.assign(emptyState(), {params: params, style: state.style});
             s.h = T.generateCoast(params);
             s.lang = makeRandomLanguage();
             s = addCities(s, params.ncities);
@@ -250,6 +262,21 @@ export var steps = {
                 return Object.assign({}, c, {name: makeName(lang, 'city'), regionName: makeName(lang, 'region')});
             });
             return Object.assign({}, state, {cities: cities, lang: lang});
+        }
+    },
+
+    // --- Style ---
+    // Merges the given fields into the style; changing theme resets the
+    // font and background to that theme's defaults.
+    setStyle: {
+        label: 'Change style',
+        apply: function (state, args) {
+            var style = Object.assign({}, state.style, args);
+            if (args.theme && args.theme !== state.style.theme) {
+                if (!('font' in args)) style.font = null;
+                if (!('background' in args)) style.background = null;
+            }
+            return Object.assign({}, state, {style: style});
         }
     },
 
