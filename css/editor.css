@@ -737,3 +737,28 @@ input[type=checkbox] {
 .stage.replaying #mapSVG {
     pointer-events: none;
 }
+
+/* --- Share and New map extras --- */
+
+.popover.share {
+    width: 420px;
+}
+
+.share-row {
+    display: flex;
+    gap: 8px;
+}
+
+.share-row input {
+    flex: 1;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+}
+
+.field-hint {
+    grid-column: 1 / -1;
+    text-align: right;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: -4px;
+}

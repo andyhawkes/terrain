@@ -23,6 +23,9 @@
             <button id="exportButton" popovertarget="exportMenu">
                 <span class="icon" aria-hidden="true">download</span>Export
             </button>
+            <button id="shareButton" popovertarget="sharePanel">
+                <span class="icon" aria-hidden="true">link</span>Share
+            </button>
             <input type="file" id="openFile" accept=".json,application/json" hidden>
         </div>
         <div class="topbar-info" id="mapInfo"></div>
@@ -30,6 +33,7 @@
 
     <div id="newMapPanel" class="popover" popover></div>
     <div id="exportMenu" class="popover menu" popover></div>
+    <div id="sharePanel" class="popover share" popover></div>
 
     <main class="workspace">
         <nav class="toolstrip" id="toolstrip" aria-label="Tools"></nav>

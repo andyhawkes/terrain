@@ -153,19 +153,22 @@ function count(args, fallback) {
 
 export var steps = {
     // --- Starting points ---
+    // A new map depends on nothing before it except the style, which carries
+    // over (or is given in args.style when a map is saved on its own). That
+    // way one map's steps can be saved, shared and replayed by themselves.
     newBlank: {
         label: 'New blank map',
         apply: function (state, args) {
-            var params = Object.assign({}, state.params, {npts: args.npts || state.params.npts});
+            var params = Object.assign({}, defaultParams, {npts: args.npts || defaultParams.npts});
             var mesh = T.generateGoodMesh(params.npts, params.extent);
-            return newTerrain(state, T.zero(mesh), params);
+            return Object.assign(emptyState(), {params: params, style: args.style || state.style, h: T.zero(mesh)});
         }
     },
     generate: {
         label: 'Generate random map',
         apply: function (state, args) {
             var params = Object.assign({}, defaultParams, args.params);
-            var s = Object.assign(emptyState(), {params: params, style: state.style});
+            var s = Object.assign(emptyState(), {params: params, style: args.style || state.style});
             s.h = T.generateCoast(params);
             s.lang = makeRandomLanguage();
             s = addCities(s, params.ncities);

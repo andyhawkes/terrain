@@ -108,8 +108,22 @@ export class MapDocument {
         this.listeners.forEach(function (fn) {fn(state)});
     }
 
-    toJSON() {
-        return {version: FORMAT_VERSION, steps: this.steps.slice(0, this.cursor)};
+    // options.currentMap: only the current map's steps, from its start
+    // options.keepRedo: include undone steps, plus where the cursor is
+    toJSON(options) {
+        options = options || {};
+        var start = options.currentMap ? this.startIndex() : 0;
+        var end = options.keepRedo ? this.steps.length : this.cursor;
+        var steps = this.steps.slice(start, end);
+        if (start > 0) {
+            // The style carried over from earlier maps goes into the start step
+            var first = steps[0];
+            var style = this.stateAt(start + 1).style;
+            steps[0] = Object.assign({}, first, {args: Object.assign({}, first.args, {style: style})});
+        }
+        var json = {version: FORMAT_VERSION, steps: steps};
+        if (options.keepRedo) json.cursor = this.cursor - start;
+        return json;
     }
 
     // Replace this document's history with a saved one
@@ -119,7 +133,7 @@ export class MapDocument {
         }
         var loaded = new MapDocument();
         loaded.steps = json.steps.slice();
-        loaded.cursor = loaded.steps.length;
+        loaded.cursor = json.cursor > 0 ? Math.min(json.cursor, loaded.steps.length) : loaded.steps.length;
         loaded.state; // replay, throwing before anything here changes
         loaded.prune();
         this.steps = loaded.steps;

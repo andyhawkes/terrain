@@ -95,9 +95,14 @@ Each phase leaves the app working.
 - Later: replay the stages inside "New random map" (mesh, heightmap, erosion, cities) for the explore-the-algorithm side. Show the Heightmap view automatically while replaying a hand-built map's terrain steps.
 
 ### Phase 6: Autosave and sharing
-- Autosave to browser storage.
-- Shareable seed links, e.g. `?seed=…`.
-- (Saving and opening map files moved into Phase 2.)
+- [x] Autosave: the current map, with its undo/redo history, is kept in this browser and restored on reload. Earlier maps from the session aren't kept.
+- [x] Share links, via the Share button:
+  - An unedited random map gets a short, readable link: `?seed=…`, plus any non-default settings (`detail`, `territories`, `cities`, `poi`, `wrecks`) and style (`theme`, `font`, `background`).
+  - Anything else (edited or hand-built maps) gets its steps compressed into the link: `#map=…`.
+  - Opening a link adds that map on top of the current history, so the previous map can still be reached with Undo or History. The link is then removed from the address bar.
+- [x] Map of the day: the seed `today` stands for today's date (`?seed=today`, the Map of the day button, `npm run generate -- --seed today`).
+- [x] Each map's steps are self-contained: a new map depends on nothing before it except the style, which is written into its first step when saved on its own. Save, autosave and links all hold just the current map.
+- Note: map files saved before this that contain several maps may name places differently on reload, because a blank map used to carry over the previous map's naming language.
 
 ### Later
 - A 3D view of the terrain, probably with three.js, and sculpting tools that record brush strokes as steps.

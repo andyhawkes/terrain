@@ -5,7 +5,8 @@ import * as d3 from 'd3';
 import {saveSvg, saveSvgAsPng} from 'save-svg-as-png';
 import {MapDocument} from './core/document.js';
 import {defaultParams} from './core/steps.js';
-import {newSeed} from './core/random.js';
+import {newSeed, resolveSeed} from './core/random.js';
+import {shareLink, readLink, clearLink} from './ui/share.js';
 import * as R from './render/svg.js';
 import {VIEWS, viewInfo, renderView} from './ui/views.js';
 import {createTools, TOOLS} from './ui/tools.js';
@@ -253,13 +254,23 @@ function readSettings() {
 
 var buttons = random.append('div').attr('class', 'button-row');
 buttons.append('button').text('Reset').on('click', resetSettings);
+function generate(seed) {
+    newMap.node().hidePopover();
+    setView('map');
+    act('generate', {params: readSettings()}, seed)();
+}
+
+// Under the seed field
+grid.insert('small', 'label[for=nterrs]').attr('class', 'field-hint').text('Type "today" for the map of the day');
+
+// Everyone who picks the map of the day (with the same settings) gets the same map
+buttons.append('button').text('Map of the day').attr('title', 'A map seeded with today\'s date')
+    .on('click', function () {generate(resolveSeed('today'))});
 buttons.append('button').attr('class', 'primary').text('Generate').on('click', function () {
     // The seed is used once; the top bar shows it afterwards
     var seed = d3.select('#seed').property('value').trim();
     d3.select('#seed').property('value', '');
-    newMap.node().hidePopover();
-    setView('map');
-    act('generate', {params: readSettings()}, seed || newSeed())();
+    generate(seed ? resolveSeed(seed) : newSeed());
 });
 
 var blank = newMap.append('section');
@@ -335,7 +346,8 @@ function fileName(ext) {
 // Save and open: a map file is its list of steps
 
 d3.select('#saveButton').on('click', function () {
-    var blob = new Blob([JSON.stringify(doc.toJSON())], {type: 'application/json'});
+    // Just the current map: earlier maps in this session's history stay out
+    var blob = new Blob([JSON.stringify(doc.toJSON({currentMap: true}))], {type: 'application/json'});
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = fileName('json');
@@ -398,6 +410,100 @@ document.addEventListener('keydown', function (event) {
     }
 });
 
-// Start with a random map, after the page has had a chance to paint
+// --- Share ---
+
+var sharePanel = d3.select('#sharePanel');
+sharePanel.append('h2').text('Share this map');
+var shareNote = sharePanel.append('p');
+var shareRow = sharePanel.append('div').attr('class', 'share-row');
+var shareInput = shareRow.append('input').attr('type', 'text').attr('readonly', true)
+    .attr('aria-label', 'Link to this map')
+    .on('focus', function () {this.select()});
+var copyButton = shareRow.append('button').attr('class', 'primary').text('Copy')
+    .on('click', function () {
+        shareInput.node().select();
+        navigator.clipboard.writeText(shareInput.property('value')).then(function () {
+            copyButton.text('Copied');
+        }, function () {
+            copyButton.text('Press ⌘C / Ctrl+C');
+        });
+    });
+
+sharePanel.node().addEventListener('beforetoggle', function (event) {
+    if (event.newState !== 'open') return;
+    copyButton.text('Copy');
+    shareInput.property('value', '');
+    shareLink(doc).then(function (link) {
+        shareInput.property('value', link);
+        shareNote.text(link.indexOf('#map=') >= 0
+            ? 'This link contains the whole map, including your changes. Anyone who opens it gets their own copy.'
+            : 'This link recreates the map from its seed and settings. Anyone who opens it gets their own copy.');
+        shareInput.node().focus();
+    });
+});
+
+// --- Autosave: the current map, with its undo history, kept in this browser ---
+
+var AUTOSAVE_KEY = 'terrain.autosave.v1';
+var autosaveTimer = null;
+
+doc.subscribe(function () {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(autosave, 500);
+});
+
+function autosave() {
+    try {
+        localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(doc.toJSON({currentMap: true, keepRedo: true})));
+    } catch (e) {
+        // Storage can be full or switched off; the map just isn't kept
+    }
+}
+
+function restoreAutosave() {
+    try {
+        var saved = localStorage.getItem(AUTOSAVE_KEY);
+        if (!saved) return false;
+        doc.load(JSON.parse(saved));
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+// Open a shared link on top of whatever is already here, so the previous
+// map is still in the history
+function openLink(link) {
+    if (link.json) {
+        var steps = link.json.steps || [];
+        if (!steps.length || ['generate', 'newBlank'].indexOf(steps[0].type) < 0) throw new Error('Not a map link');
+        steps.forEach(function (step) {doc.dispatch(step.type, step.args, step.seed)});
+    } else {
+        doc.dispatch('generate', {params: link.params, style: link.style}, link.seed);
+    }
+}
+
+// Start: open a shared link, or the autosaved map, or a new random map.
+// Runs after the page has had a chance to paint.
 updateChrome();
-act('generate', {params: defaultParams})();
+statusText = 'Loading…';
+updateStatus();
+setTimeout(function () {
+    var restored = restoreAutosave();
+    readLink().then(function (link) {
+        if (link) {
+            openLink(link);
+            setView('map');
+            clearLink();
+        } else if (!restored) {
+            doc.dispatch('generate', {params: defaultParams});
+        }
+    }).catch(function (e) {
+        clearLink();
+        alert('Couldn\'t open that link: ' + e.message);
+        if (!restored) doc.dispatch('generate', {params: defaultParams});
+    }).finally(function () {
+        statusText = null;
+        updateStatus();
+    });
+}, 20);

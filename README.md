@@ -12,6 +12,7 @@ npm run dev        # start the editor at http://localhost:5173
 npm test           # run the core tests
 npm run build      # static build in dist/
 npm run generate -- --seed hello --npts 4096 --out map.json   # generate a map without a browser
+npm run generate -- --seed today                             # the map of the day
 ```
 
 ### Layout

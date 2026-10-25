@@ -42,6 +42,13 @@ export function withSeed(seed, fn) {
     }
 }
 
+// "today" stands for today's date, so everyone gets the same map of the day
+export function resolveSeed(seed, date) {
+    if (String(seed).trim().toLowerCase() !== 'today') return seed;
+    var d = date || new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
 // A fresh, unpredictable seed for steps the user didn't seed themselves.
 export function newSeed() {
     return Math.floor(Math.random() * 36 ** 6).toString(36).padStart(6, '0');

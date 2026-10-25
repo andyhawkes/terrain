@@ -204,3 +204,32 @@ test('jumping through the history', function () {
     assert.equal(doc.cursor, 5);
     assert.equal(doc.startIndex(), 3, 'the second map starts at its generate step');
 });
+
+test('the current map can be saved on its own, with its undo history', function () {
+    var doc = new MapDocument();
+    doc.dispatch('generate', {params: small}, 'first');
+    doc.dispatch('setStyle', {theme: 'fantasy'});
+    doc.dispatch('addMarker', {pos: [0, 0]});
+    doc.dispatch('newBlank', {npts: 1024});
+    doc.dispatch('blobs', {count: 5});
+    doc.dispatch('seaLevel', {q: 0.4});
+    doc.dispatch('addCities', {count: 3});
+    var city = doc.state.cities[1];
+    doc.dispatch('moveItem', {id: city.id, pos: [0.1, 0.1]});
+    doc.dispatch('editLabel', {id: city.id, kind: 'city', text: 'Innsmouth'});
+    doc.undo();
+
+    var json = JSON.parse(JSON.stringify(doc.toJSON({currentMap: true, keepRedo: true})));
+    assert.equal(json.steps.length, 6);
+    assert.equal(json.steps[0].type, 'newBlank');
+    assert.equal(json.steps[0].args.style.theme, 'fantasy', 'the style travels with the map');
+    assert.equal(json.cursor, 5);
+
+    var copy = MapDocument.fromJSON(json);
+    assert.equal(fingerprint(copy.state), fingerprint(doc.state));
+    assert.deepEqual(copy.state.style, doc.state.style);
+    copy.redo();
+    doc.redo();
+    assert.equal(fingerprint(copy.state), fingerprint(doc.state));
+    assert.equal(copy.state.cities[1].name, 'Innsmouth');
+});
