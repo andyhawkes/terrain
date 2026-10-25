@@ -209,6 +209,8 @@ function drawMarkers(svg, state, theme) {
     var prefix = '#' + svg.attr('id') + '-marker-';
     join(svg, 'marker', 'use', 'placedMarker', itemData(state, 'markers', 'marker'), byId)
         .attr('class', function (d) {return 'placedMarker ' + markerType(d.item, specs)})
+        // Marker symbols draw in currentColor, so this sets each one's colour
+        .attr('color', function (d) {return d.item.color || theme.colors.marker})
         .attr('x', function (d) {return SCALE*d.pos[0]})
         .attr('y', function (d) {return SCALE*d.pos[1]})
         .attr('href', function (d) {return prefix + markerType(d.item, specs) + '0'});

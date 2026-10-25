@@ -45,7 +45,7 @@ export function emptyState() {
         cities: [],   // {id, vx, name, regionName, pos?, labelOffset?, regionLabelPos?}
         wrecks: [],   // {id, vx, variant, pos?}
         poi: [],      // {id, vx, variant, pos?}
-        markers: [],  // {id, pos, type}; type is a marker type id (see MARKER_TYPES)
+        markers: [],  // {id, pos, type, color}; type is a marker type id (see MARKER_TYPES)
         notes: [],    // {id, pos, text}: free text placed on the map
         nextId: 1
     };
@@ -294,7 +294,8 @@ export var steps = {
     addMarker: {
         label: 'Add marker',
         apply: function (state, args) {
-            var markers = state.markers.concat([{id: state.nextId, pos: args.pos, type: args.type || 'x'}]);
+            var markers = state.markers.concat([{id: state.nextId, pos: args.pos, type: args.type || 'x',
+                color: args.color || null}]);
             return Object.assign({}, state, {markers: markers, nextId: state.nextId + 1});
         }
     },

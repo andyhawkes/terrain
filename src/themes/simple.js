@@ -90,8 +90,9 @@ export default {
     parts: {
         solid: {fill: '#2b2b2b', stroke: 'none'},
         line: {fill: 'none', stroke: '#2b2b2b', 'stroke-width': 3},
-        mark: {fill: 'none', stroke: '#c62828', 'stroke-width': 3},
-        markX: {fill: 'none', stroke: '#c62828', 'stroke-width': 4}
+        // Markers use currentColor: the colour the user picked for each one
+        mark: {fill: 'none', stroke: 'currentColor', 'stroke-width': 3},
+        markX: {fill: 'none', stroke: 'currentColor', 'stroke-width': 4}
     },
 
     // Extra CSS for the map's own elements (not symbols: see parts), with MAP

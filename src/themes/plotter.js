@@ -73,12 +73,14 @@ export default {
             {d: 'M-16,0 Q0,9 16,0 Z M1,0 L6,-17 M6,-17 L13,-12', cls: 'line'},
             {d: 'M-20,8 q5,-4 10,0 t10,0 t10,0 t10,0', cls: 'line'}
         ]]},
-        markers: markerSymbols('line')
+        markers: markerSymbols('mark')
     },
 
     // Pen width is the same everywhere, so scaled symbols are drawn with
     // non-scaling strokes
     parts: {
-        line: {fill: 'none', stroke: '#000000', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke'}
+        line: {fill: 'none', stroke: '#000000', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke'},
+        // A marker's colour could stand for a pen colour
+        mark: {fill: 'none', stroke: 'currentColor', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke'}
     }
 };

@@ -173,8 +173,8 @@ test('markers have types, and notes can be added, edited, moved and deleted', fu
     var doc = new MapDocument();
     doc.dispatch('generate', {params: small}, 'seed');
     doc.dispatch('addMarker', {pos: [0, 0]});
-    doc.dispatch('addMarker', {pos: [0.1, 0], type: 'danger'});
-    assert.deepEqual(doc.state.markers.map(function (m) {return m.type}), ['x', 'danger']);
+    doc.dispatch('addMarker', {pos: [0.1, 0], type: 'danger', color: '#1e5aa8'});
+    assert.deepEqual(doc.state.markers.map(function (m) {return [m.type, m.color]}), [['x', null], ['danger', '#1e5aa8']]);
 
     doc.dispatch('addNote', {pos: [0.2, 0.2], text: 'Here be dragons'});
     var note = doc.state.notes[0];

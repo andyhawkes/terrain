@@ -16,7 +16,7 @@ export var TOOLS = [
     {id: 'note', icon: 'title', name: 'Add text', key: 't',
         hint: 'Click the map to write something there, like "Here be dragons".'},
     {id: 'marker', icon: 'location_on', name: 'Add marker', key: 'm',
-        hint: 'Click the map to add a marker. Choose the kind above the map.'},
+        hint: 'Click the map to add a marker. Choose its kind and colour above the map.'},
     {id: 'delete', icon: 'delete', name: 'Delete', key: 'd',
         hint: 'Click a place, symbol, marker or text to remove it. Clicking a city or region name hides the name.'}
 ];
@@ -38,6 +38,16 @@ function editable(d) {
     return null;
 }
 
+// Colours offered for new markers; any other can be picked with the last swatch
+var MARKER_COLORS = [
+    {color: '#000000', name: 'Black'},
+    {color: '#c62828', name: 'Red'},
+    {color: '#1e5aa8', name: 'Blue'},
+    {color: '#2e7d32', name: 'Green'},
+    {color: '#7b4a1e', name: 'Brown'},
+    {color: '#6a1b9a', name: 'Purple'}
+];
+
 // Small previews of the current theme's marker symbols, for the options bar
 function markerPreview(button, spec) {
     var svg = button.append('svg').attr('viewBox', '-16 -16 32 32').attr('aria-hidden', true);
@@ -51,6 +61,7 @@ function markerPreview(button, spec) {
 export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
     var active = 'pointer';
     var markerType = 'x';
+    var markerColor = MARKER_COLORS[0].color;
     var buttons = {};
     var shownTheme = null;
 
@@ -80,7 +91,7 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
         if (active !== 'marker') return;
         var theme = getTheme(doc.state.style.theme);
         if (shownTheme === theme) {
-            optionsBar.selectAll('button').classed('active', function (t) {return t.id === markerType});
+            updateOptions();
             return;
         }
         shownTheme = theme;
@@ -98,6 +109,48 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
             markerPreview(b, theme.symbols.markers[type.id]);
             b.append('span').text(type.name);
         });
+
+        optionsBar.append('span').attr('class', 'tool-options-label tool-options-gap').text('Colour');
+        var swatches = optionsBar.append('div').attr('class', 'swatches').attr('role', 'radiogroup')
+            .attr('aria-label', 'Marker colour');
+        MARKER_COLORS.forEach(function (c) {
+            swatches.append('button')
+                .datum(c)
+                .attr('class', 'swatch')
+                .attr('role', 'radio')
+                .attr('title', c.name)
+                .attr('aria-label', c.name)
+                .style('background', c.color)
+                .on('click', function () {
+                    markerColor = c.color;
+                    updateOptions();
+                });
+        });
+        // Any other colour, via the browser's own colour picker
+        var custom = swatches.append('label').attr('class', 'swatch custom').attr('title', 'Other colour');
+        custom.append('input')
+            .attr('type', 'color')
+            .attr('aria-label', 'Other colour')
+            .on('input', function () {
+                markerColor = this.value;
+                updateOptions();
+            });
+        updateOptions();
+    }
+
+    // Highlight the chosen kind and colour; previews show the colour too
+    function updateOptions() {
+        optionsBar.selectAll('button[title]').filter(function (d) {return d && d.id})
+            .classed('active', function (t) {return t.id === markerType})
+            .select('svg').style('color', markerColor);
+        var preset = MARKER_COLORS.some(function (c) {return c.color === markerColor});
+        optionsBar.selectAll('.swatch:not(.custom)')
+            .classed('active', function (c) {return c.color === markerColor})
+            .attr('aria-checked', function (c) {return c.color === markerColor});
+        var custom = optionsBar.select('.swatch.custom')
+            .classed('active', !preset)
+            .style('background', preset ? null : markerColor);
+        custom.select('input').property('value', markerColor);
     }
 
     function mapPoint(node) {
@@ -126,7 +179,7 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
         var target = d3.event.target;
         var d = d3.select(target).datum();
         if (active === 'marker') {
-            doc.dispatch('addMarker', {pos: mapPoint(this), type: markerType});
+            doc.dispatch('addMarker', {pos: mapPoint(this), type: markerType, color: markerColor});
         } else if (active === 'note') {
             if (d && d.kind === 'note') {
                 edit(d, target);

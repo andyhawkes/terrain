@@ -83,8 +83,8 @@ export default {
     parts: {
         tentacle: {fill: '#000000', stroke: '#ffffff'},
         ripples: {fill: '#ffffff', stroke: '#000000'},
-        cross: {fill: '#cc0000', stroke: '#ffffff', 'stroke-width': 1},
-        mark: {fill: 'none', stroke: '#cc0000', 'stroke-width': 3}
+        cross: {fill: 'currentColor', stroke: '#ffffff', 'stroke-width': 1},
+        mark: {fill: 'none', stroke: 'currentColor', 'stroke-width': 3}
     },
 
     css: [
