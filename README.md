@@ -18,7 +18,8 @@ npm run generate -- --seed hello --npts 4096 --out map.json   # generate a map w
 
 - `src/core/`: map generation, independent of the DOM. All randomness is seeded. A map is a list of *steps*: see `steps.js` and `document.js`.
 - `src/render/`: draws a map state as SVG.
-- `src/main.js`: the editor UI.
+- `src/main.js` and `src/ui/`: the editor (top bar, tools, views and side panels).
+- `css/editor.css` styles the editor; `css/map.css` styles the map itself and will become the themes.
 - `scripts/`: command-line tools.
 
 ## Original README

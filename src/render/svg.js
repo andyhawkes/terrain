@@ -12,8 +12,6 @@ var LAYERS = ['field', 'points', 'river', 'coast', 'border', 'slope', 'city', 'w
 
 export function addSVG(div, id) {
     var svg = div.append('svg')
-        .attr('height', 800)
-        .attr('width', 800)
         .attr('viewBox', '-500 -500 1000 1000')
         .attr('id', id);
     LAYERS.forEach(function (name) {
@@ -49,6 +47,10 @@ function byId(d) {
 
 export function clear(svg, layerName) {
     layer(svg, layerName).selectAll('*').remove();
+}
+
+export function clearAll(svg) {
+    LAYERS.forEach(function (name) {clear(svg, name)});
 }
 
 export function visualizePoints(svg, pts) {

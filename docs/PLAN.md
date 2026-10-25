@@ -62,14 +62,16 @@ Each phase leaves the app working.
 - [x] A command-line script that generates a map from a seed, plus tests showing generation is deterministic.
 
 ### Phase 2: Neutral editor layout
-- Top bar: New map (Random or Blank), Save, Load, Export.
-- Tool strip: Select/Move, Edit label, Add marker, Delete.
-- The map in the centre, fitted to the window.
-- Right-hand panels:
-  - **Style**: theme, font, layers.
-  - **Build / Advanced**: the old stage controls, acting on the current map, plus the diagnostic views.
-- Remove the tabs. The mesh demo moves into Advanced.
-- Plain, neutral styling for the editor.
+- [x] Top bar: New map (Random or Blank, with detail level and seed), Open, Save, Export (PNG/SVG). The seed of the current map is shown.
+- [x] Tool strip: Pointer, Move, Edit labels, Add marker, Delete, Undo/Redo. Keyboard shortcuts: V, G, T, M, D, Esc.
+- [x] The map in the centre, fitted to the window. The status bar shows hints for the active tool and a View picker.
+- [x] One map view with view modes: Map, Heightmap, Erosion rate, City scores, Territories, Mesh demo.
+- [x] Right-hand panel:
+  - **Build**: new terrain, shaping, sea level and erosion (with sliders), places.
+  - **Style**: label font, parchment, layer toggles.
+  - **Advanced**: the mesh demo and a history count.
+- [x] Remove the tabs. Plain, neutral editor styling (`css/editor.css`), separate from how the map is drawn (`css/map.css`).
+- [x] Save and Open map files, which were planned for Phase 6. They fit the top bar and were simple once the step history existed.
 
 ### Phase 3: Themes
 - A theme format, and a renderer that uses it.
@@ -86,10 +88,10 @@ Each phase leaves the app working.
 - Undo/redo buttons and keyboard shortcuts become part of the main UI. They exist in basic form from Phase 1.
 - A history panel, with the option to replay how a map was built.
 
-### Phase 6: Save, load and share
-- Save and load the step list as a JSON file.
+### Phase 6: Autosave and sharing
 - Autosave to browser storage.
 - Shareable seed links, e.g. `?seed=…`.
+- (Saving and opening map files moved into Phase 2.)
 
 ### Later
 - A 3D view of the terrain, probably with three.js, and sculpting tools that record brush strokes as steps.

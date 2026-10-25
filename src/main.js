@@ -1,262 +1,107 @@
-// UI wiring. Every tab is a different view of one shared map document; the
-// buttons dispatch steps, and the active view redraws when the map changes.
+// The editor: one map document, shown in one map view, changed by the tools
+// on the left and the panels on the right.
 import * as d3 from 'd3';
 import {saveSvg, saveSvgAsPng} from 'save-svg-as-png';
 import {MapDocument} from './core/document.js';
 import {defaultParams} from './core/steps.js';
 import {newSeed} from './core/random.js';
-import * as T from './core/terrain.js';
-import {derive, terrainLayers} from './core/derive.js';
 import * as R from './render/svg.js';
+import {VIEWS, viewInfo, renderView} from './ui/views.js';
+import {createTools, TOOLS} from './ui/tools.js';
+import {createPanels} from './ui/panels.js';
 
 var doc = new MapDocument();
-var activeTab = '#quick';
-var views = {};
+var view = 'map';
+var stage = d3.select('#stage');
+var svg = R.addSVG(d3.select('#mapFrame'), 'mapSVG');
+var statusbar = d3.select('#statusbar');
+var strip = d3.select('#toolstrip');
 
-function run(type, args) {
+// --- Drawing ---
+
+function render() {
+    renderView(svg, view, doc.state);
+    tools.bind();
+    updateChrome();
+}
+
+doc.subscribe(render);
+
+function setView(id) {
+    view = id;
+    viewSelect.property('value', id);
+    render();
+}
+
+// Run a step after giving the browser a moment to show that it's busy
+function act(type, args, seed) {
     return function () {
-        doc.dispatch(type, args);
+        stage.classed('busy', true);
+        statusText = 'Working…';
+        updateStatus();
+        setTimeout(function () {
+            try {
+                doc.dispatch(type, args, seed);
+            } finally {
+                stage.classed('busy', false);
+                statusText = null;
+                updateStatus();
+            }
+        }, 20);
     };
 }
 
-function button(div, text, onClick) {
-    return div.append('button').text(text).on('click', onClick);
-}
+// --- Status bar: tool hint or view description, plus the view picker ---
 
-// A button whose label flips between two states
-function toggle(div, labels, initial, onChange) {
-    var on = initial;
-    var but = div.append('button')
-        .text(labels[on ? 1 : 0])
-        .on('click', function () {
-            on = !on;
-            but.text(labels[on ? 1 : 0]);
-            onChange(on);
-            redraw();
-        });
-    return but;
-}
-
-function redraw() {
-    var view = views[activeTab];
-    if (view && doc.state.h) view(doc.state);
-    updateHistoryButtons();
-}
-
-doc.subscribe(redraw);
-
-// --- Quick start ---
-
-var quickDiv = d3.select('div#quick');
-
-button(quickDiv, 'Generate new random map', function () {
-    doc.dispatch('generate', {params: defaultParams});
-    goToTab('#final');
+var statusText = null;
+var tools = null;
+var statusMessage = statusbar.append('span').attr('class', 'status-message');
+var viewPicker = statusbar.append('label').attr('class', 'view-picker');
+viewPicker.append('span').text('View');
+var viewSelect = viewPicker.append('select').attr('id', 'viewSelect')
+    .on('change', function () {setView(this.value)});
+VIEWS.forEach(function (v) {
+    viewSelect.append('option').attr('value', v.id).text(v.name);
 });
 
-button(quickDiv, 'Start a blank map', function () {
-    doc.dispatch('newBlank', {npts: readSettings().npts});
-    goToTab('#prim');
-});
-
-quickDiv.append('h3').text('Custom settings');
-
-var settingFields = [
-    {id: 'seed', label: 'Seed (random)'},
-    {id: 'npts', label: 'Grid points (' + defaultParams.npts + ')'},
-    {id: 'nterrs', label: 'Territories (' + defaultParams.nterrs + ')'},
-    {id: 'ncities', label: 'Cities (' + defaultParams.ncities + ')'},
-    {id: 'nwrecks', label: 'Wrecks (' + defaultParams.nwrecks + ')'},
-    {id: 'npoi', label: 'Points of interest (' + defaultParams.npoi + ')'}
-];
-
-settingFields.forEach(function (f) {
-    quickDiv.append('input')
-        .attr('id', f.id)
-        .attr('type', f.id === 'seed' ? 'text' : 'number')
-        .attr('min', f.id === 'npts' ? 256 : 0)
-        .attr('placeholder', f.label)
-        .attr('title', f.label);
-});
-
-// Read the custom settings, falling back to defaults for empty fields
-function readSettings() {
-    var params = Object.assign({}, defaultParams);
-    settingFields.forEach(function (f) {
-        if (f.id === 'seed') return;
-        var n = parseInt(d3.select('#' + f.id).property('value'), 10);
-        if (n >= 0) params[f.id] = n;
-    });
-    return params;
-}
-
-button(quickDiv, 'Generate map from settings', function () {
-    var seed = d3.select('#seed').property('value').trim();
-    doc.dispatch('generate', {params: readSettings()}, seed || newSeed());
-    goToTab('#final');
-});
-
-button(quickDiv, 'Reset to defaults', function () {
-    settingFields.forEach(function (f) {
-        d3.select('#' + f.id).property('value', '');
-    });
-});
-
-// --- Map mesh (a standalone demo of how the mesh is built) ---
-
-var meshDiv = d3.select('div#mesh');
-var meshSVG = R.addSVG(meshDiv, 'meshSVG');
-var meshPts = null;
-var meshVxs = null;
-var meshDual = false;
-
-function meshDraw() {
-    if (!meshPts) return;
-    if (meshDual && !meshVxs) {
-        meshVxs = T.makeMesh(meshPts).vxs;
+function updateStatus() {
+    statusMessage.html('');
+    if (statusText) {
+        statusMessage.text(statusText);
+        return;
     }
-    R.visualizePoints(meshSVG, meshDual ? meshVxs : meshPts);
-}
-
-meshDiv.append('input')
-    .attr('id', 'gridPoints')
-    .attr('type', 'number')
-    .attr('placeholder', 'Points (' + defaultParams.npts + ')');
-
-button(meshDiv, 'Generate map mesh', function () {
-    var n = parseInt(d3.select('#gridPoints').property('value'), 10);
-    meshDual = false;
-    vorBut.text('Show Voronoi corners');
-    meshVxs = null;
-    meshPts = T.generatePoints(n > 0 ? n : defaultParams.npts);
-    meshDraw();
-});
-
-button(meshDiv, 'Improve mesh', function () {
-    if (!meshPts) return;
-    meshPts = T.improvePoints(meshPts);
-    meshVxs = null;
-    meshDraw();
-});
-
-var vorBut = button(meshDiv, 'Show Voronoi corners', function () {
-    meshDual = !meshDual;
-    vorBut.text(meshDual ? 'Show original points' : 'Show Voronoi corners');
-    meshDraw();
-});
-
-// --- Rough outline ---
-
-var primDiv = d3.select('div#prim');
-var primSVG = R.addSVG(primDiv, 'primSVG');
-
-views['#prim'] = function (state) {
-    R.visualizeVoronoi(primSVG, state.h, -1, 1);
-    R.drawPaths(primSVG, 'coast', terrainLayers(state.h).coasts);
-};
-
-button(primDiv, 'Reset to flat', run('flatten'));
-button(primDiv, 'Add random slope', run('slope'));
-button(primDiv, 'Add cone', run('cone', {slope: -0.5}));
-button(primDiv, 'Add inverted cone', run('cone', {slope: 0.5}));
-button(primDiv, 'Add 5 blobs', run('blobs', {count: 5}));
-button(primDiv, 'Add 10 blobs', run('blobs', {count: 10}));
-button(primDiv, 'Normalize heightmap', run('normalize'));
-button(primDiv, 'Round hills', run('roundHills'));
-button(primDiv, 'Relax', run('relax'));
-button(primDiv, 'Set sea level to median', run('seaLevel', {q: 0.5}));
-
-// --- Erosion ---
-
-var erodeDiv = d3.select('div#erode');
-var erodeSVG = R.addSVG(erodeDiv, 'erodeSVG');
-var erodeViewErosion = false;
-
-views['#erode'] = function (state) {
-    if (erodeViewErosion) {
-        R.visualizeVoronoi(erodeSVG, T.erosionRate(state.h));
+    var tool = TOOLS.find(function (t) {return t.id === (tools ? tools.active : 'pointer')});
+    if (tool.hint) {
+        statusMessage.append('strong').text(tool.name + ': ');
+        statusMessage.append('span').text(tool.hint + ' Esc to stop.');
     } else {
-        R.visualizeVoronoi(erodeSVG, state.h, 0, 1);
+        statusMessage.append('strong').text(viewInfo(view).name + ' view: ');
+        statusMessage.append('span').text(viewInfo(view).hint);
     }
-    R.drawPaths(erodeSVG, 'coast', terrainLayers(state.h).coasts);
-};
+}
 
-button(erodeDiv, 'Generate random heightmap', run('randomHeightmap', {style: 'uneroded'}));
-button(erodeDiv, 'Erode', run('erode', {amount: 0.1}));
-button(erodeDiv, 'Set sea level to median', run('seaLevel', {q: 0.5}));
-button(erodeDiv, 'Clean coastlines', run('cleanCoast'));
-toggle(erodeDiv, ['Show erosion rate', 'Show heightmap'], false, function (on) {
-    erodeViewErosion = on;
-});
+// --- Tools and history ---
 
-// --- Terrain ---
+tools = createTools(doc, svg, stage, strip, updateStatus);
 
-var physDiv = d3.select('div#phys');
-var physSVG = R.addSVG(physDiv, 'physSVG');
-var physView = {coast: false, rivers: false, slope: false, height: true};
+strip.append('hr');
 
-views['#phys'] = function (state) {
-    var layers = terrainLayers(state.h);
-    if (physView.height) {
-        R.visualizeVoronoi(physSVG, state.h, 0);
-    } else {
-        R.clear(physSVG, 'field');
-    }
-    R.drawPaths(physSVG, 'coast', physView.coast ? layers.coasts : []);
-    R.drawPaths(physSVG, 'river', physView.rivers ? layers.rivers : []);
-    R.drawSlopes(physSVG, physView.slope ? layers.slopes : []);
-};
+function historyButton(icon, name, key, onClick) {
+    var b = strip.append('button')
+        .attr('title', name + ' (' + key + ')')
+        .attr('aria-label', name)
+        .on('click', onClick);
+    b.append('span').attr('class', 'icon').attr('aria-hidden', true).text(icon);
+    return b;
+}
 
-button(physDiv, 'Generate random heightmap', run('randomHeightmap', {style: 'coast'}));
-toggle(physDiv, ['Show coastline', 'Hide coastline'], false, function (on) {physView.coast = on});
-toggle(physDiv, ['Show rivers', 'Hide rivers'], false, function (on) {physView.rivers = on});
-toggle(physDiv, ['Show slope shading', 'Hide slope shading'], false, function (on) {physView.slope = on});
-toggle(physDiv, ['Hide heightmap', 'Show heightmap'], false, function (on) {physView.height = !on});
+var isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+var undoButton = historyButton('undo', 'Undo', isMac ? '⌘Z' : 'Ctrl+Z', function () {doc.undo()});
+var redoButton = historyButton('redo', 'Redo', isMac ? '⇧⌘Z' : 'Ctrl+Shift+Z', function () {doc.redo()});
 
-// --- Cities & borders ---
+// --- Top bar ---
 
-var cityDiv = d3.select('div#city');
-var citySVG = R.addSVG(cityDiv, 'citySVG');
-var cityViewTerritories = false;
-
-views['#city'] = function (state) {
-    var d = derive(state);
-    if (cityViewTerritories) {
-        R.visualizeVoronoi(citySVG, d.terr);
-    } else {
-        var score = T.cityScore(state.h, state.cities.map(function (c) {return c.vx}));
-        R.visualizeVoronoi(citySVG, score, d3.max(score) - 0.5);
-    }
-    R.drawPaths(citySVG, 'coast', d.coasts);
-    R.drawPaths(citySVG, 'river', d.rivers);
-    R.drawPaths(citySVG, 'border', d.borders);
-    R.drawSlopes(citySVG, d.slopes);
-    R.drawFeatures(citySVG, state);
-};
-
-button(cityDiv, 'Add new city', run('addCities', {count: 1}));
-button(cityDiv, 'Add 5 cities', run('addCities', {count: 5}));
-button(cityDiv, 'Add 10 cities', run('addCities', {count: 10}));
-button(cityDiv, 'Add new point of interest', run('addPOI', {count: 1}));
-button(cityDiv, 'Add new wreck', run('addWrecks', {count: 1}));
-toggle(cityDiv, ['Show territories', 'Show city location scores'], false, function (on) {
-    cityViewTerritories = on;
-});
-
-// --- Final map ---
-
-var finalDiv = d3.select('div#final');
-var finalMapDiv = d3.select('div#finalMap');
-var finalSVG = R.addSVG(finalMapDiv, 'finalMapSVG');
-var editControlsDiv = d3.select('div#editControls');
-var seedNote = finalDiv.insert('p', '#finalMap').attr('class', 'seedNote');
-
-views['#final'] = function (state) {
-    R.drawMap(finalSVG, state);
-    bindDragging();
-    var start = currentStartStep();
-    seedNote.text(start && start.type === 'generate' ? 'Seed: ' + start.seed : '');
-};
+var mapInfo = d3.select('#mapInfo');
 
 // The step that started the current map (later steps build on it)
 function currentStartStep() {
@@ -267,155 +112,184 @@ function currentStartStep() {
     return null;
 }
 
-// Editing tools: at most one is active at a time
-var tools = {
-    label: {icon: 'text_fields', title: 'Edit labels', cls: 'editable'},
-    delete: {icon: 'delete_forever', title: 'Delete markers or hide labels', cls: 'deleteMode'},
-    marker: {icon: 'add_location', title: 'Add treasure markers', cls: 'clickableMode'},
-    move: {icon: 'arrows_output', title: 'Move markers and labels', cls: 'dragableMode'}
-};
-var activeTool = null;
-
-Object.keys(tools).forEach(function (name) {
-    var tool = tools[name];
-    tool.button = editControlsDiv.append('button')
-        .text(tool.icon)
-        .attr('title', tool.title)
-        .attr('class', 'material-symbols-outlined')
-        .on('click', function () {
-            setTool(activeTool === name ? null : name);
-        });
-});
-
-function setTool(name) {
-    activeTool = name;
-    Object.keys(tools).forEach(function (n) {
-        tools[n].button.classed('active', n === name);
-        finalMapDiv.classed(tools[n].cls, n === name);
-    });
-    bindDragging();
-}
-
-var undoBut = editControlsDiv.append('button')
-    .text('undo')
-    .attr('title', 'Undo (Ctrl/Cmd+Z)')
-    .attr('class', 'material-symbols-outlined')
-    .on('click', function () {doc.undo()});
-
-var redoBut = editControlsDiv.append('button')
-    .text('redo')
-    .attr('title', 'Redo (Ctrl/Cmd+Shift+Z)')
-    .attr('class', 'material-symbols-outlined')
-    .on('click', function () {doc.redo()});
-
-function updateHistoryButtons() {
-    undoBut.property('disabled', !doc.canUndo());
-    redoBut.property('disabled', !doc.canRedo());
-}
-
-var parchmentBut = editControlsDiv.append('button')
-    .text('map')
-    .attr('title', 'Parchment background')
-    .attr('class', 'material-symbols-outlined')
-    .on('click', function () {
-        var on = !finalMapDiv.classed('parchment');
-        finalMapDiv.classed('parchment', on);
-        parchmentBut.classed('active', on);
-    });
-
-function labelKind(d) {
-    return d.kind === 'regionLabel' ? 'region' : 'city';
-}
-
-function isLabel(d) {
-    return d && (d.kind === 'cityLabel' || d.kind === 'regionLabel');
-}
-
-finalSVG.on('click', function () {
-    var d = d3.select(d3.event.target).datum();
-    if (activeTool === 'marker') {
-        var p = d3.mouse(this);
-        doc.dispatch('addMarker', {pos: [p[0] / R.SCALE, p[1] / R.SCALE]});
-    } else if (activeTool === 'delete' && d && d.id != null) {
-        // Deleting a label hides it; deleting a marker or city removes it
-        if (isLabel(d)) doc.dispatch('editLabel', {id: d.id, kind: labelKind(d), text: ''});
-        else doc.dispatch('deleteItem', {id: d.id});
-    } else if (activeTool === 'label' && isLabel(d)) {
-        var text = prompt('Label text', d.label.text);
-        if (text != null && text !== d.label.text) {
-            doc.dispatch('editLabel', {id: d.id, kind: labelKind(d), text: text});
-        }
+function updateChrome() {
+    undoButton.property('disabled', !doc.canUndo());
+    redoButton.property('disabled', !doc.canRedo());
+    var start = currentStartStep();
+    mapInfo.html('');
+    if (start && start.type === 'generate') {
+        mapInfo.append('span').text('Seed ');
+        mapInfo.append('code').attr('title', 'Use this seed to generate the same map again').text(start.seed);
+    } else if (start) {
+        mapInfo.append('span').text('Hand-built map');
     }
-});
-
-var dragStart;
-
-var dragHandler = d3.drag()
-    .on('start', function (d) {
-        // A city's label moves with it while dragging; a label moves alone
-        var nodes = [this];
-        if (d.kind === 'city') {
-            nodes = nodes.concat(finalSVG.selectAll('text.city').filter(function (l) {return l.id === d.id}).nodes());
-        }
-        var moving = d3.selectAll(nodes);
-        moving.each(function () {
-            this.__dragBase = this.getAttribute('transform') || '';
-        });
-        dragStart = {x: d3.event.x, y: d3.event.y, moving: moving};
-    })
-    .on('drag', function () {
-        var shift = 'translate(' + (d3.event.x - dragStart.x) + ',' + (d3.event.y - dragStart.y) + ') ';
-        dragStart.moving.attr('transform', function () {return shift + this.__dragBase});
-    })
-    .on('end', function (d) {
-        var dx = (d3.event.x - dragStart.x) / R.SCALE;
-        var dy = (d3.event.y - dragStart.y) / R.SCALE;
-        if (dx === 0 && dy === 0) return;
-        var pos = [d.pos[0] + dx, d.pos[1] + dy];
-        if (isLabel(d)) doc.dispatch('moveLabel', {id: d.id, kind: labelKind(d), pos: pos});
-        else doc.dispatch('moveItem', {id: d.id, pos: pos});
-    });
-
-// Re-applied after every redraw, so newly drawn items can be dragged too
-function bindDragging() {
-    var draggable = finalSVG.selectAll('circle.city, use.wreck, text.poi, path.placedMarker, text.city, text.region');
-    if (activeTool === 'move') {
-        draggable.call(dragHandler);
-    } else {
-        draggable.on('.drag', null);
+    if (panelCtx && panelCtx.historyInfo) {
+        panelCtx.historyInfo.text(doc.cursor + ' steps so far' +
+            (doc.canRedo() ? ', plus ' + (doc.steps.length - doc.cursor) + ' undone' : '') + '.');
     }
+    updateStatus();
 }
 
-button(finalDiv, 'Rename places', run('renamePlaces'));
-
-var labelStyles = ['fantasy', 'cursive', 'monospace', 'rlyehian', 'cthulhu'];
-var styleSelect = finalDiv.append('select')
-    .attr('name', 'labelStyle')
-    .attr('id', 'labelStyle')
-    .on('change', function () {
-        finalSVG.attr('class', 'labelStyle_' + this.value);
+// Popovers open just below the button that opened them
+d3.selectAll('.popover').each(function () {
+    var pop = this;
+    pop.addEventListener('beforetoggle', function (event) {
+        if (event.newState !== 'open') return;
+        var opener = document.querySelector('[popovertarget="' + pop.id + '"]');
+        var r = opener.getBoundingClientRect();
+        pop.style.top = (r.bottom + 6) + 'px';
+        pop.style.left = r.left + 'px';
     });
-styleSelect.append('option')
-    .attr('value', 'default')
-    .text('default font');
-labelStyles.forEach(function (style) {
-    styleSelect.append('option')
-        .attr('value', style)
-        .text(style + ' font');
 });
 
-button(finalDiv, 'Download as PNG', function () {
-    saveSvgAsPng(finalSVG.node(), 'map.png', {left: -500, top: -500});
+// New map
+
+var newMap = d3.select('#newMapPanel');
+
+var detailLevels = [
+    [4096, 'Low (fast)'],
+    [16384, 'Medium'],
+    [65536, 'High (slow)']
+];
+
+var settings = [
+    {id: 'nterrs', label: 'Territories'},
+    {id: 'ncities', label: 'Cities and towns'},
+    {id: 'npoi', label: 'Points of interest'},
+    {id: 'nwrecks', label: 'Wrecks'}
+];
+
+var detailSection = newMap.append('section');
+var grid = detailSection.append('div').attr('class', 'form-grid').style('margin-bottom', 0);
+grid.append('label').attr('for', 'npts').text('Detail');
+var detailSelect = grid.append('select').attr('id', 'npts');
+detailLevels.forEach(function (d) {
+    detailSelect.append('option').attr('value', d[0]).text(d[1]);
 });
 
-button(finalDiv, 'Download as SVG', function () {
-    saveSvg(finalSVG.node(), 'map.svg', {left: -500, top: -500});
+var random = newMap.append('section');
+random.append('h2').text('Random map');
+random.append('p').text('Coastline, rivers, cities and names, all from one seed.');
+grid = random.append('div').attr('class', 'form-grid');
+grid.append('label').attr('for', 'seed').text('Seed');
+grid.append('input').attr('id', 'seed').attr('type', 'text').attr('placeholder', 'Random');
+settings.forEach(function (f) {
+    grid.append('label').attr('for', f.id).text(f.label);
+    grid.append('input').attr('id', f.id).attr('type', 'number').attr('min', 0).attr('max', 200);
 });
+
+function resetSettings() {
+    detailSelect.property('value', defaultParams.npts);
+    d3.select('#seed').property('value', '');
+    settings.forEach(function (f) {
+        d3.select('#' + f.id).property('value', defaultParams[f.id]);
+    });
+}
+resetSettings();
+
+function readSettings() {
+    var params = {npts: +detailSelect.property('value')};
+    settings.forEach(function (f) {
+        var n = parseInt(d3.select('#' + f.id).property('value'), 10);
+        params[f.id] = n >= 0 ? n : defaultParams[f.id];
+    });
+    return params;
+}
+
+var buttons = random.append('div').attr('class', 'button-row');
+buttons.append('button').text('Reset').on('click', resetSettings);
+buttons.append('button').attr('class', 'primary').text('Generate').on('click', function () {
+    // The seed is used once; the top bar shows it afterwards
+    var seed = d3.select('#seed').property('value').trim();
+    d3.select('#seed').property('value', '');
+    newMap.node().hidePopover();
+    setView('map');
+    act('generate', {params: readSettings()}, seed || newSeed())();
+});
+
+var blank = newMap.append('section');
+blank.append('h2').text('Blank map');
+blank.append('p').text('Start with flat land and shape it yourself with the Build tools.');
+blank.append('div').attr('class', 'button-row')
+    .append('button').text('Start blank').on('click', function () {
+        newMap.node().hidePopover();
+        setView('heightmap');
+        panels.show('build');
+        act('newBlank', {npts: +detailSelect.property('value')})();
+    });
+
+// Export: always the finished map, whatever view is showing
+
+var exportMenu = d3.select('#exportMenu');
+var exportOptions = {left: -500, top: -500, width: 1000, height: 1000};
+
+function exportMap(save, name, options) {
+    exportMenu.node().hidePopover();
+    var previous = view;
+    if (view !== 'map') setView('map');
+    save(svg.node(), name, Object.assign({}, exportOptions, options)).finally(function () {
+        if (previous !== 'map') setView(previous);
+    });
+}
+
+function fileName(ext) {
+    var start = currentStartStep();
+    return 'map' + (start && start.type === 'generate' ? '-' + start.seed : '') + '.' + ext;
+}
+
+[
+    ['image', 'PNG image', function () {exportMap(saveSvgAsPng, fileName('png'), {scale: 2})}],
+    ['draw', 'SVG drawing', function () {exportMap(saveSvg, fileName('svg'))}]
+].forEach(function (item) {
+    var b = exportMenu.append('button').on('click', item[2]);
+    b.append('span').attr('class', 'icon').attr('aria-hidden', true).text(item[0]);
+    b.append('span').text(item[1]);
+});
+
+// Save and open: a map file is its list of steps
+
+d3.select('#saveButton').on('click', function () {
+    var blob = new Blob([JSON.stringify(doc.toJSON())], {type: 'application/json'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fileName('json');
+    a.click();
+    setTimeout(function () {URL.revokeObjectURL(a.href)}, 1000);
+});
+
+var openFile = d3.select('#openFile');
+d3.select('#openButton').on('click', function () {openFile.node().click()});
+openFile.on('change', function () {
+    var file = this.files[0];
+    this.value = '';
+    if (!file) return;
+    file.text().then(function (text) {
+        statusText = 'Opening ' + file.name + '…';
+        updateStatus();
+        setTimeout(function () {
+            try {
+                doc.load(JSON.parse(text));
+                setView('map');
+            } catch (e) {
+                alert('Couldn\'t open ' + file.name + ': ' + e.message);
+            } finally {
+                statusText = null;
+                updateStatus();
+            }
+        }, 20);
+    });
+});
+
+// --- Side panel ---
+
+var panelCtx = {act: act, svg: svg, setView: setView};
+var panels = createPanels(d3.select('#panelTabs'), d3.select('#panelBody'), panelCtx);
 
 // --- Keyboard shortcuts ---
 
 document.addEventListener('keydown', function (event) {
-    if (event.target.closest && event.target.closest('input, select, textarea')) return;
+    var target = event.target;
+    if (target.closest && target.closest('input, select, textarea, [popover]')) return;
     var mod = event.metaKey || event.ctrlKey;
     var key = event.key.toLowerCase();
     if (mod && key === 'z') {
@@ -426,34 +300,12 @@ document.addEventListener('keydown', function (event) {
         event.preventDefault();
         doc.redo();
     } else if (event.key === 'Escape') {
-        setTool(null);
+        tools.set('pointer');
+    } else if (!mod && !event.altKey && tools.forKey(key)) {
+        tools.set(tools.forKey(key).id);
     }
 });
 
-// --- Navigation ---
-
-var navLinks = document.querySelectorAll('nav a');
-
-navLinks.forEach(function (link) {
-    link.addEventListener('click', function (event) {
-        event.preventDefault();
-        goToTab(link.getAttribute('href'));
-    });
-});
-
-function goToTab(target) {
-    activeTab = target;
-    document.querySelectorAll('.example').forEach(function (el) {
-        el.classList.toggle('active', '#' + el.id === target);
-    });
-    navLinks.forEach(function (link) {
-        link.classList.toggle('active', link.getAttribute('href') === target);
-    });
-    redraw();
-}
-
 // Start with a random map, after the page has had a chance to paint
-updateHistoryButtons();
-setTimeout(function () {
-    doc.dispatch('generate', {params: defaultParams});
-}, 0);
+updateChrome();
+act('generate', {params: defaultParams})();

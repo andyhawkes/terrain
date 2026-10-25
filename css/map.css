@@ -1,0 +1,134 @@
+/* How the map itself is drawn. In Phase 3 this becomes the themes; the
+   editor's own look is in editor.css. Rules are scoped to the map SVG so
+   they're picked up when exporting it. */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel&display=swap');
+
+@font-face {
+    font-family: 'Rlyehian';
+    src: url('../fonts/Rlyehian.ttf') format('truetype');
+}
+@font-face {
+    font-family: 'RlyehianBase';
+    src: url('../fonts/RlyehianBase.ttf') format('truetype');
+}
+
+#mapSVG {
+    background-color: white;
+}
+
+#mapSVG.parchment {
+    background: white url(../images/parchment.jpg) no-repeat 50%;
+    background-size: 150%;
+}
+
+#mapSVG path,
+#mapSVG line,
+#mapSVG circle {
+    fill: none;
+    stroke: black;
+    stroke-linecap: round;
+}
+
+#mapSVG path.wreck {
+    fill: black;
+    stroke: white;
+}
+
+#mapSVG path.ripples {
+    fill: white;
+    stroke: black;
+}
+
+#mapSVG .placedMarker {
+    fill: red;
+    stroke: white;
+}
+
+#mapSVG .field {
+    stroke: none;
+    fill-opacity: 1.0;
+}
+
+#mapSVG circle.point {
+    fill: black;
+    stroke: none;
+}
+
+#mapSVG .slope {
+    stroke-width: 1;
+    stroke: #333;
+}
+
+#mapSVG .river {
+    stroke-width: 2;
+    stroke: #000066;
+}
+
+#mapSVG .coast {
+    stroke-width: 4;
+    stroke: #003;
+}
+
+#mapSVG .border {
+    stroke-width: 5;
+    stroke-dasharray: 4, 4;
+    stroke-linecap: butt;
+    stroke: #660000;
+}
+
+#mapSVG circle.city {
+    fill: #333;
+    fill-opacity: 0.25;
+    stroke: #333;
+    stroke-width: 5;
+}
+
+#mapSVG text {
+    font-family: "Cinzel", "Palatino Linotype", "Book Antiqua", Palatino, serif;
+    fill: #000;
+    stroke-width: 5;
+    stroke-linejoin: round;
+    paint-order: stroke;
+    filter: drop-shadow(3px 3px 2px #fff);
+}
+
+#mapSVG.labelStyle_cursive text {
+    font-family: cursive;
+}
+#mapSVG.labelStyle_monospace text {
+    font-family: monospace;
+}
+#mapSVG.labelStyle_fantasy text {
+    font-family: fantasy;
+}
+#mapSVG.labelStyle_rlyehian text {
+    font-family: "Rlyehian", fantasy;
+}
+#mapSVG.labelStyle_cthulhu text {
+    font-family: "RlyehianBase", fantasy;
+}
+
+#mapSVG text.region {
+    stroke-width: 10;
+    font-variant: small-caps;
+    fill: #600;
+}
+
+#mapSVG text.poi {
+    font-family: sans-serif;
+    fill: black;
+}
+
+/* Layers switched off in the Style panel */
+#mapSVG.hide-coast .layer-coast,
+#mapSVG.hide-river .layer-river,
+#mapSVG.hide-border .layer-border,
+#mapSVG.hide-slope .layer-slope,
+#mapSVG.hide-city .layer-city,
+#mapSVG.hide-wreck .layer-wreck,
+#mapSVG.hide-poi .layer-poi,
+#mapSVG.hide-marker .layer-marker,
+#mapSVG.hide-label .layer-label {
+    display: none;
+}

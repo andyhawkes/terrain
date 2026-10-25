@@ -6,62 +6,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Fantasy map generator</title>
 
-    <link rel="stylesheet" href="css/style.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined&display=block" rel="stylesheet" />
-    <!-- <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined&icon_names=text_fields,delete_forever,add_location,arrows_output,map&display=block" /> -->
+    <link rel="stylesheet" href="css/editor.css" />
+    <link rel="stylesheet" href="css/map.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,300..500,0..1,0&display=block" />
 </head>
 
 <body>
-    <header>
+    <header class="topbar">
         <h1>Fantasy map generator</h1>
-        <nav>
-            <ol>
-                <li><a href="#quick" class="active">Quick start</a></li>
-                <li><a href="#mesh">Map mesh</a></li>
-                <li><a href="#prim">Rough Outline</a></li>
-                <li><a href="#erode">Erosion</a></li>
-                <li><a href="#phys">Terrain</a></li>
-                <li><a href="#city">Cities & borders</a></li>
-                <li><a href="#final">Place labels</a></li>
-            </ol>
-        </nav>
+        <div class="topbar-actions">
+            <button id="newMapButton" class="primary" popovertarget="newMapPanel">
+                <span class="icon" aria-hidden="true">add</span>New map
+            </button>
+            <button id="openButton"><span class="icon" aria-hidden="true">folder_open</span>Open…</button>
+            <button id="saveButton"><span class="icon" aria-hidden="true">save</span>Save</button>
+            <button id="exportButton" popovertarget="exportMenu">
+                <span class="icon" aria-hidden="true">download</span>Export
+            </button>
+            <input type="file" id="openFile" accept=".json,application/json" hidden>
+        </div>
+        <div class="topbar-info" id="mapInfo"></div>
     </header>
 
-    <div id="controls"></div>
+    <div id="newMapPanel" class="popover" popover></div>
+    <div id="exportMenu" class="popover menu" popover></div>
 
-    <div id="content">
-        <div class="example active" id="quick">
-            <h2>Quick start</h2>
-        </div>
+    <main class="workspace">
+        <nav class="toolstrip" id="toolstrip" aria-label="Tools"></nav>
 
-        <div class="example" id="mesh">
-            <h2>Map mesh</h2>
-        </div>
+        <section class="stage" id="stage">
+            <div class="map-frame" id="mapFrame"></div>
+            <div class="statusbar" id="statusbar" role="status"></div>
+        </section>
 
-        <div class="example" id="prim">
-            <h2>Rough outlines</h2>
-        </div>
-
-        <div class="example" id="erode">
-            <h2>Erosion</h2>
-        </div>
-
-        <div class="example" id="phys">
-            <h2>Rendering terrain</h2>
-        </div>
-
-        <div class="example" id="city">
-            <h2>Cities & borders</h2>
-        </div>
-
-        <div class="example" id="final">
-            <h2>Place labels</h2>
-            <div id="editControls"></div>
-            <div id="finalMap">
-                <p class="labelNote"><strong>Note: </strong>Labels may not export in the <span>correct font</span></p>
-            </div>
-        </div>
-    </div>
+        <aside class="sidepanel">
+            <div class="panel-tabs" role="tablist" id="panelTabs"></div>
+            <div class="panel-body" id="panelBody"></div>
+        </aside>
+    </main>
 
     <script type="module" src="/src/main.js"></script>
 

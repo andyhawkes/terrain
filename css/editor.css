@@ -1,0 +1,513 @@
+/* The editor's own look: plain and neutral, so the map's theme stands out. */
+
+:root {
+    --bg: #f3f3f1;
+    --panel: #ffffff;
+    --border: #dcdcd8;
+    --text: #1f1f1d;
+    --muted: #6b6b66;
+    --hover: #ececea;
+    --accent: #2f6fdb;
+    --accent-soft: #e4edfc;
+    --danger: #c62828;
+    --move: #7b3fbf;
+    --radius: 6px;
+    --topbar: 52px;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    color: var(--text);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    height: 100%;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    overflow: hidden;
+}
+
+.icon {
+    font-family: 'Material Symbols Outlined';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 20px;
+    line-height: 1;
+    display: inline-block;
+    white-space: nowrap;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* --- Controls --- */
+
+button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font: inherit;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+    background: var(--hover);
+}
+
+button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+button.primary:hover:not(:disabled) {
+    background: #2559b3;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+input[type=text],
+input[type=number],
+select {
+    font: inherit;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 5px 8px;
+    min-width: 0;
+}
+
+input[type=number] {
+    width: 4.5em;
+}
+
+input[type=range] {
+    accent-color: var(--accent);
+    flex: 1;
+    min-width: 0;
+}
+
+input[type=checkbox] {
+    accent-color: var(--accent);
+    margin: 0;
+}
+
+/* --- Top bar --- */
+
+.topbar {
+    height: var(--topbar);
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+}
+
+.topbar h1 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.topbar-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.topbar-info {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.topbar-info code {
+    color: var(--text);
+    background: var(--hover);
+    padding: 2px 6px;
+    border-radius: 4px;
+    user-select: all;
+}
+
+/* --- Popovers (New map, Export) --- */
+
+.popover {
+    inset: auto;
+    margin: 0;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--panel);
+    color: var(--text);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    width: 340px;
+}
+
+.popover.menu {
+    width: auto;
+    padding: 6px;
+}
+
+.menu button {
+    display: flex;
+    width: 100%;
+    border: none;
+    justify-content: flex-start;
+}
+
+.popover h2 {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0 0 8px;
+}
+
+.popover section + section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+}
+
+.popover p {
+    margin: 0 0 10px;
+    color: var(--muted);
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px 12px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.form-grid input[type=text],
+.form-grid select {
+    width: 11em;
+}
+
+.button-row {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* --- Workspace --- */
+
+.workspace {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+}
+
+.toolstrip {
+    flex: none;
+    width: 52px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 0;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+}
+
+.toolstrip button {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    justify-content: center;
+    border-color: transparent;
+    background: transparent;
+}
+
+.toolstrip button.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.toolstrip hr {
+    width: 28px;
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 6px 0;
+}
+
+.stage {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.map-frame {
+    flex: 1;
+    min-height: 0;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#mapSVG {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: 100%;
+    aspect-ratio: 1;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.statusbar {
+    flex: none;
+    min-height: 32px;
+    padding: 7px 16px;
+    font-size: 13px;
+    color: var(--muted);
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+}
+
+.statusbar strong {
+    color: var(--text);
+    font-weight: 600;
+}
+
+/* --- Side panel --- */
+
+.sidepanel {
+    flex: none;
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+}
+
+.panel-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+}
+
+.panel-tabs button {
+    flex: 1;
+    justify-content: center;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    padding: 12px 8px 10px;
+    color: var(--muted);
+    background: transparent;
+}
+
+.panel-tabs button[aria-selected=true] {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+    font-weight: 600;
+}
+
+.panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0 16px;
+}
+
+.panel-section {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.panel-section:last-child {
+    border-bottom: none;
+}
+
+.panel-section h3 {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    margin: 0 0 10px;
+}
+
+.panel-section p {
+    margin: 0 0 10px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.control-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.control-row:last-child {
+    margin-bottom: 0;
+}
+
+.control-row label {
+    flex: 1;
+    color: var(--text);
+}
+
+.control-row output {
+    width: 2.5em;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+}
+
+.button-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.button-grid button {
+    justify-content: center;
+    text-align: center;
+}
+
+.button-grid .wide {
+    grid-column: span 2;
+}
+
+.check-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.check-list label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.view-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.view-list label {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--radius);
+    cursor: pointer;
+}
+
+.view-list label:hover {
+    background: var(--hover);
+}
+
+.view-list small {
+    display: block;
+    color: var(--muted);
+}
+
+/* --- Tool feedback on the map --- */
+
+.tool-marker #mapSVG {
+    cursor: crosshair;
+}
+
+.tool-label #mapSVG text.city:hover,
+.tool-label #mapSVG text.region:hover {
+    cursor: text;
+    fill: var(--accent);
+}
+
+.tool-move #mapSVG text.city,
+.tool-move #mapSVG text.region,
+.tool-move #mapSVG text.poi,
+.tool-move #mapSVG use.wreck,
+.tool-move #mapSVG path.placedMarker,
+.tool-move #mapSVG circle.city {
+    cursor: grab;
+}
+
+.tool-move #mapSVG text.city:hover,
+.tool-move #mapSVG text.region:hover,
+.tool-move #mapSVG text.poi:hover,
+.tool-move #mapSVG use.wreck:hover,
+.tool-move #mapSVG path.placedMarker:hover {
+    fill: var(--move);
+}
+
+.tool-move #mapSVG circle.city:hover {
+    stroke: var(--move);
+}
+
+.tool-delete #mapSVG text.city:hover,
+.tool-delete #mapSVG text.region:hover,
+.tool-delete #mapSVG text.poi:hover,
+.tool-delete #mapSVG use.wreck:hover,
+.tool-delete #mapSVG path.placedMarker:hover {
+    cursor: pointer;
+    fill: var(--danger);
+}
+
+.tool-delete #mapSVG circle.city:hover {
+    cursor: pointer;
+    stroke: var(--danger);
+}
+
+/* --- Status bar contents --- */
+
+.statusbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+.status-message {
+    flex: 1;
+    min-width: 0;
+}
+
+.view-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+}
+
+.view-picker select {
+    padding: 3px 6px;
+}
+
+.stage.busy,
+.stage.busy #mapSVG {
+    cursor: progress;
+}

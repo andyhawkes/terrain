@@ -93,13 +93,25 @@ export class MapDocument {
         return {version: FORMAT_VERSION, steps: this.steps.slice(0, this.cursor)};
     }
 
+    // Replace this document's history with a saved one
+    load(json) {
+        if (!json || json.version !== FORMAT_VERSION || !Array.isArray(json.steps) || !json.steps.length) {
+            throw new Error('This is not a map file this version can open.');
+        }
+        var loaded = new MapDocument();
+        loaded.steps = json.steps.slice();
+        loaded.cursor = loaded.steps.length;
+        loaded.state; // replay, throwing before anything here changes
+        loaded.prune();
+        this.steps = loaded.steps;
+        this.snapshots = loaded.snapshots;
+        this.cursor = loaded.cursor;
+        this.emit();
+    }
+
     static fromJSON(json) {
-        if (json.version !== FORMAT_VERSION) throw new Error('Unsupported map version: ' + json.version);
         var doc = new MapDocument();
-        doc.steps = json.steps.slice();
-        doc.cursor = doc.steps.length;
-        doc.state; // replay
-        doc.prune();
+        doc.load(json);
         return doc;
     }
 }
