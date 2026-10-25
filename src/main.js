@@ -23,7 +23,7 @@ var strip = d3.select('#toolstrip');
 
 function render() {
     renderView(svg, view, doc.state);
-    tools.bind();
+    tools.refresh();
     panels.update(doc.state);
     updateChrome();
 }
@@ -85,7 +85,7 @@ function updateStatus() {
 
 // --- Tools and history ---
 
-tools = createTools(doc, svg, stage, strip, updateStatus);
+tools = createTools(doc, svg, stage, strip, d3.select('#toolOptions'), updateStatus);
 
 strip.append('hr');
 

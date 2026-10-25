@@ -1,6 +1,7 @@
 // Single pen lines only, for pen plotters (and for colouring in). Everything
 // is a stroke: no fills, shadows or background, labels are drawn with
 // single-stroke Hershey fonts, and dashed borders are real separate lines.
+import {markerSymbols} from './markers.js';
 export default {
     id: 'plotter',
     name: 'Plotter',
@@ -72,10 +73,12 @@ export default {
             {d: 'M-16,0 Q0,9 16,0 Z M1,0 L6,-17 M6,-17 L13,-12', cls: 'line'},
             {d: 'M-20,8 q5,-4 10,0 t10,0 t10,0 t10,0', cls: 'line'}
         ]]},
-        marker: {kind: 'path', variants: [[
-            {d: 'M-11,-11 L11,11 M11,-11 L-11,11', cls: 'line'}
-        ]]}
+        markers: markerSymbols('line')
     },
 
-    css: 'MAP .line { fill: none; stroke: var(--ink); stroke-width: 1.5; }'
+    // Pen width is the same everywhere, so scaled symbols are drawn with
+    // non-scaling strokes
+    parts: {
+        line: {fill: 'none', stroke: '#000000', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke'}
+    }
 };

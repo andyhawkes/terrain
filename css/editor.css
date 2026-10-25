@@ -258,10 +258,68 @@ input[type=checkbox] {
 }
 
 .stage {
+    position: relative;
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
+}
+
+/* Options for the active tool, e.g. which kind of marker to add */
+.tool-options {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+}
+
+.tool-options[hidden] {
+    display: none;
+}
+
+.tool-options-label {
+    color: var(--muted);
+    margin-right: 4px;
+}
+
+.tool-options button {
+    white-space: nowrap;
+    padding: 4px 10px 4px 6px;
+}
+
+.tool-options button svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.5;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.tool-options button.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* Editing text in place on the map */
+.text-editor {
+    position: absolute;
+    z-index: 10;
+    font: inherit;
+    font-size: 15px;
+    padding: 6px 10px;
+    border: 2px solid var(--accent);
+    border-radius: var(--radius);
+    background: var(--panel);
+    color: var(--text);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+    outline: none;
 }
 
 .map-frame {
@@ -444,13 +502,26 @@ input[type=checkbox] {
     cursor: crosshair;
 }
 
+.tool-note #mapSVG {
+    cursor: text;
+}
+
+.tool-label #mapSVG .layer-city .city,
+.tool-label #mapSVG .note-label,
+.tool-note #mapSVG .note-label {
+    cursor: text;
+}
+
 .tool-label #mapSVG .city-label,
 .tool-label #mapSVG .region-label {
     cursor: text;
 }
 
 .tool-label #mapSVG .city-label:hover,
-.tool-label #mapSVG .region-label:hover {
+.tool-label #mapSVG .region-label:hover,
+.tool-label #mapSVG .note-label:hover,
+.tool-label #mapSVG .layer-city .city:hover,
+.tool-note #mapSVG .note-label:hover {
     filter: drop-shadow(0 0 3px var(--accent)) drop-shadow(0 0 2px var(--accent));
 }
 
@@ -459,7 +530,8 @@ input[type=checkbox] {
 .tool-move #mapSVG .layer-poi .poi,
 .tool-move #mapSVG .layer-marker .placedMarker,
 .tool-move #mapSVG .city-label,
-.tool-move #mapSVG .region-label {
+.tool-move #mapSVG .region-label,
+.tool-move #mapSVG .note-label {
     cursor: grab;
 }
 
@@ -468,7 +540,8 @@ input[type=checkbox] {
 .tool-move #mapSVG .layer-poi .poi:hover,
 .tool-move #mapSVG .layer-marker .placedMarker:hover,
 .tool-move #mapSVG .city-label:hover,
-.tool-move #mapSVG .region-label:hover {
+.tool-move #mapSVG .region-label:hover,
+.tool-move #mapSVG .note-label:hover {
     filter: drop-shadow(0 0 3px var(--move)) drop-shadow(0 0 2px var(--move));
 }
 
@@ -477,7 +550,8 @@ input[type=checkbox] {
 .tool-delete #mapSVG .layer-poi .poi,
 .tool-delete #mapSVG .layer-marker .placedMarker,
 .tool-delete #mapSVG .city-label,
-.tool-delete #mapSVG .region-label {
+.tool-delete #mapSVG .region-label,
+.tool-delete #mapSVG .note-label {
     cursor: pointer;
 }
 
@@ -486,7 +560,8 @@ input[type=checkbox] {
 .tool-delete #mapSVG .layer-poi .poi:hover,
 .tool-delete #mapSVG .layer-marker .placedMarker:hover,
 .tool-delete #mapSVG .city-label:hover,
-.tool-delete #mapSVG .region-label:hover {
+.tool-delete #mapSVG .region-label:hover,
+.tool-delete #mapSVG .note-label:hover {
     filter: drop-shadow(0 0 3px var(--danger)) drop-shadow(0 0 2px var(--danger));
 }
 

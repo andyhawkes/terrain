@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {dashPaths, hersheyPath, hersheyWidth} from '../src/render/theme.js';
 import {THEMES} from '../src/themes/index.js';
+import {MARKER_TYPES} from '../src/core/steps.js';
 
 test('dashes become separate segments of the right length', function () {
     var dashes = dashPaths([[[0, 0], [10, 0]]], 2, 1);
@@ -25,9 +26,23 @@ test('every theme has what the renderer needs', function () {
     THEMES.forEach(function (theme) {
         ['id', 'name', 'description', 'fonts', 'backgrounds', 'colors', 'widths', 'borderDash', 'labels', 'cities', 'symbols']
             .forEach(function (key) {assert.ok(theme[key], theme.id + ' is missing ' + key)});
-        ['poi', 'wreck', 'marker'].forEach(function (kind) {
+        ['poi', 'wreck'].forEach(function (kind) {
             var spec = theme.symbols[kind];
             assert.ok(spec.kind === 'text' ? spec.chars.length : spec.variants.length, theme.id + ' ' + kind);
+        });
+        // Markers of different types share a layer, so they must all be paths
+        MARKER_TYPES.forEach(function (type) {
+            var spec = theme.symbols.markers[type.id];
+            assert.ok(spec && spec.kind === 'path' && spec.variants.length, theme.id + ' marker ' + type.id);
+        });
+        // Symbol parts are styled from theme.parts, not CSS, so every part needs one
+        var specs = [theme.symbols.poi, theme.symbols.wreck].concat(Object.values(theme.symbols.markers));
+        specs.filter(function (spec) {return spec.kind === 'path'}).forEach(function (spec) {
+            spec.variants.forEach(function (parts) {
+                parts.forEach(function (part) {
+                    assert.ok(theme.parts && theme.parts[part.cls], theme.id + ' has no style for part ' + part.cls);
+                });
+            });
         });
     });
 });

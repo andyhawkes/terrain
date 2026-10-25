@@ -115,23 +115,28 @@ function drawBackground(svg, background) {
     }
 }
 
-// <symbol>s for a path-based symbol set, rebuilt when the set changes
-function ensureSymbols(svg, kind, spec) {
+// <symbol>s for a path-based symbol set, rebuilt when the set changes.
+// Each part gets its style from theme.parts directly: CSS can't reach
+// inside a <use>.
+function ensureSymbols(svg, kind, spec, parts) {
     var node = svg.node();
     node.__symbols = node.__symbols || {};
     if (node.__symbols[kind] === spec) return;
     node.__symbols[kind] = spec;
     var defs = svg.select('defs.symbols');
     defs.selectAll('symbol.' + kind).remove();
-    spec.variants.forEach(function (parts, i) {
+    spec.variants.forEach(function (partList, i) {
         var g = defs.append('symbol')
             .attr('class', kind)
             .attr('id', svg.attr('id') + '-' + kind + i)
             .attr('overflow', 'visible')
             .append('g')
             .attr('transform', spec.transform || null);
-        parts.forEach(function (part) {
-            g.append('path').attr('d', part.d).attr('class', part.cls);
+        partList.forEach(function (part) {
+            var path = g.append('path').attr('d', part.d).attr('class', part.cls)
+                .attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round');
+            var style = parts[part.cls] || {};
+            Object.keys(style).forEach(function (prop) {path.attr(prop, style[prop])});
         });
     });
 }
@@ -167,8 +172,8 @@ export function drawCities(svg, state, theme) {
         .attr('r', function (d, i) {return i < n ? theme.cities.capitalRadius : theme.cities.townRadius});
 }
 
-// Points of interest, wrecks and markers, drawn with the theme's symbols
-function drawSymbols(svg, layerName, cls, data, spec) {
+// Points of interest and wrecks, drawn with the theme's symbols
+function drawSymbols(svg, layerName, cls, data, spec, parts) {
     if (spec.kind === 'text') {
         join(svg, layerName, 'text', cls, data, byId)
             .attr('x', function (d) {return SCALE*d.pos[0]})
@@ -179,7 +184,7 @@ function drawSymbols(svg, layerName, cls, data, spec) {
             .text(function (d) {return spec.chars[(d.item.variant || 0) % spec.chars.length]});
         return;
     }
-    ensureSymbols(svg, cls, spec);
+    ensureSymbols(svg, cls, spec, parts);
     var prefix = '#' + svg.attr('id') + '-' + cls;
     join(svg, layerName, 'use', cls, data, byId)
         .attr('x', function (d) {return SCALE*d.pos[0]})
@@ -190,25 +195,49 @@ function drawSymbols(svg, layerName, cls, data, spec) {
 export function drawFeatures(svg, state, theme) {
     theme = theme || applyTheme(svg, state.style).theme;
     drawCities(svg, state, theme);
-    drawSymbols(svg, 'wreck', 'wreck', itemData(state, 'wrecks', 'wreck'), theme.symbols.wreck);
-    drawSymbols(svg, 'poi', 'poi', itemData(state, 'poi', 'poi'), theme.symbols.poi);
-    drawSymbols(svg, 'marker', 'placedMarker', itemData(state, 'markers', 'marker'), theme.symbols.marker);
+    drawSymbols(svg, 'wreck', 'wreck', itemData(state, 'wrecks', 'wreck'), theme.symbols.wreck, theme.parts);
+    drawSymbols(svg, 'poi', 'poi', itemData(state, 'poi', 'poi'), theme.symbols.poi, theme.parts);
+    drawMarkers(svg, state, theme);
 }
 
-function labelSets(labels, font) {
+// Markers of every type share a layer; each type has its own symbol
+function drawMarkers(svg, state, theme) {
+    var specs = theme.symbols.markers;
+    Object.keys(specs).forEach(function (type) {
+        ensureSymbols(svg, 'marker-' + type, specs[type], theme.parts);
+    });
+    var prefix = '#' + svg.attr('id') + '-marker-';
+    join(svg, 'marker', 'use', 'placedMarker', itemData(state, 'markers', 'marker'), byId)
+        .attr('class', function (d) {return 'placedMarker ' + markerType(d.item, specs)})
+        .attr('x', function (d) {return SCALE*d.pos[0]})
+        .attr('y', function (d) {return SCALE*d.pos[1]})
+        .attr('href', function (d) {return prefix + markerType(d.item, specs) + '0'});
+}
+
+function markerType(marker, specs) {
+    return specs[marker.type] ? marker.type : 'x';
+}
+
+var NOTE_SIZE = 24;
+
+// City and region names, plus the user's own text notes
+function labelSets(labels, font, notes) {
     return [
-        {kind: 'city', cls: 'city-label', labels: labels.cities, family: font.label,
+        {kind: 'city', dataKind: 'cityLabel', cls: 'city-label', labels: labels.cities, family: font.label,
             size: function (l) {return l.size}, anchor: function (l) {return l.align}},
-        {kind: 'region', cls: 'region-label', labels: labels.regions, family: font.region,
-            size: function (l) {return SCALE*l.size}, anchor: function () {return 'middle'}}
+        {kind: 'region', dataKind: 'regionLabel', cls: 'region-label', labels: labels.regions, family: font.region,
+            size: function (l) {return SCALE*l.size}, anchor: function () {return 'middle'}},
+        {kind: 'note', dataKind: 'note', cls: 'note-label', family: font.label,
+            labels: notes.map(function (n) {return {id: n.id, x: n.pos[0], y: n.pos[1], text: n.text, item: n}}),
+            size: function () {return NOTE_SIZE}, anchor: function () {return 'middle'}}
     ];
 }
 
-// City and region names, as text or as single-stroke Hershey paths
-export function drawLabels(svg, labels, theme, font) {
-    labelSets(labels, font).forEach(function (set) {
+// Labels as text, or as single-stroke Hershey paths
+export function drawLabels(svg, labels, notes, theme, font) {
+    labelSets(labels, font, notes).forEach(function (set) {
         var data = set.labels.map(function (l) {
-            return {id: l.id, kind: set.kind + 'Label', pos: [l.x, l.y], label: l,
+            return {id: l.id, kind: set.dataKind, pos: [l.x, l.y], label: l, item: l.item,
                 text: labelText(theme, font, set.kind, l.text)};
         });
         if (set.family.hershey) {
@@ -230,9 +259,9 @@ export function drawLabels(svg, labels, theme, font) {
 
 // Pen lettering has no halo, so hatching under it is left out instead.
 // Boxes are in map units, with a little padding.
-function hersheyLabelBoxes(labels, theme, font) {
+function hersheyLabelBoxes(labels, notes, theme, font) {
     var boxes = [];
-    labelSets(labels, font).forEach(function (set) {
+    labelSets(labels, font, notes).forEach(function (set) {
         if (!set.family.hershey) return;
         set.labels.forEach(function (l) {
             if (!l.text) return;
@@ -268,9 +297,9 @@ export function drawMap(svg, state) {
     drawPaths(svg, 'border', theme.strokeOnly
         ? dashPaths(d.borders, theme.borderDash[0] / SCALE, theme.borderDash[1] / SCALE)
         : d.borders);
-    var boxes = hersheyLabelBoxes(d.labels, theme, t.font);
+    var boxes = hersheyLabelBoxes(d.labels, state.notes, theme, t.font);
     drawSlopes(svg, boxes.length ? d.slopes.filter(outsideBoxes(boxes)) : d.slopes);
     drawFeatures(svg, state, theme);
-    drawLabels(svg, d.labels, theme, t.font);
+    drawLabels(svg, d.labels, state.notes, theme, t.font);
     showLayers(svg, state.style.hidden);
 }

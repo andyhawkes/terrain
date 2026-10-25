@@ -82,9 +82,11 @@ Each phase leaves the app working.
 - Later, for plotting: clear rivers and borders from under labels too, optimise pen travel, set a physical paper size.
 
 ### Phase 4: Tools
-- One tool controller with clear hints for the active tool. Esc returns to Select.
-- Edit labels in place with a text box, replacing `prompt()`.
-- More marker types: treasure cross, plus theme-specific markers.
+- [x] Tools: Pointer (V), Move (G), Edit text (E), Add text (T), Add marker (M), Delete (D). Esc returns to Pointer. The status bar explains the active tool.
+- [x] Edit text in place with a text box on the map, replacing `prompt()`. Enter saves, Esc cancels. Double-click edits text with Pointer or Move. Clicking a city with Edit text names it even when its label is hidden.
+- [x] Add text: free text anywhere on the map ("Here be dragons"), drawn in the theme's lettering. It can be moved, edited and deleted.
+- [x] Marker types: X marks the spot, Danger, Flag, Camp and Landmark, chosen from a bar above the map. Each theme draws them in its own style.
+- [x] Symbol parts are styled straight from the theme (`parts`), since CSS can't reach inside SVG `<use>` elements. This also keeps plotter output free of fills.
 
 ### Phase 5: Undo/redo UI
 - Undo/redo buttons and keyboard shortcuts become part of the main UI. They exist in basic form from Phase 1.

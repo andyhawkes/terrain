@@ -168,3 +168,19 @@ test('the style is part of the map: undoable, saved, and kept for new maps', fun
     doc.dispatch('newBlank', {npts: 512});
     assert.equal(doc.state.style.theme, 'fantasy');
 });
+
+test('markers have types, and notes can be added, edited, moved and deleted', function () {
+    var doc = new MapDocument();
+    doc.dispatch('generate', {params: small}, 'seed');
+    doc.dispatch('addMarker', {pos: [0, 0]});
+    doc.dispatch('addMarker', {pos: [0.1, 0], type: 'danger'});
+    assert.deepEqual(doc.state.markers.map(function (m) {return m.type}), ['x', 'danger']);
+
+    doc.dispatch('addNote', {pos: [0.2, 0.2], text: 'Here be dragons'});
+    var note = doc.state.notes[0];
+    doc.dispatch('editLabel', {id: note.id, kind: 'note', text: 'Dig here'});
+    doc.dispatch('moveItem', {id: note.id, pos: [0.3, 0.3]});
+    assert.deepEqual(doc.state.notes[0], {id: note.id, pos: [0.3, 0.3], text: 'Dig here'});
+    doc.dispatch('deleteItem', {id: note.id});
+    assert.equal(doc.state.notes.length, 0);
+});

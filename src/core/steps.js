@@ -45,13 +45,23 @@ export function emptyState() {
         cities: [],   // {id, vx, name, regionName, pos?, labelOffset?, regionLabelPos?}
         wrecks: [],   // {id, vx, variant, pos?}
         poi: [],      // {id, vx, variant, pos?}
-        markers: [],  // {id, pos}
+        markers: [],  // {id, pos, type}; type is a marker type id (see MARKER_TYPES)
+        notes: [],    // {id, pos, text}: free text placed on the map
         nextId: 1
     };
 }
 
+// Kinds of marker the user can place. Each theme draws them its own way.
+export var MARKER_TYPES = [
+    {id: 'x', name: 'X marks the spot'},
+    {id: 'danger', name: 'Danger'},
+    {id: 'flag', name: 'Flag'},
+    {id: 'camp', name: 'Camp'},
+    {id: 'star', name: 'Landmark'}
+];
+
 // Lists of map items that can be moved or deleted
-export var ITEM_LISTS = ['cities', 'wrecks', 'poi', 'markers'];
+export var ITEM_LISTS = ['cities', 'wrecks', 'poi', 'markers', 'notes'];
 
 export function findItem(state, id) {
     for (var i = 0; i < ITEM_LISTS.length; i++) {
@@ -284,8 +294,15 @@ export var steps = {
     addMarker: {
         label: 'Add marker',
         apply: function (state, args) {
-            var markers = state.markers.concat([{id: state.nextId, pos: args.pos}]);
+            var markers = state.markers.concat([{id: state.nextId, pos: args.pos, type: args.type || 'x'}]);
             return Object.assign({}, state, {markers: markers, nextId: state.nextId + 1});
+        }
+    },
+    addNote: {
+        label: 'Add text',
+        apply: function (state, args) {
+            var notes = state.notes.concat([{id: state.nextId, pos: args.pos, text: args.text}]);
+            return Object.assign({}, state, {notes: notes, nextId: state.nextId + 1});
         }
     },
     // Moving an item only moves its marker: the terrain, territories and
@@ -309,13 +326,14 @@ export var steps = {
             return Object.assign({}, state, changes);
         }
     },
-    // kind is 'city' or 'region'; id is the city's id
+    // kind is 'city' or 'region' (id is the city's id), or 'note'
     editLabel: {
-        label: 'Edit label',
+        label: 'Edit text',
         apply: function (state, args) {
-            return mapItem(state, args.id, function (city) {
-                city[args.kind === 'region' ? 'regionName' : 'name'] = args.text;
-                return city;
+            return mapItem(state, args.id, function (item) {
+                var field = {region: 'regionName', note: 'text'}[args.kind] || 'name';
+                item[field] = args.text;
+                return item;
             });
         }
     },

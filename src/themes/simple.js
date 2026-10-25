@@ -1,5 +1,6 @@
 // A clean, modern atlas look. This file doubles as the reference for the
 // theme format.
+import {markerSymbols} from './markers.js';
 export default {
     id: 'simple',
     name: 'Simple',
@@ -79,15 +80,23 @@ export default {
             {d: 'M1,0 L6,-17 M6,-17 L13,-12', cls: 'line'},
             {d: 'M-20,8 q5,-4 10,0 t10,0 t10,0 t10,0', cls: 'line'}
         ]]},
-        marker: {kind: 'path', variants: [[
-            {d: 'M-11,-11 L11,11 M11,-11 L-11,11', cls: 'cross'}
-        ]]}
+        // One spec per marker type: x, danger, flag, camp, star
+        markers: markerSymbols('mark', null, 'markX')
     },
 
-    // Extra CSS, with MAP standing for the map's own selector
+    // How each part (cls) of a symbol is drawn, as SVG style properties.
+    // These go directly on the symbol's paths: page CSS can't style the
+    // inside of a <use>, and plotting software may ignore CSS altogether.
+    parts: {
+        solid: {fill: '#2b2b2b', stroke: 'none'},
+        line: {fill: 'none', stroke: '#2b2b2b', 'stroke-width': 3},
+        mark: {fill: 'none', stroke: '#c62828', 'stroke-width': 3},
+        markX: {fill: 'none', stroke: '#c62828', 'stroke-width': 4}
+    },
+
+    // Extra CSS for the map's own elements (not symbols: see parts), with MAP
+    // standing for the map's own selector
     css: [
-        'MAP .poi .solid, MAP .wreck .solid { fill: var(--symbol); stroke: none; }',
-        'MAP .poi .line, MAP .wreck .line { fill: none; stroke: var(--symbol); stroke-width: 3; }',
-        'MAP .placedMarker .cross { fill: none; stroke: var(--marker); stroke-width: 6; }'
+        'MAP .note-label { font-style: italic; fill: var(--marker); }'
     ].join('\n')
 };

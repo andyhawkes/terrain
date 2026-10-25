@@ -1,5 +1,6 @@
 // Old print, tentacles in the water and things best left unnamed.
 import {poiSymbols, wreckSymbols, ripples} from './fantasy-symbols.js';
+import {markerSymbols} from './markers.js';
 
 var parchment = new URL('../../images/parchment.jpg', import.meta.url).href;
 
@@ -71,15 +72,23 @@ export default {
         wreck: {kind: 'path', transform: wreckTransform, variants: wreckSymbols.map(function (d) {
             return [{d: d, cls: 'tentacle'}, {d: ripples, cls: 'ripples'}];
         })},
-        marker: {kind: 'path', transform: 'rotate(45)', variants: [[
-            {d: 'M-13.42,-4.47L-4.47,-4.47L-4.47,-13.42L4.47,-13.42L4.47,-4.47L13.42,-4.47L13.42,4.47L4.47,4.47L4.47,13.42L-4.47,13.42L-4.47,4.47L-13.42,4.47Z', cls: 'cross'}
-        ]]}
+        // The treasure X is the original solid red cross
+        markers: markerSymbols('mark', {
+            x: {kind: 'path', transform: 'rotate(45) scale(1.3)', variants: [[
+                {d: 'M-13.42,-4.47L-4.47,-4.47L-4.47,-13.42L4.47,-13.42L4.47,-4.47L13.42,-4.47L13.42,4.47L4.47,4.47L4.47,13.42L-4.47,13.42L-4.47,4.47L-13.42,4.47Z', cls: 'cross'}
+            ]]}
+        })
+    },
+
+    parts: {
+        tentacle: {fill: '#000000', stroke: '#ffffff'},
+        ripples: {fill: '#ffffff', stroke: '#000000'},
+        cross: {fill: '#cc0000', stroke: '#ffffff', 'stroke-width': 1},
+        mark: {fill: 'none', stroke: '#cc0000', 'stroke-width': 3}
     },
 
     css: [
-        'MAP .wreck .tentacle { fill: var(--symbol); stroke: #fff; }',
-        'MAP .wreck .ripples { fill: #fff; stroke: var(--symbol); }',
-        'MAP .placedMarker .cross { fill: var(--marker); stroke: #fff; stroke-width: 1; }',
+        'MAP .note-label { font-style: italic; }',
         'MAP .border { stroke-linecap: butt; }'
     ].join('\n')
 };
