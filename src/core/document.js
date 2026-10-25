@@ -80,6 +80,25 @@ export class MapDocument {
         this.emit();
     }
 
+    // Jump to the map as it was after the first n steps (undoing or redoing
+    // everything in between). Like undo, it can't go before the first step.
+    goTo(n) {
+        n = Math.max(1, Math.min(this.steps.length, n));
+        if (n === this.cursor) return;
+        this.cursor = n;
+        this.emit();
+    }
+
+    // Where the current map starts: the index of the last step before the
+    // cursor that made a new map (later steps build on it)
+    startIndex() {
+        for (var i = this.cursor - 1; i > 0; i--) {
+            var type = this.steps[i].type;
+            if (type === 'generate' || type === 'newBlank') return i;
+        }
+        return 0;
+    }
+
     subscribe(fn) {
         this.listeners.push(fn);
     }

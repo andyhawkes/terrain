@@ -28,6 +28,19 @@ function isLabel(d) {
     return d && (d.kind === 'cityLabel' || d.kind === 'regionLabel');
 }
 
+// A short name for what an edit acted on, recorded with the step so the
+// History panel can say e.g. "Move Nenonu"
+function nameOf(d) {
+    var named = d.kind === 'city' ? d.item.name : (d.label && d.label.text);
+    if (named && d.kind !== 'note') return named;
+    if (d.kind === 'note') return '“' + d.item.text + '”';
+    if (d.kind === 'marker') {
+        var type = MARKER_TYPES.find(function (t) {return t.id === d.item.type});
+        return (type ? type.name.toLowerCase() : 'a') + ' marker';
+    }
+    return {city: 'a city', wreck: 'a wreck', poi: 'a point of interest'}[d.kind] || '';
+}
+
 // What clicking with the Edit text tool edits, if anything
 function editable(d) {
     if (!d || d.id == null) return null;
@@ -169,8 +182,8 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
             if (!label.empty()) anchor = label.node();
         }
         editText(stage.node(), anchor.getBoundingClientRect(), target.text, function (text) {
-            if (target.kind === 'note' && !text) doc.dispatch('deleteItem', {id: d.id});
-            else doc.dispatch('editLabel', {id: d.id, kind: target.kind, text: text});
+            if (target.kind === 'note' && !text) doc.dispatch('deleteItem', {id: d.id, what: nameOf(d)});
+            else doc.dispatch('editLabel', {id: d.id, kind: target.kind, text: text, what: nameOf(d)});
         }, {hide: anchor === node && d.kind !== 'city' ? node : null, label: 'Edit text'});
         return true;
     }
@@ -191,8 +204,8 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
             }, {placeholder: 'Type, then press Enter', label: 'New text'});
         } else if (active === 'delete' && d && d.id != null) {
             // Names of places are hidden; everything else is removed
-            if (isLabel(d)) doc.dispatch('editLabel', {id: d.id, kind: d.kind === 'regionLabel' ? 'region' : 'city', text: ''});
-            else doc.dispatch('deleteItem', {id: d.id});
+            if (isLabel(d)) doc.dispatch('editLabel', {id: d.id, kind: d.kind === 'regionLabel' ? 'region' : 'city', text: '', what: nameOf(d)});
+            else doc.dispatch('deleteItem', {id: d.id, what: nameOf(d)});
         } else if (active === 'label') {
             edit(d, target);
         }
@@ -227,8 +240,8 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
             var dy = (d3.event.y - dragStart.y) / R.SCALE;
             if (dx === 0 && dy === 0) return;
             var pos = [d.pos[0] + dx, d.pos[1] + dy];
-            if (isLabel(d)) doc.dispatch('moveLabel', {id: d.id, kind: d.kind === 'regionLabel' ? 'region' : 'city', pos: pos});
-            else doc.dispatch('moveItem', {id: d.id, pos: pos});
+            if (isLabel(d)) doc.dispatch('moveLabel', {id: d.id, kind: d.kind === 'regionLabel' ? 'region' : 'city', pos: pos, what: nameOf(d)});
+            else doc.dispatch('moveItem', {id: d.id, pos: pos, what: nameOf(d)});
         });
 
     // Call after every redraw, so newly drawn items can be dragged too

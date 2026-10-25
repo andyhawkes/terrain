@@ -638,3 +638,102 @@ input[type=checkbox] {
 .stage.busy #mapSVG {
     cursor: progress;
 }
+
+/* --- History panel --- */
+
+.replay-button {
+    width: 100%;
+    justify-content: center;
+}
+
+.history-list {
+    list-style: none;
+    margin: 0;
+    padding: 6px 8px 0;
+    counter-reset: step;
+}
+
+.history-list li {
+    counter-increment: step;
+}
+
+.history-list li.start {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+}
+
+.history-list li.start:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+}
+
+.history-list button {
+    display: flex;
+    width: 100%;
+    gap: 8px;
+    align-items: baseline;
+    border: none;
+    background: transparent;
+    padding: 5px 8px;
+    text-align: left;
+}
+
+.history-list button::before {
+    content: counter(step);
+    min-width: 1.6em;
+    color: var(--muted);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+
+.history-list li.start .history-text {
+    font-weight: 600;
+}
+
+.history-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.history-detail {
+    color: var(--muted);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 45%;
+}
+
+.history-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex: none;
+    align-self: center;
+    border: 1px solid rgba(0, 0, 0, 0.25);
+}
+
+.history-list li.current button {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+/* Steps after the current one have been undone; they come back with Redo */
+.history-list li.undone button {
+    color: var(--muted);
+    opacity: 0.6;
+}
+
+.history-list li.undone .history-text {
+    text-decoration: line-through;
+}
+
+/* The map can't be edited while a replay is playing */
+.stage.replaying #mapSVG {
+    pointer-events: none;
+}

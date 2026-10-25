@@ -88,9 +88,11 @@ Each phase leaves the app working.
 - [x] Marker types: X marks the spot, Danger, Flag, Camp and Landmark, chosen from a bar above the map. Each theme draws them in its own style, in the colour picked for each marker (black by default; swatches or any custom colour).
 - [x] Symbol parts are styled straight from the theme (`parts`), since CSS can't reach inside SVG `<use>` elements. This also keeps plotter output free of fills.
 
-### Phase 5: Undo/redo UI
-- Undo/redo buttons and keyboard shortcuts become part of the main UI. They exist in basic form from Phase 1.
-- A history panel, with the option to replay how a map was built.
+### Phase 5: Undo/redo and history
+- [x] Undo/redo buttons and shortcuts (Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z or Ctrl+Y). The buttons' tooltips say which step they'll undo or redo.
+- [x] A History panel listing every step in plain words, e.g. "Add 5 blobs", "Move Nenonu", "Rename Kuleno to “Innsmouth”". Each new map starts a group. Click any step to jump back to it; undone steps are struck through until you redo them or make a new change.
+- [x] Replay: plays the current map's steps back from its start, highlighting each in the list. Esc or any change stops it. The map can't be edited during a replay, and the history is never changed by it.
+- Later: replay the stages inside "New random map" (mesh, heightmap, erosion, cities) for the explore-the-algorithm side. Show the Heightmap view automatically while replaying a hand-built map's terrain steps.
 
 ### Phase 6: Autosave and sharing
 - Autosave to browser storage.

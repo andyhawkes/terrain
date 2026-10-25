@@ -184,3 +184,23 @@ test('markers have types, and notes can be added, edited, moved and deleted', fu
     doc.dispatch('deleteItem', {id: note.id});
     assert.equal(doc.state.notes.length, 0);
 });
+
+test('jumping through the history', function () {
+    var doc = new MapDocument();
+    doc.dispatch('newBlank', {npts: 512});
+    doc.dispatch('blobs', {count: 3});
+    doc.dispatch('seaLevel', {q: 0.5});
+    doc.dispatch('generate', {params: small}, 'second');
+    doc.dispatch('addMarker', {pos: [0, 0]});
+    var afterBlobs = doc.stateAt(2);
+
+    doc.goTo(2);
+    assert.equal(doc.state, afterBlobs);
+    assert.equal(doc.canRedo(), true);
+    assert.equal(doc.startIndex(), 0);
+    doc.goTo(0);
+    assert.equal(doc.cursor, 1, 'cannot go before the first step');
+    doc.goTo(99);
+    assert.equal(doc.cursor, 5);
+    assert.equal(doc.startIndex(), 3, 'the second map starts at its generate step');
+});

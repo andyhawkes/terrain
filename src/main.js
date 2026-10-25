@@ -10,6 +10,7 @@ import * as R from './render/svg.js';
 import {VIEWS, viewInfo, renderView} from './ui/views.js';
 import {createTools, TOOLS} from './ui/tools.js';
 import {createPanels} from './ui/panels.js';
+import {describeStep} from './ui/history.js';
 import {getTheme, fontChoice} from './themes/index.js';
 
 var doc = new MapDocument();
@@ -21,14 +22,64 @@ var strip = d3.select('#toolstrip');
 
 // --- Drawing ---
 
+// Draws the current map, or during a replay the step being shown
 function render() {
-    renderView(svg, view, doc.state);
+    renderView(svg, view, replaying() ? doc.stateAt(panelCtx.replayAt + 1) : doc.state);
     tools.refresh();
     panels.update(doc.state);
     updateChrome();
 }
 
-doc.subscribe(render);
+// Any change to the map ends a replay
+doc.subscribe(function () {
+    cancelReplay();
+    render();
+});
+
+// --- Replay: play the current map's steps back from its start ---
+
+var REPLAY_DELAY = 700;
+var replayTimer = null;
+
+function replaying() {
+    return panelCtx.replayAt != null;
+}
+
+function startReplay() {
+    var start = doc.startIndex();
+    panelCtx.replayAt = start;
+    stage.classed('replaying', true);
+    showFrame(start);
+}
+
+function showFrame(start) {
+    var i = panelCtx.replayAt;
+    statusText = 'Replaying: step ' + (i - start + 1) + ' of ' + (doc.cursor - start) +
+        ', ' + describeStep(doc.steps[i]).text.toLowerCase() + '. Esc to stop.';
+    render();
+    replayTimer = setTimeout(function () {
+        if (panelCtx.replayAt + 1 >= doc.cursor) {
+            stopReplay();
+        } else {
+            panelCtx.replayAt++;
+            showFrame(start);
+        }
+    }, REPLAY_DELAY);
+}
+
+function cancelReplay() {
+    if (!replaying()) return;
+    clearTimeout(replayTimer);
+    panelCtx.replayAt = null;
+    statusText = null;
+    stage.classed('replaying', false);
+}
+
+function stopReplay() {
+    if (!replaying()) return;
+    cancelReplay();
+    render();
+}
 
 function setView(id) {
     view = id;
@@ -116,8 +167,13 @@ function currentStartStep() {
 }
 
 function updateChrome() {
-    undoButton.property('disabled', !doc.canUndo());
-    redoButton.property('disabled', !doc.canRedo());
+    // The buttons say which step they'll undo or redo
+    undoButton.property('disabled', !doc.canUndo())
+        .attr('title', 'Undo' + (doc.canUndo() ? ': ' + describeStep(doc.steps[doc.cursor - 1]).text : '') +
+            ' (' + (isMac ? '⌘Z' : 'Ctrl+Z') + ')');
+    redoButton.property('disabled', !doc.canRedo())
+        .attr('title', 'Redo' + (doc.canRedo() ? ': ' + describeStep(doc.steps[doc.cursor]).text : '') +
+            ' (' + (isMac ? '⇧⌘Z' : 'Ctrl+Shift+Z') + ')');
     var start = currentStartStep();
     mapInfo.html('');
     if (start && start.type === 'generate') {
@@ -312,7 +368,12 @@ openFile.on('change', function () {
 
 // --- Side panel ---
 
-var panelCtx = {act: act, doc: doc, svg: svg, setView: setView, updaters: []};
+var panelCtx = {act: act, doc: doc, svg: svg, setView: setView, updaters: [], replayAt: null,
+    stopReplay: stopReplay,
+    toggleReplay: function () {
+        if (replaying()) stopReplay();
+        else startReplay();
+    }};
 var panels = createPanels(d3.select('#panelTabs'), d3.select('#panelBody'), panelCtx);
 
 // --- Keyboard shortcuts ---
@@ -330,7 +391,8 @@ document.addEventListener('keydown', function (event) {
         event.preventDefault();
         doc.redo();
     } else if (event.key === 'Escape') {
-        tools.set('pointer');
+        if (replaying()) stopReplay();
+        else tools.set('pointer');
     } else if (!mod && !event.altKey && tools.forKey(key)) {
         tools.set(tools.forKey(key).id);
     }

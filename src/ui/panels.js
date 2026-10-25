@@ -1,7 +1,8 @@
 // The right-hand panel: Build (shape the current map), Style (how it's
-// drawn).
+// drawn) and History (every step, with replay).
 import {THEMES, getTheme, fontChoice, backgroundChoice} from '../themes/index.js';
 import {TOGGLE_LAYERS} from '../render/svg.js';
+import {historyPanel} from './history.js';
 
 var nextId = 0;
 
@@ -182,7 +183,8 @@ function stylePanel(body, ctx) {
 
 var PANELS = [
     {id: 'build', name: 'Build', build: buildPanel},
-    {id: 'style', name: 'Style', build: stylePanel}
+    {id: 'style', name: 'Style', build: stylePanel},
+    {id: 'history', name: 'History', build: historyPanel}
 ];
 
 export function createPanels(tabs, body, ctx) {
@@ -201,12 +203,15 @@ export function createPanels(tabs, body, ctx) {
             buttons[p.id].attr('aria-selected', p.id === id);
             panes[p.id].style('display', p.id === id ? null : 'none');
         });
+        update(ctx.doc.state);
+    }
+
+    function update(state) {
+        ctx.updaters.forEach(function (fn) {fn(state)});
     }
     show('build');
     return {
         show: show,
-        update: function (state) {
-            ctx.updaters.forEach(function (fn) {fn(state)});
-        }
+        update: update
     };
 }
