@@ -148,9 +148,9 @@ test('the style is part of the map: undoable, saved, and kept for new maps', fun
     var doc = new MapDocument();
     doc.dispatch('generate', {params: small}, 'seed');
     var before = derive(doc.state);
-    doc.dispatch('setStyle', {theme: 'lovecraftian', font: 'cinzel'});
+    doc.dispatch('setStyle', {theme: 'fantasy', font: 'cinzel'});
     doc.dispatch('setStyle', {hidden: ['slope']});
-    assert.deepEqual(doc.state.style, {theme: 'lovecraftian', font: 'cinzel', background: null, hidden: ['slope']});
+    assert.deepEqual(doc.state.style, {theme: 'fantasy', font: 'cinzel', background: null, hidden: ['slope']});
     // Style changes don't recompute territories and labels
     assert.equal(derive(doc.state), before);
 
@@ -158,13 +158,13 @@ test('the style is part of the map: undoable, saved, and kept for new maps', fun
     doc.dispatch('setStyle', {theme: 'plotter'});
     assert.equal(doc.state.style.font, null);
     doc.undo();
-    assert.equal(doc.state.style.theme, 'lovecraftian');
+    assert.equal(doc.state.style.theme, 'fantasy');
 
     var reloaded = MapDocument.fromJSON(doc.toJSON());
     assert.deepEqual(reloaded.state.style, doc.state.style);
 
     doc.dispatch('generate', {params: small}, 'other');
-    assert.equal(doc.state.style.theme, 'lovecraftian');
+    assert.equal(doc.state.style.theme, 'fantasy');
     doc.dispatch('newBlank', {npts: 512});
-    assert.equal(doc.state.style.theme, 'lovecraftian');
+    assert.equal(doc.state.style.theme, 'fantasy');
 });

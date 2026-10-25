@@ -126,10 +126,6 @@ function updateChrome() {
     } else if (start) {
         mapInfo.append('span').text('Hand-built map');
     }
-    if (panelCtx && panelCtx.historyInfo) {
-        panelCtx.historyInfo.text(doc.cursor + ' steps so far' +
-            (doc.canRedo() ? ', plus ' + (doc.steps.length - doc.cursor) + ' undone' : '') + '.');
-    }
     updateStatus();
 }
 

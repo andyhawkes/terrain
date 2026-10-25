@@ -1,5 +1,5 @@
 // Old print, tentacles in the water and things best left unnamed.
-import {poiSymbols, wreckSymbols, ripples} from './lovecraftian-symbols.js';
+import {poiSymbols, wreckSymbols, ripples} from './fantasy-symbols.js';
 
 var parchment = new URL('../../images/parchment.jpg', import.meta.url).href;
 
@@ -7,8 +7,8 @@ var parchment = new URL('../../images/parchment.jpg', import.meta.url).href;
 var wreckTransform = 'translate(-32.5,-45)';
 
 export default {
-    id: 'lovecraftian',
-    name: 'Lovecraftian',
+    id: 'fantasy',
+    name: 'Fantasy',
     description: 'Aged parchment, old type and things lurking offshore.',
 
     fonts: [
@@ -19,7 +19,10 @@ export default {
     ],
 
     backgrounds: [
-        {id: 'parchment', name: 'Parchment', color: '#efe3c8', image: parchment, imageScale: 1.5},
+        // A white halo looks like stickers on parchment, so use the paper's
+        // own (slightly lighter) tone instead
+        {id: 'parchment', name: 'Parchment', color: '#efe3c8', image: parchment, imageScale: 1.5,
+            halo: {color: '#e8d7b8', opacity: 0.85, shadow: null}},
         {id: 'plain', name: 'Plain', color: '#ffffff'}
     ],
 

@@ -2,14 +2,18 @@
 // simple.js for a commented example of every field. Adding a theme means
 // adding a file here, not changing the renderer.
 import simple from './simple.js';
-import lovecraftian from './lovecraftian.js';
+import fantasy from './fantasy.js';
 import plotter from './plotter.js';
 
-export var THEMES = [simple, lovecraftian, plotter];
+export var THEMES = [simple, fantasy, plotter];
+
+// Old theme ids, so earlier map files still open with the right look
+var RENAMED = {lovecraftian: 'fantasy'};
 
 export var DEFAULT_THEME = 'simple';
 
 export function getTheme(id) {
+    id = RENAMED[id] || id;
     return THEMES.find(function (t) {return t.id === id}) || THEMES[0];
 }
 

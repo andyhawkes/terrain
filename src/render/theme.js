@@ -4,12 +4,15 @@
 import hershey from './fonts/hershey.json' with {type: 'json'};
 
 // The map's stylesheet. It lives inside the SVG, so exports carry it along.
-export function themeCSS(theme, font, scope) {
+// A background can adjust the label halo to suit it (see fantasy.js).
+export function themeCSS(theme, font, background, scope) {
     var c = theme.colors;
     var w = theme.widths;
     var l = theme.labels;
-    var halo = c.halo === 'none' || !w.halo ? 'stroke: none;' :
-        'stroke: ' + c.halo + '; stroke-width: ' + w.halo + 'px; stroke-linejoin: round; paint-order: stroke;';
+    var h = Object.assign({color: c.halo, opacity: 1, shadow: l.shadow}, background.halo);
+    var halo = h.color === 'none' || !w.halo ? 'stroke: none;' :
+        'stroke: ' + h.color + '; stroke-opacity: ' + h.opacity + '; stroke-width: ' + w.halo +
+        'px; stroke-linejoin: round; paint-order: stroke;';
     var rules = [
         'S { --ink: ' + c.ink + '; --symbol: ' + c.symbol + '; --marker: ' + c.marker + '; }',
         'S path, S line, S circle { fill: none; stroke: ' + c.ink + '; stroke-linecap: round; }',
@@ -20,7 +23,7 @@ export function themeCSS(theme, font, scope) {
         'S .slope { stroke: ' + c.slope + '; stroke-width: ' + w.slope + 'px; }',
         'S circle.city { fill: ' + c.cityFill + '; fill-opacity: ' + theme.cities.fillOpacity +
             '; stroke: ' + c.city + '; stroke-width: ' + w.city + 'px; }',
-        'S text { ' + halo + (l.shadow ? ' filter: drop-shadow(' + l.shadow + ');' : '') + ' }',
+        'S text { ' + halo + (h.shadow ? ' filter: drop-shadow(' + h.shadow + ');' : '') + ' }',
         typeof font.label === 'string' ?
             'S text.city-label { font-family: ' + font.label + '; fill: ' + c.label + '; }' : '',
         typeof font.region === 'string' ?

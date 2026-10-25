@@ -1,6 +1,5 @@
 // The right-hand panel: Build (shape the current map), Style (how it's
-// drawn) and Advanced (the mesh demo).
-import {meshDemo} from './views.js';
+// drawn).
 import {THEMES, getTheme, fontChoice, backgroundChoice} from '../themes/index.js';
 import {TOGGLE_LAYERS} from '../render/svg.js';
 
@@ -181,44 +180,9 @@ function stylePanel(body, ctx) {
     });
 }
 
-function advancedPanel(body, ctx) {
-    var s = section(body, 'Mesh demo',
-        'How the map grid is built: random points, spread out evenly, then joined into a mesh. This doesn\'t change your map.');
-    var id = 'ctl' + nextId++;
-    var row = s.append('div').attr('class', 'control-row');
-    row.append('label').attr('for', id).text('Points');
-    var input = row.append('input').attr('id', id).attr('type', 'number').attr('min', 16).property('value', 4096)
-        .style('width', '6em');
-    var cornersButton;
-    function show() {
-        cornersButton.text(meshDemo.showCorners ? 'Show original points' : 'Show Voronoi corners');
-        ctx.setView('mesh');
-    }
-    buttonGrid(s, [
-        {text: 'New points', onClick: function () {
-            meshDemo.generate(parseInt(input.property('value'), 10) || 4096);
-            meshDemo.showCorners = false;
-            show();
-        }},
-        {text: 'Improve points', title: 'Move each point to the centre of its cell', onClick: function () {
-            meshDemo.improve();
-            show();
-        }},
-        {text: 'Show Voronoi corners', wide: true, onClick: function () {
-            meshDemo.showCorners = !meshDemo.showCorners;
-            show();
-        }}
-    ]);
-    cornersButton = s.selectAll('.button-grid button').filter(function (d, i) {return i === 2});
-
-    s = section(body, 'Map history');
-    ctx.historyInfo = s.append('p');
-}
-
 var PANELS = [
     {id: 'build', name: 'Build', build: buildPanel},
-    {id: 'style', name: 'Style', build: stylePanel},
-    {id: 'advanced', name: 'Advanced', build: advancedPanel}
+    {id: 'style', name: 'Style', build: stylePanel}
 ];
 
 export function createPanels(tabs, body, ctx) {

@@ -5,8 +5,3 @@
     stroke: none;
     fill-opacity: 1.0;
 }
-
-#mapSVG circle.point {
-    fill: black;
-    stroke: none;
-}

@@ -8,7 +8,7 @@ This fork started from Martin O'Leary's [terrain generator](https://mewo2.com/no
 - **Two equal ways to start a map:**
   - *Random*: generate a complete map from a seed and a few settings.
   - *Blank*: start with a flat map and build it up by hand with slopes, cones, blobs, erosion, sea level, cities and so on. You can also generate a random map and then tinker with it.
-- **A neutral editor, with themed output.** The tool itself looks plain. The style belongs to the map: simple, Lovecraftian, military, pirate, high fantasy, and more.
+- **A neutral editor, with themed output.** The tool itself looks plain. The style belongs to the map: simple, fantasy, military, pirate, and more.
 - **Edits that can be undone and saved.** Every action is one recorded step.
 
 ## Core ideas
@@ -65,18 +65,17 @@ Each phase leaves the app working.
 - [x] Top bar: New map (Random or Blank, with detail level and seed), Open, Save, Export (PNG/SVG). The seed of the current map is shown.
 - [x] Tool strip: Pointer, Move, Edit labels, Add marker, Delete, Undo/Redo. Keyboard shortcuts: V, G, T, M, D, Esc.
 - [x] The map in the centre, fitted to the window. The status bar shows hints for the active tool and a View picker.
-- [x] One map view with view modes: Map, Heightmap, Erosion rate, City scores, Territories, Mesh demo.
+- [x] One map view with view modes: Map, Heightmap, Erosion rate, City scores, Territories. (A mesh demo view was later removed: it no longer added anything.)
 - [x] Right-hand panel:
   - **Build**: new terrain, shaping, sea level and erosion (with sliders), places.
-  - **Style**: label font, parchment, layer toggles.
-  - **Advanced**: the mesh demo and a history count.
+  - **Style**: theme, lettering, background, layer toggles.
 - [x] Remove the tabs. Plain, neutral editor styling (`css/editor.css`), separate from how the map is drawn (`css/map.css`).
 - [x] Save and Open map files, which were planned for Phase 6. They fit the top bar and were simple once the step history existed.
 
 ### Phase 3: Themes
 - [x] A theme format (`src/themes/`; `simple.js` documents every field) and a renderer that uses it. The theme's stylesheet is written into the SVG, so exports carry it.
 - [x] The style is part of the map: theme, font, background and hidden layers are a step, so they can be undone, are saved in map files and carry over to new maps.
-- [x] **Simple** (the default), **Lovecraftian** (the original look: parchment, IM Fell type, tentacle wrecks) and **Plotter**.
+- [x] **Simple** (the default), **Fantasy** (the original look: parchment, IM Fell type, tentacle wrecks; first called Lovecraftian) and **Plotter**.
 - [x] Plotter: strokes only, single-stroke Hershey lettering, borders drawn as separate dashes, slope hatching cleared from under labels.
 - [x] Fonts are bundled (`@fontsource`), and exports embed only the current theme's fonts, so labels keep their font in PNG/SVG.
 - Later: pirate, military, high fantasy, and theme-specific naming styles.

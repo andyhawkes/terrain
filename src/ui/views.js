@@ -10,8 +10,7 @@ export var VIEWS = [
     {id: 'heightmap', name: 'Heightmap', hint: 'Land and sea heights. Useful while shaping terrain from a blank start.'},
     {id: 'erosion', name: 'Erosion rate', hint: 'Where erosion will cut deepest: along rivers and steep slopes.'},
     {id: 'cityScore', name: 'City scores', hint: 'How attractive each spot is for the next city. Brighter is better.'},
-    {id: 'territories', name: 'Territories', hint: 'Which capital each part of the map belongs to.'},
-    {id: 'mesh', name: 'Mesh demo', hint: 'A standalone demo of how the map grid is built. It does not change your map.'}
+    {id: 'territories', name: 'Territories', hint: 'Which capital each part of the map belongs to.'}
 ];
 
 export function viewInfo(id) {
@@ -50,34 +49,12 @@ var draw = {
     }
 };
 
-// The mesh demo keeps its own points, separate from the map
-export var meshDemo = {
-    pts: null,
-    vxs: null,
-    showCorners: false,
-    generate: function (n) {
-        this.pts = T.generatePoints(n);
-        this.vxs = null;
-    },
-    improve: function () {
-        if (!this.pts) return;
-        this.pts = T.improvePoints(this.pts);
-        this.vxs = null;
-    }
-};
-
 var shown = null;
 
 export function renderView(svg, view, state) {
     if (view !== shown) {
         R.clearAll(svg);
         shown = view;
-    }
-    if (view === 'mesh') {
-        if (!meshDemo.pts) meshDemo.generate(4096);
-        if (meshDemo.showCorners && !meshDemo.vxs) meshDemo.vxs = T.makeMesh(meshDemo.pts).vxs;
-        R.visualizePoints(svg, meshDemo.showCorners ? meshDemo.vxs : meshDemo.pts);
-        return;
     }
     if (state.h) draw[view](svg, state);
 }

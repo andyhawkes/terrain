@@ -9,7 +9,7 @@ import {themeCSS, labelText, hersheyPath, hersheyBox, dashPaths} from './theme.j
 export var SCALE = 1000;
 
 // Layers in drawing order; each is a <g> so redraws keep the stacking order
-var LAYERS = ['background', 'field', 'points', 'river', 'coast', 'border', 'slope', 'city', 'wreck', 'poi', 'marker', 'label'];
+var LAYERS = ['background', 'field', 'river', 'coast', 'border', 'slope', 'city', 'wreck', 'poi', 'marker', 'label'];
 
 // Layers the user can switch off in the Style panel
 export var TOGGLE_LAYERS = [
@@ -76,13 +76,6 @@ export function showLayers(svg, hidden) {
 
 // --- Diagnostic drawing ---
 
-export function visualizePoints(svg, pts) {
-    join(svg, 'points', 'circle', 'point', pts)
-        .attr('cx', function (d) {return SCALE*d[0]})
-        .attr('cy', function (d) {return SCALE*d[1]})
-        .attr('r', 100 / Math.sqrt(pts.length));
-}
-
 export function visualizeVoronoi(svg, field, lo, hi) {
     if (hi == undefined) hi = d3.max(field) + 1e-9;
     if (lo == undefined) lo = d3.min(field) - 1e-9;
@@ -100,10 +93,11 @@ export function visualizeVoronoi(svg, field, lo, hi) {
 export function applyTheme(svg, style) {
     var theme = getTheme(style.theme);
     var font = fontChoice(theme, style);
-    var css = themeCSS(theme, font, '#' + svg.attr('id'));
+    var background = backgroundChoice(theme, style);
+    var css = themeCSS(theme, font, background, '#' + svg.attr('id'));
     var el = svg.select('style.theme');
     if (el.text() !== css) el.text(css);
-    return {theme: theme, font: font, background: backgroundChoice(theme, style)};
+    return {theme: theme, font: font, background: background};
 }
 
 function drawBackground(svg, background) {

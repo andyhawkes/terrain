@@ -15,7 +15,8 @@ export default {
     ],
 
     // Backgrounds to choose from; the first is the default. image is drawn
-    // behind the map, scaled up by imageScale and centred.
+    // behind the map, scaled up by imageScale and centred. halo can override
+    // the label halo for this background: {color, opacity, shadow}.
     backgrounds: [
         {id: 'white', name: 'White', color: '#ffffff'},
         {id: 'cream', name: 'Cream', color: '#f7f2e4'}

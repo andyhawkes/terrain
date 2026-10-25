@@ -1,4 +1,4 @@
-// Symbols for the Lovecraftian theme: POI glyphs, tentacle wrecks and their ripples.
+// Symbols for the Fantasy theme: POI glyphs, tentacle wrecks and their ripples.
 export var poiSymbols = '⚒⚔⚖☠☤⚚☥♖♜⚐⚑';
 // poiSymbols += '⚓♕♘♛♞';
 // poiSymbols += '🛕🛖🛡🗡🏹⛏🪓';
