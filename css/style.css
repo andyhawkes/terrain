@@ -113,6 +113,20 @@ div.output {
     width: 200px;
 }
 
+#editControls button:disabled {
+    opacity: 0.3;
+    cursor: default;
+    background-color: white;
+    color: black;
+}
+
+.seedNote {
+    clear: right;
+    float: right;
+    margin: 0 0 0.5rem;
+    font-family: monospace;
+}
+
 #editControls .active {
     background-color: #900;
     color: #fff;
@@ -269,7 +283,7 @@ text.poi {
 /* Label editing mode */
 
 .editable::before {
-    content: 'Edit mode active - click a map label to edit it';
+    content: 'Edit labels: click a label to change its text. Esc to stop.';
     color: green;
     font-weight: bold;
 }
@@ -282,7 +296,7 @@ text.poi {
 
 .editable text.region:hover,
 .editable text.city:hover {
-    cursor: text;
+    cursor: pointer;
     fill: green;
 }
 
@@ -310,7 +324,7 @@ text.poi {
 }
 
 .clickableMode::before {
-    content: 'Clickable mode active - click to add a treasure marker cross';
+    content: 'Add markers: click the map to add a treasure cross. Esc to stop.';
     color: blue;
     font-weight: bold;
 }
@@ -322,7 +336,7 @@ text.poi {
 }
 
 .dragableMode::before {
-    content: 'Dragable mode active - drag points of interest, wrecks, or treasure markers to reposition them';
+    content: 'Move: drag cities, labels, wrecks, points of interest or markers. Esc to stop.';
     color: purple;
     font-weight: bold;
 }
@@ -341,6 +355,8 @@ text.poi {
     stroke: purple;
 }
 
+.dragableMode text.city:hover,
+.dragableMode text.region:hover,
 .dragableMode text.poi:hover,
 .dragableMode use.wreck:hover,
 .dragableMode path.wreck:hover,
@@ -357,7 +373,7 @@ text.poi {
 }
 
 .deleteMode::before {
-    content: 'DANGER: Delete mode active - click a map marker to delete it';
+    content: 'Delete: click a marker or city to remove it, or a label to hide it. Ctrl/Cmd+Z to undo.';
     color: red;
     font-weight: bold;
 }
@@ -384,7 +400,7 @@ text.poi {
 .deleteMode circle.city:hover,
 .deleteMode text.city:hover,
 .deleteMode text.region:hover {
-    cursor: not-allowed;
+    cursor: pointer;
 }
 
 .parchment #finalMapSVG {

@@ -1,0 +1,103 @@
+# Plan: from tutorial demo to map-making tool
+
+This fork started from Martin O'Leary's [terrain generator](https://mewo2.com/notes/terrain/). The original was a step-by-step explanation of how the algorithm works. The aim now is a tool for making maps, while still letting you explore the algorithm.
+
+## Goals
+
+- **Make maps people can use.** That includes tabletop RPG game masters, parents making treasure maps for their kids, and anyone who just enjoys playing with it. It's a fun experiment first.
+- **Two equal ways to start a map:**
+  - *Random*: generate a complete map from a seed and a few settings.
+  - *Blank*: start with a flat map and build it up by hand with slopes, cones, blobs, erosion, sea level, cities and so on. You can also generate a random map and then tinker with it.
+- **A neutral editor, with themed output.** The tool itself looks plain. The style belongs to the map: simple, Lovecraftian, military, pirate, high fantasy, and more.
+- **Edits that can be undone and saved.** Every action is one recorded step.
+
+## Core ideas
+
+### One map, many views
+
+There is a single map state: mesh, heightmap, cities, points of interest, wrecks, markers, names and label edits. Every view draws from it:
+
+- the finished map;
+- diagnostic views, such as heightmap colours, erosion rate, city scores and territories.
+
+Nothing needs copying between stages.
+
+### Everything is a step
+
+Each action is a step in one ordered list. That includes "new blank map", "generate random map", "add 10 blobs", "erode", "add city", "move label" and "delete wreck". A step that uses randomness records its own seed, so replaying the list rebuilds exactly the same map. From that:
+
+- **Undo/redo** means moving back and forth through the list. Each step's result is cached, so this is instant.
+- **A save file** is just the step list as JSON. It stays small, whether the map was generated or built by hand.
+- **Watching a map being built** step by step becomes possible, for the "explore the algorithm" side.
+- **Later sculpting tools** fit in the same way: a brush stroke is just another step.
+
+### Seeded and independent of the browser
+
+The generation code (`src/core/`) doesn't use the DOM, and all its randomness comes from a seeded generator. The same seed always produces the same map. That allows:
+
+- shareable seeds and links;
+- a "map of the day" seeded from the date;
+- generating maps from the command line, e.g. on a Raspberry Pi driving a pen plotter.
+
+### Themes are data
+
+A theme describes how the map is drawn: fonts, colours, line styles for coasts, rivers and borders, marker symbols, background, and later a naming style. Adding a theme means writing data, not changing the editor. There will also be a **Plotter** theme: strokes only, single-stroke (Hershey-style) fonts, no fills or background images.
+
+## Phases
+
+Each phase leaves the app working.
+
+### Phase 1: Foundations
+- [x] Move to Vite and ES modules. Keep D3 v4 for now, from npm instead of vendored files.
+- [x] Seeded random number generation. Remove every direct `Math.random` call from the generation code.
+- [x] Split the generation code (`src/core/`) from SVG rendering (`src/render/`). The core runs in Node.
+- [x] One shared map state, built from a step history with cached snapshots and undo/redo.
+- [x] Choose a point-of-interest symbol, wreck variant and place names once, when the item is created, so they don't change on every redraw.
+- [x] Rewire the existing tabs to the shared map. Remove the "Copy heightmap from…" buttons.
+- [x] Fix these bugs:
+  - edit modes getting out of sync;
+  - Quick start inputs only updating on blur;
+  - drag and delete ignoring items added later;
+  - duplicate element IDs.
+- [x] A command-line script that generates a map from a seed, plus tests showing generation is deterministic.
+
+### Phase 2: Neutral editor layout
+- Top bar: New map (Random or Blank), Save, Load, Export.
+- Tool strip: Select/Move, Edit label, Add marker, Delete.
+- The map in the centre, fitted to the window.
+- Right-hand panels:
+  - **Style**: theme, font, layers.
+  - **Build / Advanced**: the old stage controls, acting on the current map, plus the diagnostic views.
+- Remove the tabs. The mesh demo moves into Advanced.
+- Plain, neutral styling for the editor.
+
+### Phase 3: Themes
+- A theme format, and a renderer that uses it.
+- Simple and Lovecraftian themes. Lovecraftian takes over the current styling: R'lyehian fonts, tentacle wrecks, parchment background.
+- A Plotter theme with stroke-only SVG export.
+- Later: pirate, military, high fantasy.
+
+### Phase 4: Tools
+- One tool controller with clear hints for the active tool. Esc returns to Select.
+- Edit labels in place with a text box, replacing `prompt()`.
+- More marker types: treasure cross, plus theme-specific markers.
+
+### Phase 5: Undo/redo UI
+- Undo/redo buttons and keyboard shortcuts become part of the main UI. They exist in basic form from Phase 1.
+- A history panel, with the option to replay how a map was built.
+
+### Phase 6: Save, load and share
+- Save and load the step list as a JSON file.
+- Autosave to browser storage.
+- Shareable seed links, e.g. `?seed=…`.
+
+### Later
+- A 3D view of the terrain, probably with three.js, and sculpting tools that record brush strokes as steps.
+- A command-line "map of the day" for a home-made pen plotter, outputting stroke-only SVG and possibly HPGL or G-code.
+- Possibly moving to D3 v7 and `d3-delaunay`. This means reworking the mesh code, which relies on D3 v4's voronoi edge structure.
+
+## Decisions so far
+- **Desktop first.** Phone layouts aren't a goal for now.
+- **Zoom and pan are not a priority.**
+- **Build tools are fine** (Vite, npm).
+- **Save files hold the step list, not the full mesh.** If replaying ever gets slow (e.g. many sculpting steps), a save can include a heightmap snapshot.

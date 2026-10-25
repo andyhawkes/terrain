@@ -1,0 +1,58 @@
+#!/usr/bin/env node
+// Generates a map from a seed without a browser, and prints its layers as JSON.
+// Usage: npm run generate -- [--seed abc] [--npts 16384] [--ncities 15] [--nterrs 5]
+//                           [--nwrecks 1] [--npoi 1] [--out map.json]
+import {writeFileSync} from 'node:fs';
+import {parseArgs} from 'node:util';
+import {MapDocument} from '../src/core/document.js';
+import {derive} from '../src/core/derive.js';
+import {itemPos} from '../src/core/steps.js';
+import {newSeed} from '../src/core/random.js';
+
+var numeric = ['npts', 'ncities', 'nterrs', 'nwrecks', 'npoi'];
+var options = {seed: {type: 'string'}, out: {type: 'string'}};
+numeric.forEach(function (name) {options[name] = {type: 'string'}});
+var args = parseArgs({options: options}).values;
+
+var params = {};
+numeric.forEach(function (name) {
+    if (args[name] != null) params[name] = parseInt(args[name], 10);
+});
+var seed = args.seed || newSeed();
+
+var doc = new MapDocument();
+doc.dispatch('generate', {params: params}, seed);
+var state = doc.state;
+var d = derive(state);
+
+function points(list) {
+    return state[list].map(function (item) {
+        return Object.assign({id: item.id, pos: itemPos(state, item)}, item.variant != null ? {variant: item.variant} : {});
+    });
+}
+
+var output = {
+    seed: seed,
+    document: doc.toJSON(),
+    extent: state.params.extent,
+    layers: {
+        coasts: d.coasts,
+        rivers: d.rivers,
+        borders: d.borders,
+        slopes: d.slopes,
+        cities: state.cities.map(function (c, i) {
+            return {id: c.id, pos: itemPos(state, c), capital: i < state.params.nterrs, name: c.name};
+        }),
+        wrecks: points('wrecks'),
+        poi: points('poi'),
+        labels: d.labels
+    }
+};
+
+var json = JSON.stringify(output);
+if (args.out) {
+    writeFileSync(args.out, json);
+    console.error('Wrote ' + args.out + ' (seed ' + seed + ')');
+} else {
+    process.stdout.write(json + '\n');
+}
