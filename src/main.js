@@ -3,7 +3,7 @@
 import './fonts.js';
 import * as d3 from 'd3';
 import {saveSvg, saveSvgAsPng} from 'save-svg-as-png';
-import {MapDocument} from './core/document.js';
+import {MapDocument, checkGenerator} from './core/document.js';
 import {defaultParams, SHAPES, getShape} from './core/steps.js';
 import {LANGUAGES} from './core/language.js';
 import {newSeed, resolveSeed} from './core/random.js';
@@ -501,6 +501,7 @@ function openLink(link) {
     if (link.json) {
         var steps = link.json.steps || [];
         if (!steps.length || ['generate', 'newBlank'].indexOf(steps[0].type) < 0) throw new Error('Not a map link');
+        checkGenerator(link.json);
         steps.forEach(function (step) {doc.dispatch(step.type, step.args, step.seed)});
     } else {
         doc.dispatch('generate', {params: link.params, style: link.style}, link.seed);

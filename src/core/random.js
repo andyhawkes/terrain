@@ -25,21 +25,30 @@ function mulberry32(a) {
     };
 }
 
-function makeContext(next) {
-    return {next: next, z2: null};
+function makeContext(next, seed) {
+    return {next: next, z2: null, seed: seed};
 }
 
 // Unseeded fallback, so code called outside withSeed() still works.
-var current = makeContext(Math.random);
+var current = makeContext(Math.random, null);
 
 export function withSeed(seed, fn) {
     var prev = current;
-    current = makeContext(mulberry32(hashSeed(seed)));
+    current = makeContext(mulberry32(hashSeed(seed)), String(seed));
     try {
         return fn();
     } finally {
         current = prev;
     }
+}
+
+// Runs fn with its own stream, derived from the current seed and a name.
+// A stage that runs in its own stream draws the same numbers however much
+// earlier stages drew: a finer grid uses more random numbers, but the
+// terrain and names that follow stay the same.
+export function withStream(name, fn) {
+    if (current.seed == null) return fn();
+    return withSeed(current.seed + ':' + name, fn);
 }
 
 // "today" stands for today's date, so everyone gets the same map of the day

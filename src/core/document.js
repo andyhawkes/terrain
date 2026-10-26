@@ -5,7 +5,24 @@ import {steps, emptyState} from './steps.js';
 import {withSeed, newSeed} from './random.js';
 
 var KEEP_SNAPSHOTS = 30;
+// The file format: how steps are stored
 export var FORMAT_VERSION = 1;
+// How steps turn into maps. Saved maps only hold steps and seeds, so a
+// change that makes the same steps give a different map (e.g. drawing
+// random numbers in a different order) needs a new version here. Maps
+// record the version they were made with; one made by an older version
+// could then be replayed the old way. History:
+//   1: one random stream per step
+//   2: generation stages draw from their own streams (see withStream), so
+//      a seed gives the same map at any detail level or shape
+export var GENERATOR_VERSION = 2;
+
+// Throws if saved map data needs a newer generator than this one
+export function checkGenerator(json) {
+    if ((json.generator || 1) > GENERATOR_VERSION) {
+        throw new Error('This map was made with a newer version of the map maker.');
+    }
+}
 
 function applyStep(state, step) {
     var def = steps[step.type];
@@ -121,7 +138,7 @@ export class MapDocument {
             var style = this.stateAt(start + 1).style;
             steps[0] = Object.assign({}, first, {args: Object.assign({}, first.args, {style: style})});
         }
-        var json = {version: FORMAT_VERSION, steps: steps};
+        var json = {version: FORMAT_VERSION, generator: GENERATOR_VERSION, steps: steps};
         if (options.keepRedo) json.cursor = this.cursor - start;
         return json;
     }
@@ -131,6 +148,7 @@ export class MapDocument {
         if (!json || json.version !== FORMAT_VERSION || !Array.isArray(json.steps) || !json.steps.length) {
             throw new Error('This is not a map file this version can open.');
         }
+        checkGenerator(json);
         var loaded = new MapDocument();
         loaded.steps = json.steps.slice();
         loaded.cursor = json.cursor > 0 ? Math.min(json.cursor, loaded.steps.length) : loaded.steps.length;

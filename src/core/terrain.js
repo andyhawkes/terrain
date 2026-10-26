@@ -3,7 +3,7 @@
 import {ascending, descending, min, max, mean, scan, quantile as d3quantile} from 'd3-array';
 import {voronoi as d3voronoi} from 'd3-voronoi';
 import PriorityQueue from 'js-priority-queue';
-import {random, runif, rnorm, randomVector} from './random.js';
+import {random, runif, rnorm, randomVector, withStream} from './random.js';
 
 export var defaultExtent = {
     width: 1,
@@ -274,37 +274,33 @@ function findSinks(h) {
     }
 }
 
+// Raises every pit so water can flow off the map: each cell ends up at
+// least epsilon above the next cell on its way out. A priority flood from
+// the edges, lowest first, does this in one pass.
 function fillSinks(h, epsilon) {
     epsilon = epsilon || 1e-5;
-    var infinity = 999999;
     var newh = zero(h.mesh);
+    var done = new Uint8Array(h.length);
+    var queue = new PriorityQueue({comparator: function (a, b) {return newh[a] - newh[b]}});
     for (var i = 0; i < h.length; i++) {
         if (isnearedge(h.mesh, i)) {
             newh[i] = h[i];
-        } else {
-            newh[i] = infinity;
+            done[i] = 1;
+            queue.queue(i);
         }
     }
-    while (true) {
-        var changed = false;
-        for (var i = 0; i < h.length; i++) {
-            if (newh[i] == h[i]) continue;
-            var nbs = neighbours(h.mesh, i);
-            for (var j = 0; j < nbs.length; j++) {
-                if (h[i] >= newh[nbs[j]] + epsilon) {
-                    newh[i] = h[i];
-                    changed = true;
-                    break;
-                }
-                var oh = newh[nbs[j]] + epsilon;
-                if ((newh[i] > oh) && (oh > h[i])) {
-                    newh[i] = oh;
-                    changed = true;
-                }
-            }
+    while (queue.length) {
+        var c = queue.dequeue();
+        var nbs = h.mesh.adj[c];
+        for (var j = 0; j < nbs.length; j++) {
+            var n = nbs[j];
+            if (done[n]) continue;
+            done[n] = 1;
+            newh[n] = Math.max(h[n], newh[c] + epsilon);
+            queue.queue(n);
         }
-        if (!changed) return newh;
     }
+    return newh;
 }
 
 function getFlux(h) {
@@ -494,8 +490,14 @@ function pickWreck(h, wrecks) {
     return scan(wreckScore(h, wrecks), descending);
 }
 
+// Points of interest go near a random spot, so they land in the same place
+// whatever the grid
 function POIScore(h, poi) {
-    var score = map(getFlux(h), function () {return random()});
+    var target = [runif(-WORLD / 2, WORLD / 2), runif(-WORLD / 2, WORLD / 2)];
+    var score = map(h, function (x, i) {
+        var v = h.mesh.vxs[i];
+        return -Math.sqrt((v[0] - target[0]) * (v[0] - target[0]) + (v[1] - target[1]) * (v[1] - target[1]));
+    });
     for (var i = 0; i < h.length; i++) {
         if (h[i] <= 0 || isnearedge(h.mesh, i)) {
             score[i] = -999999;
@@ -686,17 +688,55 @@ function dropEdge(h, p) {
     return newh;
 }
 
+// Random features are placed in a fixed square of this size around the
+// middle, big enough for any map shape. A map shows the part that falls
+// inside it, so maps of different shapes from one seed share features.
+var WORLD = 2.12;
+
+// Hills scattered across the world: 50 per square map unit
+function worldHills(mesh) {
+    var n = Math.round(50 * WORLD * WORLD);
+    var hills = [];
+    for (var i = 0; i < n; i++) {
+        var p = [WORLD * (random() - 0.5), WORLD * (random() - 0.5)];
+        // Hills further off the map than this add nothing visible to it
+        if (Math.abs(p[0]) < mesh.extent.width / 2 + 0.25 && Math.abs(p[1]) < mesh.extent.height / 2 + 0.25) hills.push(p);
+    }
+    var r = 0.05;
+    var h = zero(mesh);
+    for (var i = 0; i < mesh.vxs.length; i++) {
+        var v = mesh.vxs[i];
+        for (var j = 0; j < hills.length; j++) {
+            var dx = v[0] - hills[j][0];
+            var dy = v[1] - hills[j][1];
+            h[i] += Math.pow(Math.exp(-(dx * dx + dy * dy) / (2 * r * r)), 2);
+        }
+    }
+    return h;
+}
+
+// Relaxing smooths over a few cells, so a finer grid needs more passes to
+// smooth the same distance: n passes at medium detail on a square map
+function smoothingPasses(mesh, n) {
+    var density = mesh.vxs.length / area(mesh);
+    return Math.max(1, Math.round(n * density / 16384));
+}
+
+// The grid and the terrain draw from separate streams, so the same seed
+// gives the same terrain at any level of detail
 function generateCoast(params) {
-    return coastHeightmap(generateGoodMesh(params.npts, params.extent));
+    var mesh = withStream('grid', function () {return generateGoodMesh(params.npts, params.extent)});
+    return withStream('terrain', function () {return coastHeightmap(mesh)});
 }
 
 function coastHeightmap(mesh) {
     var h = add(
             slope(mesh, randomVector(4)),
             cone(mesh, runif(-1, -1)),
-            mountains(mesh, Math.round(50 * area(mesh)))
+            worldHills(mesh)
             );
-    for (var i = 0; i < 10; i++) {
+    var passes = smoothingPasses(mesh, 10);
+    for (var i = 0; i < passes; i++) {
         h = relax(h);
     }
     h = peaky(h);

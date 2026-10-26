@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {MapDocument} from '../src/core/document.js';
+import {MapDocument, GENERATOR_VERSION} from '../src/core/document.js';
 import {derive} from '../src/core/derive.js';
 import {itemPos} from '../src/core/steps.js';
 
@@ -265,6 +265,58 @@ test('maps can be square or A4-shaped, and square maps are unchanged', function 
     var blank = new MapDocument();
     blank.dispatch('newBlank', {shape: 'a4-landscape', npts: 1024});
     assert.deepEqual(blank.state.params.extent, {width: 2.12, height: 1.5});
+});
+
+// Land or sea at points spread over the middle of a map
+function landAt(state, n) {
+    var vxs = state.h.mesh.vxs;
+    var out = [];
+    for (var a = 0; a < n; a++) {
+        for (var b = 0; b < n; b++) {
+            var x = (a + 0.5) / n * 0.9 - 0.45;
+            var y = (b + 0.5) / n * 0.9 - 0.45;
+            var best = Infinity;
+            var nearest = 0;
+            for (var i = 0; i < vxs.length; i++) {
+                var d = (vxs[i][0] - x) * (vxs[i][0] - x) + (vxs[i][1] - y) * (vxs[i][1] - y);
+                if (d < best) {
+                    best = d;
+                    nearest = i;
+                }
+            }
+            out.push(state.h[nearest] > 0);
+        }
+    }
+    return out;
+}
+
+function agreement(a, b) {
+    return a.filter(function (v, i) {return v === b[i]}).length / a.length;
+}
+
+test('a seed gives the same map at any detail level or shape', function () {
+    function make(params) {
+        var doc = new MapDocument();
+        doc.dispatch('generate', {params: Object.assign({ncities: 6, nterrs: 3}, params)}, 'same');
+        return doc.state;
+    }
+    var low = make({npts: 1024});
+    var high = make({npts: 4096});
+    var wide = make({npts: 4096, shape: 'a4-landscape', ncities: 6, nterrs: 3});
+    assert.ok(agreement(landAt(low, 20), landAt(high, 20)) > 0.85);
+    assert.ok(agreement(landAt(high, 20), landAt(wide, 20)) > 0.75);
+    // Names come from their own stream, so they don't depend on the grid
+    assert.equal(low.lang.names[0], high.lang.names[0]);
+    assert.equal(high.cities[0].name, wide.cities[0].name);
+});
+
+test('saved maps record the generator version, and newer ones are refused', function () {
+    var doc = new MapDocument();
+    doc.dispatch('newBlank', {npts: 512});
+    var json = doc.toJSON();
+    assert.equal(json.generator, GENERATOR_VERSION);
+    json.generator = GENERATOR_VERSION + 1;
+    assert.throws(function () {MapDocument.fromJSON(json)}, /newer version/);
 });
 
 test('jumping through the history', function () {

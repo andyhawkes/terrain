@@ -2,6 +2,7 @@
 // link (?seed=…&cities=…&theme=…); anything else gets its steps compressed
 // into the link (#map=…), so hand-built and edited maps can be shared too.
 import {defaultParams, defaultStyle, newParams} from '../core/steps.js';
+import {GENERATOR_VERSION, checkGenerator} from '../core/document.js';
 import {resolveSeed} from '../core/random.js';
 
 // Link parameter names for the generation settings
@@ -40,7 +41,8 @@ export async function shareLink(doc) {
     var plain = steps[0].type === 'generate' && !style.hidden.length &&
         steps.slice(1).every(function (s) {return s.type === 'setStyle'});
     if (plain) {
-        var query = new URLSearchParams({seed: steps[0].seed});
+        // v: the generator version, so a later version can recreate the same map
+        var query = new URLSearchParams({seed: steps[0].seed, v: GENERATOR_VERSION});
         // Only settings that differ from the shape's defaults go in the link
         var params = steps[0].args.params || {};
         var defaults = newParams({shape: params.shape});
@@ -63,6 +65,7 @@ export async function readLink() {
     if (hash) return {json: JSON.parse(await decompress(fromBase64Url(hash[1])))};
     var query = new URLSearchParams(location.search);
     if (!query.has('seed')) return null;
+    checkGenerator({generator: parseInt(query.get('v'), 10) || 1});
     var params = {};
     Object.keys(PARAMS).forEach(function (key) {
         var n = parseInt(query.get(PARAMS[key]), 10);

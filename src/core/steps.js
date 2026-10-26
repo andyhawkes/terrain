@@ -2,7 +2,7 @@
 // a new one, leaving the old state untouched so history snapshots stay valid.
 // Steps run inside withSeed(), so any randomness they use is reproducible.
 import * as T from './terrain.js';
-import {randomVector, runif, randrange} from './random.js';
+import {randomVector, runif, randrange, withStream} from './random.js';
 import {makeLanguage, makeName} from './language.js';
 
 export var defaultParams = {
@@ -212,11 +212,15 @@ export var steps = {
         apply: function (state, args) {
             var params = newParams(args.params);
             var s = Object.assign(emptyState(), {params: params, style: args.style || state.style});
+            // Each stage has its own random stream (see withStream), so
+            // changing the detail, shape or counts changes only what it must
             s.h = T.generateCoast(params);
-            s.lang = makeLanguage(params.language);
-            s = addCities(s, params.ncities);
-            s = addPlaced(s, 'wrecks', T.pickWreck, params.nwrecks);
-            s = addPlaced(s, 'poi', T.pickPOI, params.npoi);
+            s = withStream('names', function () {
+                s.lang = makeLanguage(params.language);
+                return addCities(s, params.ncities);
+            });
+            s = withStream('wrecks', function () {return addPlaced(s, 'wrecks', T.pickWreck, params.nwrecks)});
+            s = withStream('poi', function () {return addPlaced(s, 'poi', T.pickPOI, params.npoi)});
             return s;
         }
     },

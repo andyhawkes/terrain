@@ -39,6 +39,10 @@ The generation code (`src/core/`) doesn't use the DOM, and all its randomness co
 - a "map of the day" seeded from the date;
 - generating maps from the command line, e.g. on a Raspberry Pi driving a pen plotter.
 
+Generation runs in stages (grid, terrain, names, wrecks, points of interest), and each stage has its own random stream derived from the seed. So changing the detail level only changes the grid: the same seed gives the same coastline, hills and names at any detail. Hills are scattered over a fixed area bigger than any map, so a square map and an A4 map from one seed share their middle. What still varies with detail: small inlets, islands and river branches; erosion; and which cities get picked first, so capitals and region names can move.
+
+Maps record the generator version they were made with (`generator` in saved files and `#map=` links, `v` in seed links). Any change that makes the same steps give a different map must bump `GENERATOR_VERSION` in `document.js`. A map from a newer version is refused. Version 1 maps aren't replayed the old way, since none were ever saved.
+
 ### Themes are data
 
 A theme describes how the map is drawn: fonts, colours, line styles for coasts, rivers and borders, marker symbols, background, and later a naming style. Adding a theme means writing data, not changing the editor. There will also be a **Plotter** theme: strokes only, single-stroke (Hershey-style) fonts, no fills or background images.
