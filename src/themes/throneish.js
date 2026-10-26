@@ -1,13 +1,20 @@
 // Rival kingdoms on aged vellum: Roman capitals, sepia ink, each realm
 // washed in its own heraldic colour, and castles for the seats of power.
 import {markerSymbols} from './markers.js';
-import {mountains, hills} from './relief-drawings.js';
+import {trees} from './relief-drawings.js';
 
 var parchment = new URL('../../images/parchment.jpg', import.meta.url).href;
 
 var INK = '#2b2116';
 var VELLUM = '#ece0c6';
 var WAVES = 'M-20,9 q5,-4 10,0 t10,0 t10,0 t10,0';
+
+// Trees are drawn in a lighter line than castles, to sit with the hachures
+function lightLines(drawing) {
+    return drawing.map(function (part) {
+        return part.cls === 'ridge' ? {d: part.d, cls: 'leaf'} : part;
+    });
+}
 
 // A castle with two towers and a keep, its base just below the city's spot
 var CASTLE = 'M-10,4 L-10,-9 L-9,-9 L-9,-11 L-8,-11 L-8,-9 L-7,-9 L-7,-11 L-6,-11 L-6,-9 L-5,-9 L-5,-5 L-3,-5 ' +
@@ -43,7 +50,8 @@ export default {
         region: INK,
         halo: VELLUM,
         symbol: INK,
-        marker: '#8c1c1c'
+        marker: '#8c1c1c',
+        hachure: '#3a2c1e'
     },
 
     widths: {
@@ -93,22 +101,14 @@ export default {
         ]]},
         relief: {
             spacing: {mountain: 17, hill: 18, tree: 8},
-            // Engraved: a sepia wash crossed with hatching on the dark side
-            mountain: {kind: 'path', variants: mountains(12, 23, {style: 'engraved', spacing: 1.5})},
-            hill: {kind: 'path', variants: hills(6, 29, {style: 'engraved', spacing: 1.5})},
-            // Pines in the cold north and high ground, broadleaf trees elsewhere
-            tree: {kind: 'path', climate: {cold: [0, 1], warm: [2, 3, 4]}, variants: [
-                [{d: 'M0,-13 L-3,-7 L-1.5,-7 L-4,-2 L4,-2 L1.5,-7 L3,-7 Z', cls: 'mask'},
-                    {d: 'M0,-13 L-3,-7 L-1.5,-7 L-4,-2 L4,-2 L1.5,-7 L3,-7 Z M0,-2 L0,1', cls: 'ridge'}],
-                [{d: 'M0,-11 L-3.5,-3 L3.5,-3 Z', cls: 'mask'},
-                    {d: 'M0,-11 L-3.5,-3 L3.5,-3 Z M0,-3 L0,0.5', cls: 'ridge'}],
-                [{d: 'M-3,-2 C-5,-4 -4,-9 0,-9 C4,-9 5,-4 3,-2 Z', cls: 'mask'},
-                    {d: 'M-3,-2 C-5,-4 -4,-9 0,-9 C4,-9 5,-4 3,-2 Z M0,-2 L0,1', cls: 'ridge'}],
-                [{d: 'M-4,-3 C-7,-4 -6,-10 -2,-10 C-1,-13 4,-12 4,-9 C7,-8 6,-3 3,-3 Z', cls: 'mask'},
-                    {d: 'M-4,-3 C-7,-4 -6,-10 -2,-10 C-1,-13 4,-12 4,-9 C7,-8 6,-3 3,-3 Z M0,-3 L0,1', cls: 'ridge'}],
-                [{d: 'M-4.5,-3 C-6,-6 -3,-8 -2,-7 C-2,-11 3,-11 3,-8 C6,-8 6,-4 4,-3 Z', cls: 'mask'},
-                    {d: 'M-4.5,-3 C-6,-6 -3,-8 -2,-7 C-2,-11 3,-11 3,-8 C6,-8 6,-4 4,-3 Z M-0.5,-3 L0,1 M0,-3 L1.5,-5', cls: 'ridge'}]
-            ]},
+            // High ground is shaded with hachures, not mountain symbols:
+            // strokes in rows between contours (spacing in SVG units), in
+            // three weights from gentle to steep
+            hachures: {spacing: 2.4, levels: 9, widths: [0.45, 0.8, 1.25]},
+            // Hand-drawn trees: pines in the cold north and on high ground,
+            // broadleaf trees elsewhere
+            tree: {kind: 'path', climate: {cold: [0, 1, 2, 3], warm: [4, 5, 6, 7, 8, 9]},
+                variants: trees(4, 41, 'pine').concat(trees(6, 43, 'broadleaf')).map(lightLines)},
             // A soft green wash under the woods
             treeWash: {color: '#5f7a3a', opacity: 0.35, radius: 7}
         },
@@ -138,10 +138,8 @@ export default {
         // The background's paper colour (see backgrounds)
         mask: {fill: 'currentColor', stroke: 'none'},
         ridge: {fill: 'none', stroke: INK, 'stroke-width': 1.2},
-        shadow: {fill: INK, stroke: 'none'},
-        wash: {fill: '#7a5c3a', 'fill-opacity': 0.45, stroke: 'none'},
-        hatch: {fill: 'none', stroke: INK, 'stroke-width': 0.55},
-        crease: {fill: 'none', stroke: INK, 'stroke-width': 0.9},
+        leaf: {fill: 'none', stroke: INK, 'stroke-width': 0.85},
+        twig: {fill: 'none', stroke: INK, 'stroke-width': 0.6},
         mark: {fill: 'none', stroke: 'currentColor', 'stroke-width': 2.5}
     },
 

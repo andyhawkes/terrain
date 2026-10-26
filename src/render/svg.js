@@ -3,7 +3,7 @@
 // setMapSize sets before drawing; text, lines and symbols are sized in SVG
 // user units.
 import * as d3 from 'd3';
-import {derive, seaShading, relief, coastOutlines, smoothCoasts, regionShapes} from '../core/derive.js';
+import {derive, seaShading, relief, coastOutlines, smoothCoasts, regionShapes, hachureStrokes} from '../core/derive.js';
 import {meshTris} from '../core/terrain.js';
 import {itemPos} from '../core/steps.js';
 import {getTheme, fontChoice, backgroundChoice} from '../themes/index.js';
@@ -341,16 +341,18 @@ function drawRelief(svg, state, theme) {
         clear(svg, 'relief');
         return;
     }
-    var kinds = ['mountain', 'hill', 'tree'];
+    // A theme can leave a kind out, e.g. mountains drawn with hachures
+    var kinds = ['mountain', 'hill', 'tree'].filter(function (kind) {return spec[kind]});
     kinds.forEach(function (kind) {ensureSymbols(svg, 'relief-' + kind, spec[kind], theme.parts)});
     var places = state.cities.map(function (c) {return itemPos(state, c)});
     var near = CITY_CLEARANCE / SCALE;
     var symbols = relief(state.h, SCALE, spec.spacing).filter(function (s) {
-        return !places.some(function (p) {
+        return spec[s.kind] && !places.some(function (p) {
             return Math.abs(p[0] - s.x) < near && Math.abs(p[1] - s.y) < near;
         });
     });
     drawTreeWash(svg, spec.treeWash, symbols);
+    drawHachures(svg, state.h, spec.hachures);
     var prefix = '#' + svg.attr('id') + '-relief-';
     // Drawn in order, back to front, so no key: nearer symbols overlap
     join(svg, 'relief', 'use', 'relief', symbols)
@@ -358,6 +360,25 @@ function drawRelief(svg, state, theme) {
         .attr('transform', function (d) {
             return 'translate(' + coord(d.x) + ',' + coord(d.y) + ') scale(' + d.size.toFixed(2) + ')';
         });
+}
+
+// Hachures on the high ground, for themes with hachures ({spacing, levels,
+// widths}: widths are three stroke widths, light to heavy). Part of the
+// relief layer, under the trees and over the forest wash.
+function drawHachures(svg, h, options) {
+    var g = layer(svg, 'relief');
+    g.selectAll('g.hachures').remove();
+    if (!options) return;
+    var paths = [[], [], []];
+    hachureStrokes(h, SCALE, {spacing: options.spacing, levels: options.levels}).forEach(function (s) {
+        var k = s.weight > 0.66 ? 2 : s.weight > 0.33 ? 1 : 0;
+        paths[k].push('M' + coord(s.line[0][0]) + ',' + coord(s.line[0][1]) + 'L' + coord(s.line[1][0]) + ',' + coord(s.line[1][1]));
+    });
+    var group = g.insert('g', 'use').attr('class', 'hachures');
+    paths.forEach(function (d, k) {
+        group.append('path').attr('class', 'hachure').attr('d', d.join(''))
+            .style('stroke-width', options.widths[k] + 'px');
+    });
 }
 
 // A soft watercolour wash under forests, for themes with treeWash

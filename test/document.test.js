@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {MapDocument, GENERATOR_VERSION} from '../src/core/document.js';
-import {derive, seaShading, relief, smoothCoasts} from '../src/core/derive.js';
+import {derive, seaShading, relief, smoothCoasts, hachureStrokes} from '../src/core/derive.js';
 import {contour} from '../src/core/terrain.js';
 import {itemPos, defaultStyle} from '../src/core/steps.js';
 
@@ -396,6 +396,39 @@ test('coastlines follow the grid unless a theme asks for them smoothed', functio
     var smooth = smoothCoasts(h);
     assert.equal(smooth.length, contour(h, 0).length);
     assert.notDeepEqual(smooth, contour(h, 0));
+});
+
+test('hachures run downhill on high ground, about as many at any detail', function () {
+    function strokes(npts) {
+        var doc = new MapDocument();
+        doc.dispatch('generate', {params: {npts: npts}}, 'hachures');
+        return {h: doc.state.h, strokes: hachureStrokes(doc.state.h, 1000, {spacing: 2.4, levels: 9})};
+    }
+    var low = strokes(4096);
+    var high = strokes(16384);
+    assert.ok(low.strokes.length > 500);
+    assert.ok(Math.abs(high.strokes.length - low.strokes.length) / low.strokes.length < 0.5);
+    // Mostly downhill: the end is lower than the start
+    var vxs = low.h.mesh.vxs;
+    function heightAt(p) {
+        var best = 0;
+        var bestD = Infinity;
+        for (var i = 0; i < vxs.length; i++) {
+            var d = Math.hypot(vxs[i][0] - p[0], vxs[i][1] - p[1]);
+            if (d < bestD) {
+                bestD = d;
+                best = i;
+            }
+        }
+        return low.h[best];
+    }
+    var sample = low.strokes.filter(function (s, i) {return i % 25 === 0});
+    var down = sample.filter(function (s) {return heightAt(s.line[1]) <= heightAt(s.line[0])});
+    assert.ok(down.length / sample.length > 0.8, down.length + ' of ' + sample.length + ' run downhill');
+    sample.forEach(function (s) {
+        assert.ok(heightAt(s.line[1]) > 0, 'a hachure into the sea');
+        assert.ok(s.weight >= 0 && s.weight <= 1);
+    });
 });
 
 test('sea shading only goes on the sea, near the coast', function () {

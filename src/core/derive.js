@@ -100,6 +100,17 @@ export function coastOutlines(h, offsets) {
     return entry.coastLines.lines;
 }
 
+// Hachures on the high ground, for themes that draw them (see
+// symbols.relief.hachures in simple.js)
+export function hachureStrokes(h, scale, options) {
+    var entry = cacheFor(h);
+    var key = scale + ' ' + JSON.stringify(options);
+    if (!entry.hachures || entry.hachures.key !== key) {
+        entry.hachures = {key: key, strokes: T.hachures(h, scale, options)};
+    }
+    return entry.hachures.strokes;
+}
+
 // Mountain, hill and tree symbols, for themes that draw relief that way
 // (see symbols.relief in simple.js). spacing is in SVG units, so it's part
 // of what's cached.

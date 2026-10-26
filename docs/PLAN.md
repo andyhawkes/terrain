@@ -150,8 +150,12 @@ Each phase leaves the app working.
 - [x] **Throne-ish**: rival kingdoms on aged vellum (or plain vellum):
   - Lettering: Marcellus SC (or Cinzel) capitals for regions and Cormorant Garamond for towns (OFL).
   - Sepia ink and a smoothed coast with one line at sea.
-  - Engraved mountains and hills: the dark side is a see-through sepia wash crossed with fine hatching (the generator's `engraved` style), not solid black.
-  - Woods by climate: pines in the north and on high ground, broadleaf trees elsewhere (a tree spec's `climate` lists, using how cold each spot is), over a soft green watercolour wash (`treeWash`).
+  - Hachures instead of mountain symbols (`relief.hachures`):
+    - Strokes start on evenly spaced contour lines across the high ground (above the middle of the land's heights) and run downhill to about the next contour, so they sit in rows like an engraved survey map.
+    - They're heavier on steeper slopes and on slopes facing away from a north-west light, in three line weights.
+    - Spacing is in SVG units, so it looks the same at any detail.
+  - Hand-drawn trees (the generator's `trees`): lumpy broadleaf crowns and ragged pines, each different, in a lighter line. They're mixed by climate: pines in the north and on high ground, broadleaf elsewhere (a tree spec's `climate` lists, using how cold each spot is). They sit over a soft green watercolour wash (`treeWash`).
+  - The generator's `engraved` style (a sepia wash and hatching in place of a solid shadow) was tried for Throne-ish's mountains and replaced by hachures. It stays available to any theme.
   - Dashed red borders, with its own ruined towers, battlefields, shrines, standing stones, longships and whirlpools.
 - [x] Region tints (`regionTints` in the theme format): each region's land washed in a colour from the theme's list. The layer is see-through as a whole, so cell edges don't show. A "Region colours" toggle shows for themes that use it.
 - [x] Watercolour washes (`regionTints.watercolour`): an SVG filter roughens the edges and makes the colour uneven, like pigment. It adds no noticeable time to redraws.
