@@ -21,7 +21,10 @@ export function themeCSS(theme, font, background, scope) {
         'S .border { stroke: ' + c.border + '; stroke-width: ' + w.border + 'px;' +
             (theme.strokeOnly ? '' : ' stroke-dasharray: ' + theme.borderDash.join(' ') + ';') + ' }',
         'S .slope { stroke: ' + c.slope + '; stroke-width: ' + w.slope + 'px; }',
-        'S .coast-line { stroke: ' + c.coast + '; fill: none; }',
+        'S .coast-line { stroke: ' + c.coast + '; fill: none; }' +
+            // Only for themes with hachures, leaving other stylesheets as they were
+            (theme.symbols.relief && theme.symbols.relief.hachures ?
+                '\nS .hachure { stroke: ' + (c.hachure || c.ink) + '; fill: none; }' : ''),
         'S .sea { stroke: ' + (c.sea || c.coast) + '; stroke-width: ' + (w.sea || 1) + 'px; }',
         'S circle.city { fill: ' + c.cityFill + '; fill-opacity: ' + theme.cities.fillOpacity +
             '; stroke: ' + c.city + '; stroke-width: ' + w.city + 'px; }',
@@ -38,7 +41,8 @@ export function themeCSS(theme, font, background, scope) {
         'S text.poi { fill: var(--symbol); stroke: none; filter: none; }',
         // A background can set the fill for symbol parts drawn in currentColor
         // (see underhill.js); markers set their own colour
-        background.paper ? 'S .relief, S .poi, S .wreck { color: ' + background.paper + '; }' : '',
+        background.paper ? 'S .relief, S .poi, S .wreck' + (theme.symbols.capital ? ', S .capital-symbol' : '') +
+            ' { color: ' + background.paper + '; }' : '',
         // Fonts that hang below the baseline are raised (translate adds to
         // any transform, such as a label being dragged)
         font.rise ? 'S text.city-label, S text.region-label, S text.note-label, S text.grid-label, ' +

@@ -10,6 +10,8 @@
 //   shadow: the dark east face, filled with ink
 //   ridge: the outline
 //   crease: a few rock folds on the lit side
+// The engraved style (options.style: 'engraved') shades the east face with
+// a wash part (a see-through fill) and hatch lines instead of shadow.
 
 // A small seeded generator, separate from the map's random numbers
 function generator(seed) {
@@ -94,7 +96,7 @@ function mountain(rand) {
 
     return [
         {d: line(outline) + ' Z', cls: 'mask'},
-        {d: line(shadow) + ' Z', cls: 'shadow'},
+        {d: line(shadow) + ' Z', cls: 'shadow', shade: shadow},
         {d: line(outline), cls: 'ridge'},
         {d: creases.join(' '), cls: 'crease'}
     ];
@@ -128,22 +130,162 @@ function hill(rand) {
     }
     return [
         {d: outline + ' Z', cls: 'mask'},
-        {d: line(shade.concat(inner.slice(1))) + ' Z', cls: 'shadow'},
+        {d: line(shade.concat(inner.slice(1))) + ' Z', cls: 'shadow', shade: shade.concat(inner.slice(1))},
         {d: outline, cls: 'ridge'},
         {d: strokes.join(' '), cls: 'crease'}
     ];
 }
 
-export function mountains(count, seed) {
+// Parallel lines across a polygon, a given distance apart, running in
+// direction dir (a unit vector)
+function hatch(polygon, dir, spacing) {
+    var n = [-dir[1], dir[0]];
+    var across = polygon.map(function (p) {return p[0] * n[0] + p[1] * n[1]});
+    var lo = Math.min.apply(null, across);
+    var hi = Math.max.apply(null, across);
+    var lines = [];
+    for (var c = lo + spacing / 2; c < hi; c += spacing) {
+        var hits = [];
+        for (var i = 0; i < polygon.length; i++) {
+            var a = polygon[i];
+            var b = polygon[(i + 1) % polygon.length];
+            var da = a[0] * n[0] + a[1] * n[1] - c;
+            var db = b[0] * n[0] + b[1] * n[1] - c;
+            if ((da < 0) === (db < 0)) continue;
+            var t = da / (da - db);
+            var x = a[0] + (b[0] - a[0]) * t;
+            var y = a[1] + (b[1] - a[1]) * t;
+            hits.push(x * dir[0] + y * dir[1]);
+        }
+        hits.sort(function (p, q) {return p - q});
+        for (var k = 0; k + 1 < hits.length; k += 2) {
+            lines.push(line([
+                [n[0] * c + dir[0] * hits[k], n[1] * c + dir[1] * hits[k]],
+                [n[0] * c + dir[0] * hits[k + 1], n[1] * c + dir[1] * hits[k + 1]]
+            ]));
+        }
+    }
+    return lines.join(' ');
+}
+
+// Engraving: the dark side becomes a see-through wash crossed by hatching,
+// running down the slope
+var FALL = (function () {
+    var x = 0.35;
+    var length = Math.sqrt(x * x + 1);
+    return [x / length, 1 / length];
+})();
+
+function styled(drawing, options) {
+    if (!options || options.style !== 'engraved') {
+        return drawing.map(function (part) {return {d: part.d, cls: part.cls}});
+    }
+    var parts = [];
+    drawing.forEach(function (part) {
+        if (part.cls !== 'shadow') {
+            parts.push({d: part.d, cls: part.cls});
+            return;
+        }
+        parts.push({d: part.d, cls: 'wash'});
+        parts.push({d: hatch(part.shade, FALL, options.spacing || 1.6), cls: 'hatch'});
+    });
+    return parts;
+}
+
+// A broadleaf tree: a lumpy crown of uneven lobes on a slightly bent trunk,
+// with a couple of shading strokes on the east side
+function broadleaf(rand) {
+    var r = between(rand, 2.8, 4.2);
+    var cy = -r - between(rand, 1.4, 2.2);
+    var lobes = 5 + Math.floor(rand() * 3);
+    var start = between(rand, 0, Math.PI * 2);
+    var points = [];
+    for (var i = 0; i < lobes; i++) {
+        var a = start + i * Math.PI * 2 / lobes + between(rand, -0.2, 0.2);
+        var radius = r * between(rand, 0.82, 1.12);
+        points.push([Math.cos(a) * radius, cy + Math.sin(a) * radius * 0.92]);
+    }
+    // Each lobe bulges outward between two points
+    var crown = 'M' + point(points[0]);
+    for (var i = 0; i < lobes; i++) {
+        var p = points[i];
+        var q = points[(i + 1) % lobes];
+        var mid = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+        var out = [mid[0] * 1.85, cy + (mid[1] - cy) * 1.85];
+        crown += ' Q' + point(out) + ' ' + point(q);
+    }
+    crown += ' Z';
+    var base = cy + r * 0.85;
+    var trunk = 'M' + point([between(rand, -0.6, 0.6), base]) + ' Q' + point([between(rand, -0.8, 0.8), base + 1.8]) +
+        ' ' + point([between(rand, -0.3, 0.3), 1]);
+    var shade = [];
+    for (var i = 0; i < 2; i++) {
+        var y = cy + r * between(rand, -0.2, 0.5);
+        var x = r * between(rand, 0.25, 0.55);
+        shade.push(line([[x, y], [x + 1, y + 1.6]]));
+    }
+    return [
+        {d: crown, cls: 'mask'},
+        {d: crown + ' ' + trunk, cls: 'ridge'},
+        {d: shade.join(' '), cls: 'twig'}
+    ];
+}
+
+// A pine: ragged tiers, wider towards the bottom, a little lopsided. Each
+// tier ends in a point, with a notch tucked in above the next one.
+function pine(rand) {
+    var height = between(rand, 10, 14);
+    var tiers = 3 + Math.floor(rand() * 2);
+    var width = between(rand, 3.2, 4.6);
+    var outerL = [];
+    var outerR = [];
+    var notchL = [];
+    var notchR = [];
+    for (var k = 1; k <= tiers; k++) {
+        var y = -height + height * 0.85 * k / tiers;
+        var spread = width * (0.45 + 0.55 * k / tiers);
+        outerL.push([-spread * between(rand, 0.85, 1.1), y]);
+        outerR.push([spread * between(rand, 0.85, 1.1), y]);
+        notchL.push([-spread * between(rand, 0.3, 0.45), y - between(rand, 0.6, 1.2)]);
+        notchR.push([spread * between(rand, 0.3, 0.45), y - between(rand, 0.6, 1.2)]);
+    }
+    // Down the west side, across the bottom, up the east side
+    var points = [[between(rand, -0.3, 0.3), -height]];
+    for (var k = 0; k < tiers; k++) {
+        points.push(outerL[k]);
+        if (k < tiers - 1) points.push(notchL[k]);
+    }
+    for (var k = tiers - 1; k >= 0; k--) {
+        points.push(outerR[k]);
+        if (k > 0) points.push(notchR[k - 1]);
+    }
+    var outline = line(points) + ' Z';
+    var trunk = line([[0, -height * 0.15], [between(rand, -0.3, 0.3), 1.2]]);
+    return [
+        {d: outline, cls: 'mask'},
+        {d: outline + ' ' + trunk, cls: 'ridge'}
+    ];
+}
+
+// options: {style: 'engraved', spacing} for hatched shading (see above)
+export function mountains(count, seed, options) {
     var rand = generator(seed);
     var drawings = [];
-    for (var i = 0; i < count; i++) drawings.push(mountain(rand));
+    for (var i = 0; i < count; i++) drawings.push(styled(mountain(rand), options));
     return drawings;
 }
 
-export function hills(count, seed) {
+export function hills(count, seed, options) {
     var rand = generator(seed);
     var drawings = [];
-    for (var i = 0; i < count; i++) drawings.push(hill(rand));
+    for (var i = 0; i < count; i++) drawings.push(styled(hill(rand), options));
+    return drawings;
+}
+
+// Hand-drawn trees, each a little different: kind is 'broadleaf' or 'pine'
+export function trees(count, seed, kind) {
+    var rand = generator(seed);
+    var drawings = [];
+    for (var i = 0; i < count; i++) drawings.push(kind === 'pine' ? pine(rand) : broadleaf(rand));
     return drawings;
 }

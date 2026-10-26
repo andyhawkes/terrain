@@ -584,6 +584,7 @@ input[type=checkbox] {
 }
 
 .tool-label #mapSVG .layer-city .city,
+.tool-label #mapSVG .layer-city .capital-symbol,
 .tool-label #mapSVG .note-label,
 .tool-note #mapSVG .note-label {
     cursor: text;
@@ -599,12 +600,14 @@ input[type=checkbox] {
 .tool-label #mapSVG .region-label:hover,
 .tool-label #mapSVG .note-label:hover,
 .tool-label #mapSVG .layer-city .city:hover,
+.tool-label #mapSVG .layer-city .capital-symbol:hover,
 .tool-label #mapSVG .layer-extras .title-text:hover,
 .tool-note #mapSVG .note-label:hover {
     filter: drop-shadow(0 0 3px var(--accent)) drop-shadow(0 0 2px var(--accent));
 }
 
 .tool-move #mapSVG .layer-city .city,
+.tool-move #mapSVG .layer-city .capital-symbol,
 .tool-move #mapSVG .layer-wreck .wreck,
 .tool-move #mapSVG .layer-poi .poi,
 .tool-move #mapSVG .layer-marker .placedMarker,
@@ -616,6 +619,7 @@ input[type=checkbox] {
 }
 
 .tool-move #mapSVG .layer-city .city:hover,
+.tool-move #mapSVG .layer-city .capital-symbol:hover,
 .tool-move #mapSVG .layer-wreck .wreck:hover,
 .tool-move #mapSVG .layer-poi .poi:hover,
 .tool-move #mapSVG .layer-marker .placedMarker:hover,
@@ -627,6 +631,7 @@ input[type=checkbox] {
 }
 
 .tool-delete #mapSVG .layer-city .city,
+.tool-delete #mapSVG .layer-city .capital-symbol,
 .tool-delete #mapSVG .layer-wreck .wreck,
 .tool-delete #mapSVG .layer-poi .poi,
 .tool-delete #mapSVG .layer-marker .placedMarker,
@@ -638,6 +643,7 @@ input[type=checkbox] {
 }
 
 .tool-delete #mapSVG .layer-city .city:hover,
+.tool-delete #mapSVG .layer-city .capital-symbol:hover,
 .tool-delete #mapSVG .layer-wreck .wreck:hover,
 .tool-delete #mapSVG .layer-poi .poi:hover,
 .tool-delete #mapSVG .layer-marker .placedMarker:hover,

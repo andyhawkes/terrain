@@ -235,7 +235,8 @@ export var LANGUAGES = [
     // Names from English word lists (see wordnames.js), not made-up sounds
     {id: 'pirate', name: 'Pirate names', hint: 'Port Blackwater, Dead Man\'s Cove, the Bone Isles', words: true},
     {id: 'military', name: 'Military codenames', hint: 'Objective Granite, Hill 312, Sector Kilo', words: true},
-    {id: 'shire', name: 'Shire names', hint: 'Bramblecombe, Little Thistleby, the Barley Downs', words: true}
+    {id: 'shire', name: 'Shire names', hint: 'Bramblecombe, Little Thistleby, the Barley Downs', words: true},
+    {id: 'realm', name: 'Kingdom names', hint: 'Stormhold, Ravenwatch Keep, the Frozen Marches', words: true}
 ];
 
 function byName(sets, name) {

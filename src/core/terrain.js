@@ -942,6 +942,101 @@ function coastLines(h, offsets) {
     });
 }
 
+// Hachures: short strokes down the fall line, in rows between contour
+// lines across the high ground, the way survey maps engraved relief. Each
+// stroke starts on a contour and runs downhill about as far as the next
+// one. Steeper slopes, and slopes facing away from the light (from the
+// north-west), get heavier strokes. options (SVG units, with scale SVG units
+// per map unit): spacing between strokes along a contour, and levels, how
+// many contours. Returns [{line: [[x, y], [x, y]], weight}], weight 0 to 1.
+function hachures(h, scale, options) {
+    var mesh = h.mesh;
+    var cell = Math.sqrt(area(mesh) / h.length);
+    var land = [];
+    for (var i = 0; i < h.length; i++) {
+        if (h[i] > 0 && !isnearedge(mesh, i)) land.push(h[i]);
+    }
+    if (!land.length) return [];
+    land.sort(ascending);
+    var low = quantileSorted(land, 0.5);
+    var top = land[land.length - 1];
+    var step = (top - low) / options.levels;
+
+    // Nearest vertex to a point, from a grid of buckets
+    var buckets = new Map();
+    for (var i = 0; i < h.length; i++) {
+        var v = mesh.vxs[i];
+        var key = Math.floor(v[0] / cell) + ',' + Math.floor(v[1] / cell);
+        if (!buckets.has(key)) buckets.set(key, []);
+        buckets.get(key).push(i);
+    }
+    function nearest(p) {
+        var cx = Math.floor(p[0] / cell);
+        var cy = Math.floor(p[1] / cell);
+        var best = -1;
+        var bestD = Infinity;
+        for (var gx = cx - 1; gx <= cx + 1; gx++) {
+            for (var gy = cy - 1; gy <= cy + 1; gy++) {
+                var list = buckets.get(gx + ',' + gy);
+                if (!list) continue;
+                for (var k = 0; k < list.length; k++) {
+                    var v = mesh.vxs[list[k]];
+                    var d = (v[0] - p[0]) * (v[0] - p[0]) + (v[1] - p[1]) * (v[1] - p[1]);
+                    if (d < bestD) {
+                        bestD = d;
+                        best = list[k];
+                    }
+                }
+            }
+        }
+        return best;
+    }
+
+    // How steep counts as steepest: most of the high ground is less steep
+    var steepness = [];
+    for (var i = 0; i < h.length; i++) {
+        if (h[i] <= low || isnearedge(mesh, i)) continue;
+        var g = trislope(h, i);
+        steepness.push(Math.sqrt(g[0] * g[0] + g[1] * g[1]));
+    }
+    steepness.sort(ascending);
+    var steep = quantileSorted(steepness, 0.9) || 1;
+
+    var gap = options.spacing / scale;
+    var strokes = [];
+    for (var level = 1; level <= options.levels; level++) {
+        var height = low + step * level;
+        contour(h, height).map(relaxPath).forEach(function (path) {
+            // Walk the contour, a stroke every gap
+            var carry = gap / 2;
+            for (var k = 1; k < path.length; k++) {
+                var a = path[k - 1];
+                var b = path[k];
+                var length = Math.sqrt((b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]));
+                for (var t = carry; t < length; t += gap) {
+                    var p = [a[0] + (b[0] - a[0]) * t / length, a[1] + (b[1] - a[1]) * t / length];
+                    var i = nearest(p);
+                    if (i < 0 || isnearedge(mesh, i)) continue;
+                    var g = trislope(h, i);
+                    var m = Math.sqrt(g[0] * g[0] + g[1] * g[1]);
+                    if (m === 0) continue;
+                    var down = [-g[0] / m, -g[1] / m];
+                    // Down to about the next contour
+                    var reach = Math.max(0.6 * cell, Math.min(3 * cell, step / m));
+                    var end = [p[0] + down[0] * reach, p[1] + down[1] * reach];
+                    var j = nearest(end);
+                    if (j < 0 || h[j] <= 0) continue;
+                    var facing = Math.max(0, down[0] * 0.7071 + down[1] * 0.7071);
+                    var weight = Math.min(1, m / steep) * (0.6 + 0.4 * facing);
+                    strokes.push({line: [p, end], weight: weight});
+                }
+                carry = t - length;
+            }
+        });
+    }
+    return strokes;
+}
+
 // Mountains, hills and trees drawn as little pictures, the way hand-drawn
 // maps show relief. The highest land gets mountains (bigger on higher
 // peaks), so they gather into ranges; the middle ground gets hills, and
@@ -949,8 +1044,9 @@ function coastLines(h, offsets) {
 // Symbols keep their distance from each other, the coast and rivers.
 // spacing gives each kind's distance in SVG units, and scale is SVG units
 // per map unit, so symbols are spaced the same however detailed the grid.
-// Returns [{kind, x, y, size, variant}], back to front so nearer symbols
-// overlap those behind.
+// Returns [{kind, x, y, size, variant, cold}], back to front so nearer
+// symbols overlap those behind. cold (0 to 1) is how far north and how high
+// a symbol is, for themes that draw different trees by climate.
 function reliefSymbols(h, scale, spacing) {
     var mesh = h.mesh;
     var flux = getFlux(h);
@@ -1015,14 +1111,18 @@ function reliefSymbols(h, scale, spacing) {
         var size = (kind === 'mountain' ? 1 + 0.5 * (h[i] - peaks) / (top - peaks || 1) : 1) * runif(0.85, 1.15);
         var gap = spacing[kind] * size / scale;
         if (!clear(v[0], v[1], gap)) return;
-        var symbol = {kind: kind, x: v[0], y: v[1], size: size, variant: randrange(1000), gap: gap};
+        var symbol = {kind: kind, x: v[0], y: v[1], size: size, variant: randrange(1000), gap: gap, vx: i};
         var key = Math.floor(v[0] / cell) + ',' + Math.floor(v[1] / cell);
         if (!grid.has(key)) grid.set(key, []);
         grid.get(key).push(symbol);
         symbols.push(symbol);
     });
+    var bottom = heights[0];
+    var north = mesh.extent.height / 2;
     return symbols.sort(function (a, b) {return a.y - b.y}).map(function (s) {
-        return {kind: s.kind, x: s.x, y: s.y, size: s.size, variant: s.variant};
+        var high = (h[s.vx] - bottom) / (top - bottom || 1);
+        var cold = Math.max(0, Math.min(1, 0.7 * (0.5 - s.y / (2 * north)) + 0.3 * high));
+        return {kind: s.kind, x: s.x, y: s.y, size: s.size, variant: s.variant, cold: cold};
     });
 }
 
@@ -1034,5 +1134,5 @@ export {
     setSeaLevel, cleanCoast, trislope, dropEdge, generateCoast, coastHeightmap,
     cityScore, wreckScore, POIScore, pickCity, pickWreck, pickPOI,
     contour, getRivers, getTerritories, getBorders, mergeSegments, relaxPath,
-    terrCenter, slopeStrokes, seaStrokes, reliefSymbols, coastLines
+    terrCenter, slopeStrokes, seaStrokes, reliefSymbols, coastLines, hachures
 };

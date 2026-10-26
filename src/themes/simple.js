@@ -52,6 +52,10 @@ export default {
 
     borderDash: [6, 5],
 
+    // regionTints: {colors: [...], opacity, watercolour} washes each
+    // region's land in a colour (one per region, in turn), optionally with a
+    // watercolour effect (see throneish.js)
+
     // smoothCoast: true draws the coastline smoothed, rather than following
     // every corner of the grid (see underhill.js)
 
@@ -111,6 +115,8 @@ export default {
         // A theme can also draw relief as little pictures (see underhill.js):
         // relief: {spacing: {mountain, hill, tree}, mountain, hill, tree},
         // with spacing in SVG units and each kind a path spec like these.
+        // Kinds can be left out; relief.hachures ({spacing, levels, widths})
+        // shades the high ground with hachures instead (see throneish.js).
         // slopeShading: false, at the top level, then turns hatching off.
     },
 

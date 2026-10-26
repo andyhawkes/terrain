@@ -71,6 +71,24 @@ export function smoothCoasts(h) {
     return entry.smoothCoasts;
 }
 
+// The land of each territory, as the grid's triangles, for themes that
+// colour regions (see regionTints in simple.js). terr maps each vertex to its
+// capital's vertex; capitals lists those, in territory order.
+export function regionShapes(h, terr, capitals) {
+    var entry = cacheFor(h);
+    var key = capitals.join(',');
+    if (entry.regions && entry.regions.terr === terr && entry.regions.key === key) return entry.regions.shapes;
+    var tris = T.meshTris(h.mesh);
+    var shapes = capitals.map(function () {return []});
+    for (var i = 0; i < h.length; i++) {
+        if (h[i] <= 0) continue;
+        var k = capitals.indexOf(terr[i]);
+        if (k >= 0) shapes[k].push(tris[i]);
+    }
+    entry.regions = {terr: terr, key: key, shapes: shapes};
+    return shapes;
+}
+
 // Lines following the coast out at sea, for themes that draw them (see
 // coastLines in simple.js); offsets are in map units
 export function coastOutlines(h, offsets) {
@@ -80,6 +98,17 @@ export function coastOutlines(h, offsets) {
         entry.coastLines = {key: key, lines: T.coastLines(h, offsets)};
     }
     return entry.coastLines.lines;
+}
+
+// Hachures on the high ground, for themes that draw them (see
+// symbols.relief.hachures in simple.js)
+export function hachureStrokes(h, scale, options) {
+    var entry = cacheFor(h);
+    var key = scale + ' ' + JSON.stringify(options);
+    if (!entry.hachures || entry.hachures.key !== key) {
+        entry.hachures = {key: key, strokes: T.hachures(h, scale, options)};
+    }
+    return entry.hachures.strokes;
 }
 
 // Mountain, hill and tree symbols, for themes that draw relief that way
