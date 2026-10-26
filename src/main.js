@@ -5,6 +5,7 @@ import * as d3 from 'd3';
 import {saveSvg, saveSvgAsPng} from 'save-svg-as-png';
 import {MapDocument} from './core/document.js';
 import {defaultParams} from './core/steps.js';
+import {LANGUAGES} from './core/language.js';
 import {newSeed, resolveSeed} from './core/random.js';
 import {shareLink, readLink, clearLink} from './ui/share.js';
 import * as R from './render/svg.js';
@@ -223,6 +224,12 @@ detailLevels.forEach(function (d) {
     detailSelect.append('option').attr('value', d[0]).text(d[1]);
 });
 
+grid.append('label').attr('for', 'language').text('Place names');
+var languageSelect = grid.append('select').attr('id', 'language');
+LANGUAGES.forEach(function (l) {
+    languageSelect.append('option').attr('value', l.id).attr('title', l.hint || null).text(l.name);
+});
+
 var random = newMap.append('section');
 random.append('h2').text('Random map');
 random.append('p').text('Coastline, rivers, cities and names, all from one seed.');
@@ -236,6 +243,7 @@ settings.forEach(function (f) {
 
 function resetSettings() {
     detailSelect.property('value', defaultParams.npts);
+    languageSelect.property('value', defaultParams.language);
     d3.select('#seed').property('value', '');
     settings.forEach(function (f) {
         d3.select('#' + f.id).property('value', defaultParams[f.id]);
@@ -244,7 +252,7 @@ function resetSettings() {
 resetSettings();
 
 function readSettings() {
-    var params = {npts: +detailSelect.property('value')};
+    var params = {npts: +detailSelect.property('value'), language: languageSelect.property('value')};
     settings.forEach(function (f) {
         var n = parseInt(d3.select('#' + f.id).property('value'), 10);
         params[f.id] = n >= 0 ? n : defaultParams[f.id];
@@ -281,7 +289,7 @@ blank.append('div').attr('class', 'button-row')
         newMap.node().hidePopover();
         setView('heightmap');
         panels.show('build');
-        act('newBlank', {npts: +detailSelect.property('value')})();
+        act('newBlank', {npts: +detailSelect.property('value'), language: languageSelect.property('value')})();
     });
 
 // Export: always the finished map, whatever view is showing

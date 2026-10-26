@@ -184,7 +184,7 @@ function makeOrthoLanguage() {
     return lang;
 }
 
-export function makeRandomLanguage() {
+function makeRandomLanguage() {
     var lang = makeBasicLanguage();
     lang.noortho = false;
     lang.nomorph = false;
@@ -204,6 +204,61 @@ export function makeRandomLanguage() {
     lang.joiner = choose("' ~ - · ");
     return lang;
 }
+// Named languages for place names. Each fixes the sounds and spelling;
+// anything it leaves out is chosen at random, as for "random". Fields:
+// C, V, L, S, F: sound sets (letters, or IPA spelled out by the orthography)
+// structure: syllable shape; cortho/vortho: spelling set names; restricts:
+// index into ressets; minsyll/maxsyll: syllables per word; joiner: between words
+export var LANGUAGES = [
+    {id: 'random', name: 'Random', hint: 'A new made-up language for each map'},
+    {id: 'plain', name: 'Plain', hint: 'Short, simple names',
+        C: 'ptkbdgmnlrsvw', V: 'aeiou', structure: 'CVC?', cortho: 'Default', vortho: 'Ácutes',
+        minsyll: 2, maxsyll: 3, joiner: ' '},
+    {id: 'english', name: 'English-ish', C: 'ptkbdgmnlrsʃʧwh', V: 'aeiou', L: 'rl',
+        structure: 'C?L?VC', cortho: 'Default', vortho: 'Ácutes', minsyll: 1, maxsyll: 2, joiner: ' '},
+    {id: 'germanic', name: 'Germanic', C: 'ptkbdgmnlrsʃʧxvh', V: 'aeiouAOU', L: 'r',
+        structure: 'C?L?VC', cortho: 'German', vortho: 'Ümlauts', minsyll: 1, maxsyll: 3, joiner: '-'},
+    {id: 'slavic', name: 'Slavic', C: 'ptkbdgmnlrszʃʒʧv', V: 'aeiou', L: 'r',
+        structure: 'CL?VC', cortho: 'Slavic', vortho: 'Ácutes', minsyll: 2, maxsyll: 4, joiner: ' '},
+    {id: 'french', name: 'French-ish', C: 'ptkbdgmnlrsʃʒv', V: 'aeiouAEI', L: 'rl',
+        structure: 'CVC?', cortho: 'French', vortho: 'Ácutes', minsyll: 2, maxsyll: 3, joiner: '-'},
+    {id: 'welsh', name: 'Welsh-ish', C: 'ptkbdgmnlrsʃʧ', V: 'aeiouAEIOU', L: 'rl', F: 'mnŋ',
+        structure: 'CVF?', cortho: 'Default', vortho: 'Welsh', minsyll: 2, maxsyll: 4, joiner: ' '},
+    {id: 'island', name: 'Hawaiian-ish', hint: 'Soft, open syllables', C: 'hklmnpwʔ', V: 'aeiou',
+        structure: 'CV', cortho: 'Default', vortho: 'Ácutes', minsyll: 2, maxsyll: 5, joiner: '-'},
+    {id: 'arctic', name: 'Greenlandic-ish', C: 'ptkqvsgrmnŋlj', V: 'aiu', F: 'sk',
+        structure: 'CVF?', cortho: 'Default', vortho: 'Doubles', minsyll: 2, maxsyll: 4, joiner: ' '},
+    {id: 'desert', name: 'Arabic-ish', C: 'tksʃdbqɣxmnlrwj', V: 'aiuAI', L: 'wj',
+        structure: 'CVC', cortho: 'Default', vortho: 'Ácutes', minsyll: 1, maxsyll: 3, joiner: ' '}
+];
+
+function byName(sets, name) {
+    return sets.find(function (s) {return s.name === name});
+}
+
+// A language by id (see LANGUAGES); unknown ids give a random one
+export function makeLanguage(id) {
+    var preset = LANGUAGES.find(function (l) {return l.id === id});
+    if (!preset || preset.id === 'random') return makeRandomLanguage();
+    var lang = makeBasicLanguage();
+    lang.noortho = false;
+    lang.nomorph = false;
+    lang.nowordpool = false;
+    lang.phonemes.C = shuffled(preset.C || choose(consets, 2).C);
+    lang.phonemes.V = shuffled(preset.V || choose(vowsets, 2).V);
+    lang.phonemes.L = shuffled(preset.L || choose(lsets, 2).L);
+    lang.phonemes.S = shuffled(preset.S || choose(ssets, 2).S);
+    lang.phonemes.F = shuffled(preset.F || choose(fsets, 2).F);
+    lang.structure = preset.structure || choose(syllstructs);
+    lang.restricts = ressets[preset.restricts == null ? 2 : preset.restricts].res;
+    lang.cortho = (preset.cortho ? byName(corthsets, preset.cortho) : choose(corthsets, 2)).orth;
+    lang.vortho = (preset.vortho ? byName(vorthsets, preset.vortho) : choose(vorthsets, 2)).orth;
+    lang.minsyll = preset.minsyll || randrange(1, 3);
+    lang.maxsyll = preset.maxsyll || randrange(lang.minsyll + 1, 7);
+    lang.joiner = preset.joiner || choose("' ~ - · ");
+    return lang;
+}
+
 var defaultOrtho = {
     'ʃ': 'sh',
     'ʒ': 'zh',

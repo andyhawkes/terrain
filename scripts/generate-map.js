@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Generates a map from a seed without a browser, and prints its layers as JSON.
 // Usage: npm run generate -- [--seed abc|today] [--npts 16384] [--ncities 15] [--nterrs 5]
-//                           [--nwrecks 1] [--npoi 1] [--out map.json]
+//                           [--nwrecks 1] [--npoi 1] [--language random|english|…] [--out map.json]
 import {writeFileSync} from 'node:fs';
 import {parseArgs} from 'node:util';
 import {MapDocument} from '../src/core/document.js';
@@ -10,7 +10,7 @@ import {itemPos} from '../src/core/steps.js';
 import {newSeed, resolveSeed} from '../src/core/random.js';
 
 var numeric = ['npts', 'ncities', 'nterrs', 'nwrecks', 'npoi'];
-var options = {seed: {type: 'string'}, out: {type: 'string'}};
+var options = {seed: {type: 'string'}, out: {type: 'string'}, language: {type: 'string'}};
 numeric.forEach(function (name) {options[name] = {type: 'string'}});
 var args = parseArgs({options: options}).values;
 
@@ -18,6 +18,7 @@ var params = {};
 numeric.forEach(function (name) {
     if (args[name] != null) params[name] = parseInt(args[name], 10);
 });
+if (args.language) params.language = args.language;
 var seed = args.seed ? resolveSeed(args.seed) : newSeed();
 
 var doc = new MapDocument();

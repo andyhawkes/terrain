@@ -87,6 +87,7 @@ Each phase leaves the app working.
 - [x] Add text: free text anywhere on the map ("Here be dragons"), drawn in the theme's lettering. It can be moved, edited and deleted.
 - [x] Marker types: X marks the spot, Danger, Flag, Camp and Landmark, chosen from a bar above the map. Each theme draws them in its own style, in the colour picked for each marker (black by default; swatches or any custom colour).
 - [x] Add symbol: place a wreck or point of interest by hand, choosing which of the theme's drawings to use from a bar above the map. Clicking an existing wreck or point of interest swaps it for the chosen symbol, which can also turn a wreck into a point of interest or back. Simple and Plotter have three wreck drawings (ship, anchor, sinking ship). A chosen drawing is stored as its number in the theme's set, so another theme with fewer drawings wraps round to one of its own.
+- [x] Place-name language: Random (a new made-up language per map, as before) or a named one (Plain, English-ish, Germanic, Slavic, French-ish, Welsh-ish, Hawaiian-ish, Greenlandic-ish, Arabic-ish). Chosen under New map, kept in the map's settings, and in share links as `names=`. The Build panel can rename every place in another language, which then names places added later. The CLI takes `--language`.
 - [x] Symbol parts are styled straight from the theme (`parts`), since CSS can't reach inside SVG `<use>` elements. This also keeps plotter output free of fills.
 
 ### Phase 5: Undo/redo and history

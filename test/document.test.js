@@ -216,6 +216,31 @@ test('wrecks and points of interest can be added by hand and have their symbol c
     assert.equal(fingerprint(copy.state), fingerprint(doc.state));
 });
 
+test('place names can use a chosen language, and random stays the default', function () {
+    function names(doc) {return doc.state.cities.map(function (c) {return c.name})}
+    var plain = new MapDocument();
+    plain.dispatch('generate', {params: small}, 'lang');
+    var random = new MapDocument();
+    random.dispatch('generate', {params: Object.assign({language: 'random'}, small)}, 'lang');
+    assert.deepEqual(names(random), names(plain));
+
+    var island = new MapDocument();
+    island.dispatch('generate', {params: Object.assign({language: 'island'}, small)}, 'lang');
+    assert.notDeepEqual(names(island), names(plain));
+    // Hawaiian-ish has no letters outside its own set
+    names(island).forEach(function (n) {assert.match(n, /^[hklmnpw‘aeiou -]+$/i)});
+
+    // Renaming in another language switches the map to it for later places
+    plain.dispatch('renamePlaces', {language: 'island'});
+    assert.equal(plain.state.params.language, 'island');
+    plain.dispatch('addCities', {count: 1});
+    names(plain).forEach(function (n) {assert.match(n, /^[hklmnpw‘aeiou -]+$/i)});
+
+    var blank = new MapDocument();
+    blank.dispatch('newBlank', {npts: 512, language: 'arctic'});
+    assert.equal(blank.state.params.language, 'arctic');
+});
+
 test('jumping through the history', function () {
     var doc = new MapDocument();
     doc.dispatch('newBlank', {npts: 512});

@@ -45,6 +45,7 @@ export async function shareLink(doc) {
         Object.keys(PARAMS).forEach(function (key) {
             if (params[key] != null && params[key] !== defaultParams[key]) query.set(PARAMS[key], params[key]);
         });
+        if (params.language && params.language !== defaultParams.language) query.set('names', params.language);
         STYLE.forEach(function (key) {
             if (style[key] && style[key] !== defaultStyle[key]) query.set(key, style[key]);
         });
@@ -64,6 +65,7 @@ export async function readLink() {
         var n = parseInt(query.get(PARAMS[key]), 10);
         if (n >= 0) params[key] = n;
     });
+    if (query.get('names')) params.language = query.get('names');
     var style = Object.assign({}, defaultStyle);
     STYLE.forEach(function (key) {
         if (query.get(key)) style[key] = query.get(key);

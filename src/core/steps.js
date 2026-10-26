@@ -3,7 +3,7 @@
 // Steps run inside withSeed(), so any randomness they use is reproducible.
 import * as T from './terrain.js';
 import {randomVector, runif, randrange} from './random.js';
-import {makeRandomLanguage, makeName} from './language.js';
+import {makeLanguage, makeName} from './language.js';
 
 export var defaultParams = {
     extent: T.defaultExtent,
@@ -12,6 +12,7 @@ export var defaultParams = {
     nwrecks: 1,
     npoi: 1,
     nterrs: 5,
+    language: 'random',  // an id from LANGUAGES, for place names
     fontsizes: {
         region: 40,
         city: 25,
@@ -94,7 +95,7 @@ function vxsOf(items) {
 
 // Copy-on-write for the naming language, which makeName mutates
 function withLanguage(state) {
-    return state.lang ? structuredClone(state.lang) : makeRandomLanguage();
+    return state.lang ? structuredClone(state.lang) : makeLanguage(state.params.language);
 }
 
 function withHeightmap(state, h) {
@@ -170,7 +171,8 @@ export var steps = {
     newBlank: {
         label: 'New blank map',
         apply: function (state, args) {
-            var params = Object.assign({}, defaultParams, {npts: args.npts || defaultParams.npts});
+            var params = Object.assign({}, defaultParams, {npts: args.npts || defaultParams.npts,
+                language: args.language || defaultParams.language});
             var mesh = T.generateGoodMesh(params.npts, params.extent);
             return Object.assign(emptyState(), {params: params, style: args.style || state.style, h: T.zero(mesh)});
         }
@@ -181,7 +183,7 @@ export var steps = {
             var params = Object.assign({}, defaultParams, args.params);
             var s = Object.assign(emptyState(), {params: params, style: args.style || state.style});
             s.h = T.generateCoast(params);
-            s.lang = makeRandomLanguage();
+            s.lang = makeLanguage(params.language);
             s = addCities(s, params.ncities);
             s = addPlaced(s, 'wrecks', T.pickWreck, params.nwrecks);
             s = addPlaced(s, 'poi', T.pickPOI, params.npoi);
@@ -278,14 +280,17 @@ export var steps = {
             return addPlaced(state, 'poi', T.pickPOI, count(args, 1));
         }
     },
+    // Names every place afresh, in args.language if given (which then
+    // becomes the map's language for places added later)
     renamePlaces: {
         label: 'Rename places',
-        apply: function (state) {
-            var lang = makeRandomLanguage();
+        apply: function (state, args) {
+            var params = args.language ? Object.assign({}, state.params, {language: args.language}) : state.params;
+            var lang = makeLanguage(params.language);
             var cities = state.cities.map(function (c) {
                 return Object.assign({}, c, {name: makeName(lang, 'city'), regionName: makeName(lang, 'region')});
             });
-            return Object.assign({}, state, {cities: cities, lang: lang});
+            return Object.assign({}, state, {cities: cities, lang: lang, params: params});
         }
     },
 

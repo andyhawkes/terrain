@@ -3,6 +3,7 @@
 import {THEMES, getTheme, fontChoice, backgroundChoice} from '../themes/index.js';
 import {TOGGLE_LAYERS} from '../render/svg.js';
 import {historyPanel} from './history.js';
+import {LANGUAGES} from '../core/language.js';
 
 var nextId = 0;
 
@@ -112,8 +113,21 @@ function buildPanel(body, ctx) {
     countRow(s, 'Cities', 1, function (n) {act('addCities', {count: n})()});
     countRow(s, 'Points of interest', 1, function (n) {act('addPOI', {count: n})()});
     countRow(s, 'Wrecks', 1, function (n) {act('addWrecks', {count: n})()});
-    buttonGrid(s, [{text: 'Rename all places', wide: true, onClick: act('renamePlaces')}]);
-    s.select('.button-grid').style('margin-top', '8px');
+
+    // Renaming uses the chosen language, which then names places added later.
+    // The list shows the map's own language until another is picked.
+    var row = s.append('div').attr('class', 'control-row').style('margin-top', '8px');
+    row.append('label').attr('for', 'renameLanguage').text('Names');
+    var languageSelect = row.append('select').attr('id', 'renameLanguage').style('flex', 1);
+    LANGUAGES.forEach(function (l) {
+        languageSelect.append('option').attr('value', l.id).attr('title', l.hint || null).text(l.name);
+    });
+    row.append('button').text('Rename all').attr('title', 'Give every city and region a new name in this language')
+        .on('click', function () {act('renamePlaces', {language: languageSelect.property('value')})()});
+    ctx.updaters.push(function () {
+        var params = ctx.doc.state.params;
+        languageSelect.property('value', params && params.language || 'random');
+    });
 }
 
 // The style belongs to the map, so changes are steps (and can be undone);
