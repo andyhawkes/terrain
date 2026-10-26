@@ -52,6 +52,10 @@ test('extras follow the theme until the map sets its own', function () {
     var style = Object.assign({}, defaultStyle, {compass: false, grid: 'hex', gridSize: 6});
     var chosen = extrasChoice(getTheme('pirate'), style, params);
     assert.deepEqual([chosen.compass, chosen.grid, chosen.gridSize], [false, 'hex', 6]);
+    // The compass rose's size is kept within limits
+    assert.equal(simple.compassSize, 1);
+    var huge = extrasChoice(getTheme('simple'), Object.assign({}, defaultStyle, {compassSize: 50}), params);
+    assert.equal(huge.compassSize, 6);
     // Older maps without these fields get the defaults
     var old = extrasChoice(getTheme('simple'), {theme: 'simple', hidden: []}, params);
     assert.deepEqual([old.grid, old.title, old.positions], ['none', '', {}]);

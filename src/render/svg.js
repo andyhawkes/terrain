@@ -486,6 +486,7 @@ var ORNAMENTS = {
             appendText(g, font.label, 'extras-label', text, SCALE * m.x, 17, 14, 'middle');
         });
     },
+    // Scaled to the chosen size, keeping its lines the same weight
     compass: function (g, extras, extent, font) {
         g.append('path').attr('class', 'extras-line')
             .attr('d', 'M-30,0a30,30 0 1,0 60,0a30,30 0 1,0 -60,0M-24,0a24,24 0 1,0 48,0a24,24 0 1,0 -48,0');
@@ -493,6 +494,7 @@ var ORNAMENTS = {
         g.append('path').attr('class', 'extras-paper').attr('d', points.light);
         g.append('path').attr('class', 'extras-fill').attr('d', points.dark);
         appendText(g, font.region, 'extras-label compass-north', 'N', 0, -52, 16, 'middle');
+        g.selectAll('path').attr('vector-effect', 'non-scaling-stroke');
     },
     title: function (g, extras, extent, font) {
         var size = 30;
@@ -515,10 +517,13 @@ function drawExtras(svg, state, theme, font) {
         return id === 'title' ? !!extras.title : extras[id];
     });
     var data = shown.map(function (id) {
-        return {id: id, kind: 'ornament', pos: extras.positions[id] || defaultPosition(id, extent)};
+        return {id: id, kind: 'ornament', pos: extras.positions[id] || defaultPosition(id, extent, SCALE, extras.compassSize),
+            scale: id === 'compass' ? extras.compassSize : 1};
     });
     var groups = join(svg, 'extras', 'g', 'ornament', data, function (d) {return d.id})
-        .attr('transform', function (d) {return 'translate(' + coord(d.pos[0]) + ',' + coord(d.pos[1]) + ')'});
+        .attr('transform', function (d) {
+            return 'translate(' + coord(d.pos[0]) + ',' + coord(d.pos[1]) + ')' + (d.scale !== 1 ? ' scale(' + d.scale + ')' : '');
+        });
     groups.each(function (d) {
         var g = d3.select(this);
         g.selectAll('*').remove();

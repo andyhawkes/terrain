@@ -2,7 +2,7 @@
 // drawn) and History (every step, with replay).
 import {THEMES, getTheme, fontChoice, backgroundChoice} from '../themes/index.js';
 import {TOGGLE_LAYERS} from '../render/svg.js';
-import {UNITS, GRIDS, extrasChoice} from '../render/extras.js';
+import {UNITS, GRIDS, COMPASS_SIZES, extrasChoice} from '../render/extras.js';
 import {historyPanel} from './history.js';
 import {LANGUAGES} from '../core/language.js';
 
@@ -218,6 +218,23 @@ function stylePanel(body, ctx) {
         if (x[0] === 'gridLabels') gridLabelText = text;
     });
 
+    // Resizes the rose on the map while dragging; the step is added on release
+    var compassRow = s.append('div').attr('class', 'control-row');
+    compassRow.append('label').attr('for', 'compassSize').text('Compass size');
+    var compassOutput;
+    var compassInput = compassRow.append('input').attr('id', 'compassSize').attr('type', 'range')
+        .attr('min', COMPASS_SIZES.min).attr('max', COMPASS_SIZES.max).attr('step', 0.25)
+        .on('input', function () {
+            var size = +this.value;
+            compassOutput.text('×' + size);
+            ctx.svg.selectAll('.layer-extras .ornament').filter(function (d) {return d.id === 'compass'})
+                .attr('transform', function () {
+                    return this.getAttribute('transform').replace(/ scale\([^)]*\)$/, '') + ' scale(' + size + ')';
+                });
+        })
+        .on('change', function () {setStyle({compassSize: +this.value})});
+    compassOutput = compassRow.append('output').attr('for', 'compassSize');
+
     row = s.append('div').attr('class', 'control-row');
     row.append('label').attr('for', 'mapTitle').text('Title');
     var titleInput = row.append('input').attr('id', 'mapTitle').attr('type', 'text').attr('placeholder', 'None')
@@ -263,6 +280,9 @@ function stylePanel(body, ctx) {
         gridLabelText.text(extras.grid === 'hex' ? 'Number the hexes' : 'Label the grid edges');
         extrasBoxes.scaleBar.property('checked', !!extras.scaleBar);
         extrasBoxes.compass.property('checked', !!extras.compass);
+        compassRow.style('display', extras.compass ? null : 'none');
+        compassInput.property('value', extras.compassSize);
+        compassOutput.text('×' + extras.compassSize);
         if (document.activeElement !== titleInput.node()) titleInput.property('value', extras.title);
     });
 }

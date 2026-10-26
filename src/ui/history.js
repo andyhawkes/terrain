@@ -40,6 +40,7 @@ function describeStyle(args, previous) {
     if (args.perUnit) return 'Map width';
     if ('scaleBar' in args) return (args.scaleBar ? 'Show' : 'Hide') + ' scale bar';
     if ('compass' in args) return (args.compass ? 'Show' : 'Hide') + ' compass rose';
+    if (args.compassSize) return 'Compass rose size';
     if ('title' in args) return args.title ? 'Title: ' + quoted(args.title) : 'Remove title';
     return 'Change style';
 }

@@ -15,7 +15,11 @@ export var GRIDS = [
     {id: 'hex', name: 'Hex'}
 ];
 
-var DEFAULTS = {units: 'miles', perUnit: 100, grid: 'none', gridLabels: true, scaleBar: false, compass: false};
+var DEFAULTS = {units: 'miles', perUnit: 100, grid: 'none', gridLabels: true, scaleBar: false, compass: false,
+    compassSize: 1};
+
+// The compass rose can go from subtle to a feature of the map
+export var COMPASS_SIZES = {min: 0.5, max: 6};
 
 // The extras for a map: the style's choices, falling back to the theme's
 function pick(value, fallback) {
@@ -36,6 +40,7 @@ export function extrasChoice(theme, style, params) {
         gridLabels: pick(style.gridLabels, t.gridLabels),
         scaleBar: pick(style.scaleBar, t.scaleBar),
         compass: pick(style.compass, t.compass),
+        compassSize: Math.min(COMPASS_SIZES.max, Math.max(COMPASS_SIZES.min, pick(style.compassSize, t.compassSize))),
         title: style.title || '',
         positions: style.positions || {}
     };
@@ -135,13 +140,20 @@ export function scaleBar(extent, perUnit) {
     return {length: length, mapLength: mapLength, marks: marks};
 }
 
-// Default places for the movable extras, inside the map's edges
-export function defaultPosition(id, extent) {
+// The compass rose reaches this far from its centre, in SVG units at
+// normal size (its N sits above the top point)
+export var COMPASS_RADIUS = 70;
+
+// Default places for the movable extras, inside the map's edges. scale is
+// SVG units per map unit; a bigger compass rose sits further in, so it
+// stays on the map.
+export function defaultPosition(id, extent, scale, compassSize) {
     var w = extent.width / 2;
     var h = extent.height / 2;
+    var reach = COMPASS_RADIUS * (compassSize || 1) / (scale || 1000);
     return {
         scaleBar: [-w + 0.07, h - 0.06],
-        compass: [w - 0.1, -h + 0.12],
+        compass: [w - 0.03 - reach, -h + 0.03 + reach],
         title: [-w + 0.05, -h + 0.07]
     }[id];
 }

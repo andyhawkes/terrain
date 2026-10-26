@@ -60,7 +60,8 @@ export function newParams(given) {
 //     unit (a square map is one map unit across)
 //   grid: 'none', 'square' or 'hex'; gridSize: in units, null to pick one
 //     to suit the map; gridLabels: lettered edges, or numbered hexes
-//   scaleBar, compass: true or false; title: text for a title box, or ''
+//   scaleBar, compass: true or false; compassSize: how big the compass rose
+//     is, as a multiple of its normal size; title: text for a title box, or ''
 //   positions: where the scale bar, compass and title have been moved to,
 //     in map units, e.g. {compass: [0.4, -0.4]}
 export var defaultStyle = {
@@ -75,6 +76,7 @@ export var defaultStyle = {
     gridLabels: null,
     scaleBar: null,
     compass: null,
+    compassSize: null,
     title: '',
     positions: {}
 };

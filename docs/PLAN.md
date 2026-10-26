@@ -123,7 +123,7 @@ Each phase leaves the app working.
 - [x] Extras drawn over the map, under Style → Extras (`src/render/extras.js` works out what to draw; `svg.js` draws it):
   - A map width, in miles, km or leagues. It sets the scale bar and the grid size.
   - A grid: none, square (lettered columns and numbered rows, "Grid C4") or hex (flat-topped, numbered 0101 for hex crawls), every N units.
-  - A scale bar, a compass rose and a title box, each in the theme's colours and lettering. Plotter draws them stroke-only, with single-stroke lettering.
+  - A scale bar, a compass rose and a title box, each in the theme's colours and lettering. The compass rose can be sized from half to six times normal, from subtle to a feature of the map; its lines keep the same weight at any size, and at its default place it stays on the map. Plotter draws them stroke-only, with single-stroke lettering.
   - The scale bar, compass and title can be dragged with Move and removed with Delete, and the title edited with Edit text.
   - All of these are part of the style, so they can be undone and are saved. A theme can set defaults (`extras` in the theme format), which apply until the map sets its own; Pirate defaults to leagues and a compass rose. A new map keeps the previous one's extras, except its title and where things were moved to. Maps with extras share as full `#map=` links.
 - [ ] **Military**, on top of that layer: a topographic or ops map, with a stencil face for regions, a square coordinate grid, and map-style symbols (objective, target, hazard, bunker, radio mast).
