@@ -1,6 +1,6 @@
 // Label placement for city and region names. Pure geometry: takes the names
 // as input and returns positions in map units, so it involves no randomness.
-import {scan} from 'd3-array';
+import {leastIndex} from 'd3-array';
 import {terrCenter} from './terrain.js';
 
 // cityNames[i] / regionNames[i] name cities[i] (vertex indices) and the
@@ -93,7 +93,7 @@ export function placeLabels(h, terr, cities, nterrs, cityNames, regionNames, fon
             y1: y + 1.3*sy
         }
         ];
-        var label = posslabels[scan(posslabels, function (a, b) {return penalty(a) - penalty(b)})];
+        var label = posslabels[leastIndex(posslabels, function (a, b) {return penalty(a) - penalty(b)})];
         label.text = text;
         label.size = size;
         citylabels.push(label);

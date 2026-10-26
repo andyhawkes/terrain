@@ -21,9 +21,9 @@
     "@fontsource/share-tech-mono": "^5.3.0",
     "@fontsource/source-sans-3": "^5.3.1",
     "@fontsource/stardos-stencil": "^5.3.0",
-    "d3": "^4.13.0",
-    "d3-array": "^1.2.4",
-    "d3-voronoi": "^1.1.4",
+    "d3": "^7.9.0",
+    "d3-array": "^3.2.4",
+    "d3-delaunay": "^6.0.4",
     "js-priority-queue": "^0.1.5",
     "save-svg-as-png": "^1.4.17"
   },

@@ -1,7 +1,7 @@
 // Terrain generation: mesh, heightmap operations, erosion, rivers, cities and
 // territories. No DOM access, and all randomness comes from ./random.js.
-import {ascending, descending, min, max, mean, scan, quantile as d3quantile} from 'd3-array';
-import {voronoi as d3voronoi} from 'd3-voronoi';
+import {ascending, min, max, mean, maxIndex, quantileSorted} from 'd3-array';
+import {Delaunay} from 'd3-delaunay';
 import PriorityQueue from 'js-priority-queue';
 import {random, runif, rnorm, randomVector, withStream} from './random.js';
 
@@ -33,9 +33,12 @@ function improvePoints(pts, n, extent) {
     n = n || 1;
     extent = extent || defaultExtent;
     for (var i = 0; i < n; i++) {
-        pts = voronoi(pts, extent)
-            .polygons(pts)
-            .map(centroid);
+        var cells = voronoi(pts, extent);
+        pts = pts.map(function (p, j) {
+            // Polygons repeat their first point at the end
+            var polygon = cells.cellPolygon(j);
+            return polygon ? centroid(polygon.slice(0, -1)) : p;
+        });
     }
     return pts;
 }
@@ -53,69 +56,76 @@ function voronoi(pts, extent) {
     extent = extent || defaultExtent;
     var w = extent.width/2;
     var h = extent.height/2;
-    return d3voronoi().extent([[-w, -h], [w, h]])(pts);
+    return Delaunay.from(pts).voronoi([-w, -h, w, h]);
 }
 
+function clamp(x, lo, hi) {
+    return x < lo ? lo : x > hi ? hi : x;
+}
+
+// The mesh is the Voronoi diagram of the points: its vertices are the
+// centres of the Delaunay triangles, and an edge joins
+// the centres of two triangles that share a side, between the two points at
+// that side's ends. Triangles on the outside have fewer than three
+// neighbours, which marks the map's edge (see isedge).
 function makeMesh(pts, extent) {
     extent = extent || defaultExtent;
-    var vor = voronoi(pts, extent);
-    var vxs = [];
-    var vxids = {};
+    var w = extent.width/2;
+    var h = extent.height/2;
+    var delaunay = Delaunay.from(pts);
+    var triangles = delaunay.triangles;
+    var halfedges = delaunay.halfedges;
+    var centres = delaunay.voronoi([-w, -h, w, h]).circumcenters;
+    var count = triangles.length / 3;
     var ends = [];
-    var degree = [];
-    // The points as the diagram has them (d3 rounds them slightly)
-    var sites = [];
-    function siteIndex(site) {
-        sites[site.index] = sites[site.index] || [site[0], site[1]];
-        return site.index;
+    var degree = new Int32Array(count);
+    for (var e = 0; e < halfedges.length; e++) {
+        // Each shared side appears twice, once from each triangle
+        var opposite = halfedges[e];
+        if (opposite < e) continue;
+        var t0 = Math.floor(e / 3);
+        var t1 = Math.floor(opposite / 3);
+        var next = e % 3 === 2 ? e - 2 : e + 1;
+        degree[t0]++;
+        degree[t1]++;
+        ends.push(t0, t1, triangles[e], triangles[next]);
     }
-    for (var i = 0; i < vor.edges.length; i++) {
-        var e = vor.edges[i];
-        if (e == undefined) continue;
-        var e0 = vxids[e[0]];
-        var e1 = vxids[e[1]];
-        if (e0 == undefined) {
-            e0 = vxs.length;
-            vxids[e[0]] = e0;
-            vxs.push(e[0]);
-        }
-        if (e1 == undefined) {
-            e1 = vxs.length;
-            vxids[e[1]] = e1;
-            vxs.push(e[1]);
-        }
-        degree[e0] = (degree[e0] || 0) + 1;
-        degree[e1] = (degree[e1] || 0) + 1;
-        ends.push(e0, e1, siteIndex(e.left), e.right ? siteIndex(e.right) : -1);
+    // Triangles near the edge can be long and thin, with centres far off the
+    // map, so centres are kept on the map. Those brought to its edge can line
+    // up or meet, which trislope and getTerritories allow for.
+    var vxs = new Array(count);
+    for (var t = 0; t < count; t++) {
+        vxs[t] = [clamp(centres[2 * t], -w, w), clamp(centres[2 * t + 1], -h, h)];
     }
 
     // Each vertex's neighbours, all in one array: those of vertex i are
     // adj[adjStart[i]] up to adj[adjStart[i + 1]], in the order its edges
     // were found
-    var adjStart = new Int32Array(vxs.length + 1);
-    for (var i = 0; i < vxs.length; i++) {
+    var adjStart = new Int32Array(count + 1);
+    for (var i = 0; i < count; i++) {
         adjStart[i + 1] = adjStart[i] + degree[i];
     }
-    var adj = new Int32Array(adjStart[vxs.length]);
-    var filled = adjStart.slice(0, vxs.length);
+    var adj = new Int32Array(adjStart[count]);
+    var filled = adjStart.slice(0, count);
     for (var k = 0; k < ends.length; k += 4) {
         adj[filled[ends[k]]++] = ends[k + 1];
         adj[filled[ends[k + 1]]++] = ends[k];
     }
 
-    // The Voronoi diagram itself isn't kept: it's the largest part by far.
-    // Everything needed from it is in typed arrays (a few MB even for big
-    // maps, where arrays of small arrays took tens of MB):
+    // Kept in typed arrays, which take a few MB even for big maps:
+    //   sites: the points, [x, y] each
     //   vxs: vertex positions, [x, y] each
     //   adjStart, adj: each vertex's neighbours (see above)
     //   edges: four numbers per edge: its two vertices, then the indexes in
-    //     sites of the points either side (the second is -1 at the map's edge)
+    //     sites of the points either side
+    //   triangles: the three points (indexes in sites) around each vertex
     var mesh = {
-        sites: sites,
+        sites: pts,
         vxs: vxs,
         adjStart: adjStart,
         adj: adj,
         edges: Int32Array.from(ends),
+        triangles: triangles,
         extent: extent
     }
     mesh.map = function (f) {
@@ -132,18 +142,9 @@ function makeMesh(pts, extent) {
 function meshTris(mesh) {
     if (mesh.tris) return mesh.tris;
     var tris = [];
-    function addSite(v, site) {
-        tris[v] = tris[v] || [];
-        if (site && !tris[v].includes(site)) tris[v].push(site);
-    }
-    var e = mesh.edges;
-    for (var k = 0; k < e.length; k += 4) {
-        var left = mesh.sites[e[k + 2]];
-        var right = e[k + 3] >= 0 ? mesh.sites[e[k + 3]] : null;
-        addSite(e[k], left);
-        addSite(e[k], right);
-        addSite(e[k + 1], left);
-        addSite(e[k + 1], right);
+    var t = mesh.triangles;
+    for (var i = 0; i < mesh.vxs.length; i++) {
+        tris.push([mesh.sites[t[3 * i]], mesh.sites[t[3 * i + 1]], mesh.sites[t[3 * i + 2]]]);
     }
     mesh.tris = tris;
     return tris;
@@ -186,7 +187,7 @@ function quantile(h, q) {
         sortedh[i] = h[i];
     }
     sortedh.sort(ascending);
-    return d3quantile(sortedh, q);
+    return quantileSorted(sortedh, q);
 }
 
 // A heightmap (or any value per vertex): a Float64Array with its mesh
@@ -483,6 +484,7 @@ function trislope(h, i) {
     var y2 = p2[1] - p0[1];
 
     var det = x1 * y2 - x2 * y1;
+    if (Math.abs(det) < 1e-15) return [0, 0];
     var h1 = h[nbs[1]] - h[nbs[0]];
     var h2 = h[nbs[2]] - h[nbs[0]];
 
@@ -508,7 +510,7 @@ function cityScore(h, cities) {
 
 // Best vertex for a new city, given the vertices of existing cities
 function pickCity(h, cities) {
-    return scan(cityScore(h, cities), descending);
+    return maxIndex(cityScore(h, cities));
 }
 
 function wreckScore(h, wrecks) {
@@ -530,7 +532,7 @@ function wreckScore(h, wrecks) {
 }
 
 function pickWreck(h, wrecks) {
-    return scan(wreckScore(h, wrecks), descending);
+    return maxIndex(wreckScore(h, wrecks));
 }
 
 // Points of interest go near a random spot, so they land in the same place
@@ -555,7 +557,7 @@ function POIScore(h, poi) {
     return score;
 }
 function pickPOI(h, poi) {
-    return scan(POIScore(h, poi), descending);
+    return maxIndex(POIScore(h, poi));
 }
 
 function contour(h, level) {
@@ -606,7 +608,8 @@ function getTerritories(h, cities, nterrs) {
     var terr = [];
     var queue = new PriorityQueue({comparator: function (a, b) {return a.score - b.score}});
     function weight(u, v) {
-        var horiz = distance(h.mesh, u, v);
+        // Vertices moved to the map's edge can meet
+        var horiz = Math.max(distance(h.mesh, u, v), 1e-9);
         var vert = h[v] - h[u];
         if (vert > 0) vert /= 10;
         var diff = 1 + 0.25 * Math.pow(vert/horiz, 2);
