@@ -509,11 +509,23 @@ function openLink(link) {
 }
 
 // Start: open a shared link, or the autosaved map, or a new random map.
-// Runs after the page has had a chance to paint.
+// Runs after the page has had a chance to paint. Small screens only get a
+// notice (see editor.css), so the map waits until the window is big enough.
 updateChrome();
 statusText = 'Loading…';
 updateStatus();
-setTimeout(function () {
+var smallScreen = window.matchMedia('(max-width: 759px), (max-height: 499px)');
+if (smallScreen.matches) {
+    smallScreen.addEventListener('change', function waitForRoom() {
+        if (smallScreen.matches) return;
+        smallScreen.removeEventListener('change', waitForRoom);
+        setTimeout(start, 20);
+    });
+} else {
+    setTimeout(start, 20);
+}
+
+function start() {
     var restored = restoreAutosave();
     readLink().then(function (link) {
         if (link) {
@@ -531,4 +543,4 @@ setTimeout(function () {
         statusText = null;
         updateStatus();
     });
-}, 20);
+}

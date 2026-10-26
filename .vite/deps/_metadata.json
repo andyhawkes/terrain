@@ -1,0 +1,46 @@
+{
+  "hash": "01e68a3f",
+  "configHash": "e00137d2",
+  "lockfileHash": "0c621475",
+  "browserHash": "be84e2ea",
+  "optimized": {
+    "d3": {
+      "src": "../../node_modules/d3/index.js",
+      "file": "d3.js",
+      "fileHash": "aef03c2b",
+      "needsInterop": false
+    },
+    "save-svg-as-png": {
+      "src": "../../node_modules/save-svg-as-png/lib/saveSvgAsPng.js",
+      "file": "save-svg-as-png.js",
+      "fileHash": "3dc78e14",
+      "needsInterop": true
+    },
+    "d3-array": {
+      "src": "../../node_modules/d3-array/src/index.js",
+      "file": "d3-array.js",
+      "fileHash": "6d8108c3",
+      "needsInterop": false
+    },
+    "d3-voronoi": {
+      "src": "../../node_modules/d3-voronoi/src/index.js",
+      "file": "d3-voronoi.js",
+      "fileHash": "f0e9ba2e",
+      "needsInterop": false
+    },
+    "js-priority-queue": {
+      "src": "../../node_modules/js-priority-queue/priority-queue.js",
+      "file": "js-priority-queue.js",
+      "fileHash": "d8fa827c",
+      "needsInterop": true
+    }
+  },
+  "chunks": {
+    "chunk-FD4HTZUV": {
+      "file": "chunk-FD4HTZUV.js"
+    },
+    "chunk-VUNV25KB": {
+      "file": "chunk-VUNV25KB.js"
+    }
+  }
+}

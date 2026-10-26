@@ -785,3 +785,47 @@ input[type=checkbox] {
     font-size: 12px;
     margin-top: -4px;
 }
+
+/* --- Small screens ---
+   The editor is built for desktop (see docs/PLAN.md), so phones get a
+   notice instead: narrower than a tablet held upright, or too short, like a
+   phone held sideways. main.js uses the same query to hold off starting. */
+
+.small-screen {
+    display: none;
+}
+
+@media (max-width: 759px), (max-height: 499px) {
+    body > :not(.small-screen) {
+        display: none !important;
+    }
+
+    .small-screen {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        height: 100%;
+        padding: 24px;
+        text-align: center;
+        overflow: auto;
+    }
+
+    .small-screen .icon {
+        font-size: 48px;
+        color: var(--muted);
+    }
+
+    .small-screen h1 {
+        margin: 0;
+        font-size: 20px;
+    }
+
+    .small-screen p {
+        margin: 0;
+        max-width: 32em;
+        line-height: 1.5;
+        color: var(--muted);
+    }
+}

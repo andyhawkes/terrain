@@ -130,7 +130,7 @@ Each phase leaves the app working.
 - Possibly moving to D3 v7 and `d3-delaunay`. This means reworking the mesh code, which relies on D3 v4's voronoi edge structure.
 
 ## Decisions so far
-- **Desktop first.** Phone layouts aren't a goal for now.
+- **Desktop first.** Phone layouts aren't a goal for now. Screens narrower than 760px or shorter than 500px (phones, either way up) get a notice asking for a bigger screen, and the editor doesn't start until the window is big enough.
 - **Zoom and pan are not a priority.**
 - **Build tools are fine** (Vite, npm).
 - **Editing tools only change what you touch.**
