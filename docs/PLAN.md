@@ -52,7 +52,7 @@ A theme describes how the map is drawn: fonts, colours, line styles for coasts, 
 Each phase leaves the app working.
 
 ### Phase 1: Foundations
-- [x] Move to Vite and ES modules. Keep D3 v4 for now, from npm instead of vendored files.
+- [x] Move to Vite and ES modules. Keep D3 v4 for now (moved to v7 in Phase 8), from npm instead of vendored files.
 - [x] Seeded random number generation. Remove every direct `Math.random` call from the generation code.
 - [x] Split the generation code (`src/core/`) from SVG rendering (`src/render/`). The core runs in Node.
 - [x] One shared map state, built from a step history with cached snapshots and undo/redo.
@@ -131,7 +131,7 @@ Each phase leaves the app working.
 - Later: high fantasy.
 
 ### Phase 8: D3 v7
-- [ ] Move to D3 v7 and `d3-delaunay`. This removes the `d3-color` audit warning and makes generation lighter, but the grid is built differently, so it needs a `GENERATOR_VERSION` bump and every seed gives a different map.
+- [x] Moved to D3 v7, d3-array v3 and `d3-delaunay` (replacing D3 v4 and `d3-voronoi`). `npm audit` is clean: the `d3-color` warning is gone. The grid is built from the Delaunay triangulation: its vertices are the triangles' centres, kept on the map, and its edges join triangles that share a side. Tools use v7's event handling (`d3.pointer`, events passed to handlers). The grid is built differently, so `GENERATOR_VERSION` is now 3 and every seed gives a different map from before.
 
 ### Later
 - A 3D view of the terrain, probably with three.js, and sculpting tools that record brush strokes as steps.

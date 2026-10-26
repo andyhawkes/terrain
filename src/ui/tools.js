@@ -184,7 +184,7 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
                 .attr('class', 'symbol-variant')
                 .attr('title', name + ' ' + (i + 1))
                 .attr('aria-label', name + ' ' + (i + 1))
-                .on('click', function (n) {
+                .on('click', function (event, n) {
                     symbolVariant[symbolKind] = n;
                     updateSymbolOptions();
                 });
@@ -264,8 +264,8 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
         custom.select('input').property('value', markerColor);
     }
 
-    function mapPoint(node) {
-        var p = d3.mouse(node);
+    function mapPoint(event, node) {
+        var p = d3.pointer(event, node);
         return [p[0] / R.SCALE, p[1] / R.SCALE];
     }
 
@@ -287,22 +287,22 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
         return true;
     }
 
-    svg.on('click', function () {
-        var target = d3.event.target;
+    svg.on('click', function (event) {
+        var target = event.target;
         var d = d3.select(target).datum();
         if (active === 'symbol') {
             var variant = symbolVariant[symbolKind] % variantCount(getTheme(doc.state.style.theme).symbols[symbolKind]);
             if (isSymbol(d)) doc.dispatch('setSymbol', {id: d.id, kind: symbolKind, variant: variant, what: nameOf(d)});
-            else doc.dispatch('addSymbol', {pos: mapPoint(this), kind: symbolKind, variant: variant});
+            else doc.dispatch('addSymbol', {pos: mapPoint(event, this), kind: symbolKind, variant: variant});
         } else if (active === 'marker') {
-            doc.dispatch('addMarker', {pos: mapPoint(this), type: markerType, color: markerColor});
+            doc.dispatch('addMarker', {pos: mapPoint(event, this), type: markerType, color: markerColor});
         } else if (active === 'note') {
             if (d && d.kind === 'note') {
                 edit(d, target);
                 return;
             }
-            var pos = mapPoint(this);
-            editText(stage.node(), {x: d3.event.clientX, y: d3.event.clientY}, '', function (text) {
+            var pos = mapPoint(event, this);
+            editText(stage.node(), {x: event.clientX, y: event.clientY}, '', function (text) {
                 if (text) doc.dispatch('addNote', {pos: pos, text: text});
             }, {placeholder: 'Type, then press Enter', label: 'New text'});
         } else if (active === 'delete' && d && d.kind === 'ornament') {
@@ -319,14 +319,14 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
     });
 
     // Double-click edits text without switching tools
-    svg.on('dblclick', function () {
+    svg.on('dblclick', function (event) {
         if (active !== 'pointer' && active !== 'move') return;
-        if (edit(d3.select(d3.event.target).datum(), d3.event.target)) d3.event.preventDefault();
+        if (edit(d3.select(event.target).datum(), event.target)) event.preventDefault();
     });
 
     var dragStart;
     var drag = d3.drag()
-        .on('start', function (d) {
+        .on('start', function (event, d) {
             // A city's label moves with it while dragging; a label moves alone
             var nodes = [this];
             if (d.kind === 'city') {
@@ -336,15 +336,15 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
             moving.each(function () {
                 this.__dragBase = this.getAttribute('transform') || '';
             });
-            dragStart = {x: d3.event.x, y: d3.event.y, moving: moving};
+            dragStart = {x: event.x, y: event.y, moving: moving};
         })
-        .on('drag', function () {
-            var shift = 'translate(' + (d3.event.x - dragStart.x) + ',' + (d3.event.y - dragStart.y) + ') ';
+        .on('drag', function (event) {
+            var shift = 'translate(' + (event.x - dragStart.x) + ',' + (event.y - dragStart.y) + ') ';
             dragStart.moving.attr('transform', function () {return shift + this.__dragBase});
         })
-        .on('end', function (d) {
-            var dx = (d3.event.x - dragStart.x) / R.SCALE;
-            var dy = (d3.event.y - dragStart.y) / R.SCALE;
+        .on('end', function (event, d) {
+            var dx = (event.x - dragStart.x) / R.SCALE;
+            var dy = (event.y - dragStart.y) / R.SCALE;
             if (dx === 0 && dy === 0) return;
             var pos = [d.pos[0] + dx, d.pos[1] + dy];
             if (d.kind === 'ornament') {

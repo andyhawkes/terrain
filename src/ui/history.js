@@ -118,7 +118,7 @@ export function historyPanel(body, ctx) {
         var items = list.selectAll('li').data(rows);
         items.exit().remove();
         var entered = items.enter().append('li');
-        var button = entered.append('button').on('click', function (row) {
+        var button = entered.append('button').on('click', function (event, row) {
             ctx.stopReplay();
             doc.goTo(row.index + 1);
         });
