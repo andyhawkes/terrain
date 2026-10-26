@@ -125,7 +125,8 @@ Each phase leaves the app working.
 - Memory, measured on an A4 High map:
   - Done: the grid no longer keeps d3's Voronoi diagram, and builds its cell outlines only for the diagnostic views (123 → 60 MB). Water flow is cached for the latest heightmap. Territories and label placement are cached separately, so moving a city recomputes nothing and renaming one only re-places labels.
   - Done: the grid and heightmaps use typed arrays (grid 60 → 15 MB). Undo keeps the last 30 steps but at most 2 million heightmap vertices (16 terrain snapshots on A4 High), plus the map's first step; undoing further replays from there. Rivers, coasts, hatching, territories and labels are kept for the 3–10 most recent heightmaps, depending on size. 60 terrain steps on A4 High hold about 100 MB (30 steps used to hold 337 MB).
-  - Next, if needed: slope hatching as a typed array (it's most of what's left per heightmap). Undo/redo between terrain steps takes about 0.25 s on A4 High, nearly all of it redrawing the SVG; redrawing only the layers that changed would help.
+  - Done: redraws skip layers drawn from the same data as last time, and slope hatching is one SVG path instead of an element per stroke (thousands of elements). On A4 High, undo/redo between terrain steps takes about 30–50 ms of script time (was 75–115) and adding a marker 3 ms (was about 70). Diagnostic views keep their cells when switching between them and only recolour.
+  - Next, if needed: slope hatching as a typed array (it's most of what's left per heightmap).
 - Possibly moving to D3 v7 and `d3-delaunay`. This means reworking the mesh code, which relies on D3 v4's voronoi edge structure.
 
 ## Decisions so far

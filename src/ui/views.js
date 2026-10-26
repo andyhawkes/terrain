@@ -54,7 +54,10 @@ var shown = null;
 export function renderView(svg, view, state) {
     var resized = state.h && R.setMapSize(svg, state.params);
     if (view !== shown || resized) {
-        R.clearAll(svg);
+        // The diagnostic views all colour the same cells, so moving between
+        // them only recolours
+        var bothFields = view !== 'map' && shown && shown !== 'map' && !resized;
+        R.clearAll(svg, bothFields ? ['field'] : null);
         shown = view;
     }
     if (state.h) draw[view](svg, state);

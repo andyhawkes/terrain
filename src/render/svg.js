@@ -85,12 +85,28 @@ function byId(d) {
     return d.id;
 }
 
-export function clear(svg, layerName) {
-    layer(svg, layerName).selectAll('*').remove();
+// True if a layer was last drawn from the same things (compared by
+// identity: map data never changes once made), so it can be left as is.
+// Otherwise remembers them for next time.
+function unchanged(svg, layerName, keys) {
+    var node = layer(svg, layerName).node();
+    var last = node.__drawnFrom;
+    node.__drawnFrom = keys;
+    return !!last && last.length === keys.length && last.every(function (k, i) {return k === keys[i]});
 }
 
-export function clearAll(svg) {
-    LAYERS.forEach(function (name) {clear(svg, name)});
+export function clear(svg, layerName) {
+    var g = layer(svg, layerName);
+    g.selectAll('*').remove();
+    g.node().__drawnFrom = null;
+    g.node().__mesh = null;
+}
+
+// keep: names of layers to leave as they are
+export function clearAll(svg, keep) {
+    LAYERS.forEach(function (name) {
+        if (!keep || keep.indexOf(name) < 0) clear(svg, name);
+    });
     showLayers(svg, []);
 }
 
@@ -103,14 +119,19 @@ export function showLayers(svg, hidden) {
 // --- Diagnostic drawing ---
 
 export function visualizeVoronoi(svg, field, lo, hi) {
+    if (unchanged(svg, 'field', [field, lo, hi])) return;
     if (hi == undefined) hi = d3.max(field) + 1e-9;
     if (lo == undefined) lo = d3.min(field) - 1e-9;
     var mappedvals = field.map(function (x) {return x > hi ? 1 : x < lo ? 0 : (x - lo) / (hi - lo)});
-    join(svg, 'field', 'path', 'field', meshTris(field.mesh))
-        .attr('d', makeD3Path)
-        .style('fill', function (d, i) {
-            return d3.interpolateViridis(mappedvals[i]);
-        });
+    // The cells only need drawing again for a different grid; otherwise
+    // just their colours change
+    var g = layer(svg, 'field');
+    var cells = g.node().__mesh === field.mesh ? g.selectAll('path.field')
+        : join(svg, 'field', 'path', 'field', meshTris(field.mesh)).attr('d', makeD3Path);
+    g.node().__mesh = field.mesh;
+    cells.style('fill', function (d, i) {
+        return d3.interpolateViridis(mappedvals[i]);
+    });
 }
 
 // --- Theme ---
@@ -127,6 +148,7 @@ export function applyTheme(svg, style) {
 }
 
 function drawBackground(svg, background) {
+    if (unchanged(svg, 'background', [background])) return;
     var g = layer(svg, 'background');
     g.selectAll('*').remove();
     var w = SCALE * extent.width;
@@ -180,17 +202,31 @@ function itemData(state, list, kind) {
     });
 }
 
-export function drawPaths(svg, cls, paths) {
+// keys say what the paths are made from, if not the paths themselves (see
+// unchanged); then paths can be a function, only called if they're needed
+export function drawPaths(svg, cls, paths, keys) {
+    if (unchanged(svg, cls, keys || [paths])) return;
+    if (typeof paths === 'function') paths = paths();
     join(svg, cls, 'path', cls, paths)
         .attr('d', makeD3Path);
 }
 
-export function drawSlopes(svg, strokes) {
-    join(svg, 'slope', 'line', 'slope', strokes)
-        .attr('x1', function (d) {return SCALE*d[0][0]})
-        .attr('y1', function (d) {return SCALE*d[0][1]})
-        .attr('x2', function (d) {return SCALE*d[1][0]})
-        .attr('y2', function (d) {return SCALE*d[1][1]});
+function coord(x) {
+    return Math.round(SCALE * x * 100) / 100;
+}
+
+// All the hatching strokes go in one path: there can be tens of thousands,
+// and one element is far quicker to draw and redraw than one each.
+// keys and strokes work as for drawPaths.
+export function drawSlopes(svg, strokes, keys) {
+    if (unchanged(svg, 'slope', keys || [strokes])) return;
+    if (typeof strokes === 'function') strokes = strokes();
+    var d = strokes.map(function (s) {
+        return 'M' + coord(s[0][0]) + ',' + coord(s[0][1]) + 'L' + coord(s[1][0]) + ',' + coord(s[1][1]);
+    }).join('');
+    join(svg, 'slope', 'path', 'slope', d ? [d] : [])
+        .attr('d', function (d) {return d})
+        .attr('fill', 'none');
 }
 
 export function drawCities(svg, state, theme) {
@@ -325,11 +361,15 @@ export function drawMap(svg, state) {
     drawPaths(svg, 'river', d.rivers);
     drawPaths(svg, 'coast', d.coasts);
     // Plotters ignore dash patterns, so draw each dash as its own line
-    drawPaths(svg, 'border', theme.strokeOnly
-        ? dashPaths(d.borders, theme.borderDash[0] / SCALE, theme.borderDash[1] / SCALE)
-        : d.borders);
+    var dash = theme.strokeOnly ? theme.borderDash : [];
+    drawPaths(svg, 'border', function () {
+        return theme.strokeOnly ? dashPaths(d.borders, dash[0] / SCALE, dash[1] / SCALE) : d.borders;
+    }, [d.borders, dash[0], dash[1]]);
+    // Hershey lettering is drawn with hatching cleared from under it
     var boxes = hersheyLabelBoxes(d.labels, state.notes, theme, t.font);
-    drawSlopes(svg, boxes.length ? d.slopes.filter(outsideBoxes(boxes)) : d.slopes);
+    drawSlopes(svg, function () {
+        return boxes.length ? d.slopes.filter(outsideBoxes(boxes)) : d.slopes;
+    }, [d.slopes, boxes.length ? JSON.stringify(boxes) : '']);
     drawFeatures(svg, state, theme);
     drawLabels(svg, d.labels, state.notes, theme, t.font);
     showLayers(svg, state.style.hidden);
