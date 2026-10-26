@@ -24,8 +24,10 @@ export default {
     ],
 
     backgrounds: [
-        {id: 'paper', name: 'Paper', color: PAPER, halo: {color: PAPER, opacity: 0.9, shadow: null}},
-        {id: 'parchment', name: 'Parchment', color: '#efe3c8', image: parchment, imageScale: 1.5,
+        // paper: what fills the drawings (see mask below). On plain paper they
+        // hide what's behind them; on textured parchment only the ink shows.
+        {id: 'paper', name: 'Paper', color: PAPER, paper: PAPER, halo: {color: PAPER, opacity: 0.9, shadow: null}},
+        {id: 'parchment', name: 'Parchment', color: '#efe3c8', image: parchment, imageScale: 1.5, paper: 'transparent',
             halo: {color: '#e8d7b8', opacity: 0.85, shadow: null}}
     ],
 
@@ -126,7 +128,8 @@ export default {
     },
 
     parts: {
-        mask: {fill: PAPER, stroke: 'none'},
+        // The background's paper colour (set through color, see backgrounds)
+        mask: {fill: 'currentColor', stroke: 'none'},
         ridge: {fill: 'none', stroke: INK, 'stroke-width': 1.3},
         shadow: {fill: INK, stroke: 'none'},
         crease: {fill: 'none', stroke: INK, 'stroke-width': 0.9},

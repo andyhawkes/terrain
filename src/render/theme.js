@@ -36,6 +36,9 @@ export function themeCSS(theme, font, background, scope) {
         'S path.city-label { stroke: ' + c.label + '; }',
         'S path.region-label { stroke: ' + c.region + '; }',
         'S text.poi { fill: var(--symbol); stroke: none; filter: none; }',
+        // A background can set the fill for symbol parts drawn in currentColor
+        // (see underhill.js); markers set their own colour
+        background.paper ? 'S .relief, S .poi, S .wreck { color: ' + background.paper + '; }' : '',
         // Fonts that hang below the baseline are raised (translate adds to
         // any transform, such as a label being dragged)
         font.rise ? 'S text.city-label, S text.region-label, S text.note-label, S text.grid-label, ' +

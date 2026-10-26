@@ -141,6 +141,7 @@ Each phase leaves the app working.
   - Lettering: Uncial Antiqua regions in red with Almendra towns (both OFL), or Almendra throughout.
   - Bold, rugged mountains packed into ranges on the highest ground. They're generated (`src/themes/relief-drawings.js`, from a fixed seed): spires to broad massifs, slightly rough ridgelines, some with a second summit, a solid black east face with a ragged edge, and rock creases on the lit side. Hills are generated the same way, with a dark east crescent.
   - Hills, woods, and dashed red borders.
+  - Drawings are filled to match the background (`paper` on a background): the cream on Paper, so nearer ones hide those behind, and nothing on Parchment, where only the ink shows.
   - A heavy, smoothed coastline with two finer lines following it out at sea.
   - Its own towers, ruins, standing stones, caves and wrecks.
 - [x] Coast lines at sea (`coastLines` in the theme format): lines following the shore at set distances, worked out from each sea point's distance to land and drawn as contours of it, so they always sit on the sea side. They hide with the coastline.

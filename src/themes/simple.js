@@ -18,7 +18,9 @@ export default {
 
     // Backgrounds to choose from; the first is the default. image is drawn
     // behind the map, scaled up by imageScale and centred. halo can override
-    // the label halo for this background: {color, opacity, shadow}.
+    // the label halo for this background: {color, opacity, shadow}. paper
+    // sets currentColor for relief, point of interest and wreck symbols, so
+    // their fills can suit the background (see underhill.js).
     backgrounds: [
         {id: 'white', name: 'White', color: '#ffffff'},
         {id: 'cream', name: 'Cream', color: '#f7f2e4'}
