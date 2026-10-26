@@ -1,0 +1,7 @@
+/* Styles for the diagnostic views. The finished map is styled by its theme
+   (src/themes/), which the renderer writes into the SVG itself. */
+
+#mapSVG .field {
+    stroke: none;
+    fill-opacity: 1.0;
+}

@@ -1,0 +1,27 @@
+{
+  "name": "terrain",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test \"test/*.test.js\"",
+    "generate": "node scripts/generate-map.js"
+  },
+  "dependencies": {
+    "@fontsource/cinzel": "^5.3.0",
+    "@fontsource/im-fell-english": "^5.3.0",
+    "@fontsource/im-fell-english-sc": "^5.3.0",
+    "@fontsource/source-sans-3": "^5.3.1",
+    "d3": "^4.13.0",
+    "d3-array": "^1.2.4",
+    "d3-voronoi": "^1.1.4",
+    "js-priority-queue": "^0.1.5",
+    "save-svg-as-png": "^1.4.17"
+  },
+  "devDependencies": {
+    "vite": "^6.4.5"
+  }
+}

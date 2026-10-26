@@ -1,5 +1,31 @@
 # Fantasy map generator
 
+## About this fork
+
+This fork is turning the original demo into a map-making tool. You can generate random maps or build one by hand from a blank start, edit it, and export it in different themes. See [docs/PLAN.md](docs/PLAN.md) for the goals and phases.
+
+### Running it
+
+```
+npm install
+npm run dev        # start the editor at http://localhost:5173
+npm test           # run the core tests
+npm run build      # static build in dist/
+npm run generate -- --seed hello --npts 4096 --out map.json   # generate a map without a browser
+npm run generate -- --seed today                             # the map of the day
+```
+
+### Layout
+
+- `src/core/`: map generation, independent of the DOM. All randomness is seeded. A map is a list of *steps*: see `steps.js` and `document.js`.
+- `src/render/`: draws a map state as SVG.
+- `src/themes/`: map themes as plain data. `simple.js` documents the format.
+- `src/main.js` and `src/ui/`: the editor (top bar, tools, views and side panels).
+- `css/editor.css` styles the editor; `css/map.css` only covers the diagnostic views.
+- `scripts/`: command-line tools.
+
+## Original README
+
 This is code for generating fantasy maps, using the algorithm behind [@unchartedatlas][uncharted]. For more details, see [these notes][notes].
 
 ## Dependencies
