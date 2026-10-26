@@ -2,6 +2,8 @@
 
 This fork started from Martin O'Leary's [terrain generator](https://mewo2.com/notes/terrain/). The original was a step-by-step explanation of how the algorithm works. The aim now is a tool for making maps, while still letting you explore the algorithm.
 
+This file records what's been done and why. What's next, in order, is in [ROADMAP.md](ROADMAP.md).
+
 ## Goals
 
 - **Make maps people can use.** That includes tabletop RPG game masters, parents making treasure maps for their kids, and anyone who just enjoys playing with it. It's a fun experiment first.
