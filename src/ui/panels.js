@@ -261,8 +261,10 @@ function stylePanel(body, ctx) {
         TOGGLE_LAYERS.forEach(function (l) {
             boxes[l[0]].property('checked', style.hidden.indexOf(l[0]) < 0);
         });
-        // Only some themes shade the sea
+        // Only some themes shade the sea, or draw hills and forests
         labels.sea.style('display', theme.seaShading ? null : 'none');
+        labels.relief.style('display', theme.symbols.relief ? null : 'none');
+        labels.slope.style('display', theme.slopeShading === false ? 'none' : null);
 
         if (!state.params) return;
         var extras = extrasChoice(theme, style, state.params);

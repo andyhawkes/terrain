@@ -36,7 +36,9 @@ test('every theme has what the renderer needs', function () {
             assert.ok(spec && spec.kind === 'path' && spec.variants.length, theme.id + ' marker ' + type.id);
         });
         // Symbol parts are styled from theme.parts, not CSS, so every part needs one
-        var specs = [theme.symbols.poi, theme.symbols.wreck].concat(Object.values(theme.symbols.markers));
+        var relief = theme.symbols.relief;
+        var specs = [theme.symbols.poi, theme.symbols.wreck].concat(Object.values(theme.symbols.markers))
+            .concat(relief ? [relief.mountain, relief.hill, relief.tree] : []);
         specs.filter(function (spec) {return spec.kind === 'path'}).forEach(function (spec) {
             spec.variants.forEach(function (parts) {
                 parts.forEach(function (part) {

@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {MapDocument, GENERATOR_VERSION} from '../src/core/document.js';
-import {derive, seaShading} from '../src/core/derive.js';
+import {derive, seaShading, relief} from '../src/core/derive.js';
 import {itemPos, defaultStyle} from '../src/core/steps.js';
 
 var small = {npts: 1024, ncities: 6, nterrs: 3};
@@ -362,6 +362,28 @@ test('a long terrain history keeps fewer snapshots, and replays the same map', f
     assert.deepEqual(Array.from(doc.state.h), expected);
 });
 
+test('mountains, hills and trees go on land, spaced apart, highest ground first', function () {
+    var doc = new MapDocument();
+    doc.dispatch('generate', {params: {npts: 4096}}, 'relief');
+    var h = doc.state.h;
+    var spacing = {mountain: 30, hill: 18, tree: 8};
+    var symbols = relief(h, 1000, spacing);
+    assert.equal(relief(h, 1000, spacing), symbols);
+    var kinds = new Set(symbols.map(function (s) {return s.kind}));
+    assert.deepEqual(Array.from(kinds).sort(), ['hill', 'mountain', 'tree']);
+    // Back to front
+    for (var i = 1; i < symbols.length; i++) assert.ok(symbols[i].y >= symbols[i - 1].y);
+    // None closer than the smaller of two spacings
+    for (var i = 0; i < symbols.length; i++) {
+        for (var j = i + 1; j < symbols.length; j++) {
+            var a = symbols[i];
+            var b = symbols[j];
+            var gap = Math.min(spacing[a.kind], spacing[b.kind]) / 1000;
+            assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= gap - 1e-9);
+        }
+    }
+});
+
 test('sea shading only goes on the sea, near the coast', function () {
     var doc = new MapDocument();
     doc.dispatch('generate', {params: {npts: 4096}}, 'sea');
@@ -394,13 +416,17 @@ test('pirate and military names come from word lists, unique and repeatable', fu
         doc.dispatch('generate', {params: Object.assign({language: language}, small, {ncities: 40, nterrs: 10})}, seed);
         return doc.state.cities.map(function (c) {return c.name}).concat(doc.state.cities.map(function (c) {return c.regionName}));
     }
-    ['pirate', 'military'].forEach(function (language) {
+    ['pirate', 'military', 'shire'].forEach(function (language) {
         var all = names(language, 'words');
         assert.deepEqual(names(language, 'words'), all);
         assert.equal(new Set(all).size, all.length, language + ' names repeat');
         all.forEach(function (n) {assert.match(n, /^[A-Z0-9][A-Za-z0-9' -]+$/, n)});
     });
     assert.ok(names('military', 'words').some(function (n) {return /^(Hill \d{3}|Sector|Zone|Objective)/.test(n)}));
+    // Shire names never borrow Tolkien's
+    ['Hobbiton', 'Bywater', 'Tuckborough', 'Underhill'].forEach(function (n) {
+        assert.ok(names('shire', 'words').indexOf(n) < 0);
+    });
 });
 
 test('jumping through the history', function () {

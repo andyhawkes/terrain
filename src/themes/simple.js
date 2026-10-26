@@ -99,6 +99,10 @@ export default {
         ]]},
         // One spec per marker type: x, danger, flag, camp, star
         markers: markerSymbols('mark', null, 'markX')
+        // A theme can also draw relief as little pictures (see underhill.js):
+        // relief: {spacing: {mountain, hill, tree}, mountain, hill, tree},
+        // with spacing in SVG units and each kind a path spec like these.
+        // slopeShading: false, at the top level, then turns hatching off.
     },
 
     // How each part (cls) of a symbol is drawn, as SVG style properties.

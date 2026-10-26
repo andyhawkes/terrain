@@ -62,6 +62,18 @@ export function seaShading(h) {
     return entry.sea;
 }
 
+// Mountain, hill and tree symbols, for themes that draw relief that way
+// (see symbols.relief in simple.js). spacing is in SVG units, so it's part
+// of what's cached.
+export function relief(h, scale, spacing) {
+    var entry = cacheFor(h);
+    var key = scale + ' ' + JSON.stringify(spacing);
+    if (!entry.relief || entry.relief.key !== key) {
+        entry.relief = {key: key, symbols: withSeed('relief', function () {return T.reliefSymbols(h, scale, spacing)})};
+    }
+    return entry.relief.symbols;
+}
+
 // Everything drawn from a map state. The same state, or one that differs
 // only in style, gets exactly the same result.
 export function derive(state) {

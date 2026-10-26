@@ -35,6 +35,38 @@ var MILITARY = {
     areas: ['Sector', 'Zone', 'Area', 'District']
 };
 
+// English village names, the gentle storybook kind
+var SHIRE = {
+    firsts: ['Bramble', 'Thistle', 'Bracken', 'Clover', 'Honey', 'Apple', 'Barley', 'Mossy', 'Puddle',
+        'Nettle', 'Badger', 'Otter', 'Fern', 'Hazel', 'Burrow', 'Sorrel', 'Teasel', 'Mallow', 'Tansy',
+        'Cob', 'Mill', 'Brook', 'Oak', 'Ash', 'Elder', 'Rowan', 'Tumble', 'Sunny', 'Chestnut', 'Bumble',
+        'Mole', 'Wren', 'Thrush', 'Fox', 'Crab', 'Plum', 'Pudding', 'Butter', 'Cherry', 'Hedge', 'Dimble'],
+    endings: ['bottom', 'by', 'combe', 'ford', 'hollow', 'bury', 'wich', 'well', 'dale', 'ley', 'stead',
+        'worth', 'wick', 'thorpe', 'field', 'mead', 'burrow', 'end', 'cote', 'den', 'hay', 'brook'],
+    villageWords: ['Green', 'Cross', 'End', 'Mill', 'Bridge', 'Hill'],
+    sizes: ['Little', 'Great', 'Nether', 'Upper', 'Lower', 'Long', 'Old'],
+    regionAdjectives: ['Green', 'Far', 'Long', 'White', 'Golden', 'Barley', 'Bramble', 'Hazel', 'Sunny',
+        'Quiet', 'Hollow', 'Rolling', 'Misty', 'Thistle', 'Apple'],
+    regionWords: ['Downs', 'Wolds', 'Fields', 'Hills', 'Marsh', 'Vale', 'Dales', 'Meads', 'Woods', 'Heath', 'Leas'],
+    // Tolkien's own places, which aren't ours to use
+    avoid: ['Hobbiton', 'Bywater', 'Tuckborough', 'Michel Delving', 'Frogmorton', 'Waymeet', 'Overhill',
+        'Underhill', 'Bucklebury', 'Crickhollow', 'Stock', 'Bree', 'Buckland', 'Longbottom', 'Hardbottle',
+        'Needlehole', 'Nobottle', 'Greenholm', 'Whitfurrows', 'Little Delving', 'Budgeford', 'Oatbarton',
+        'Deephallow', 'Rushey', 'Willowbottom', 'Pincup', 'Long Cleeve', 'Tighfield', 'Bindbole',
+        'Woody End', 'The White Downs', 'The Far Downs', 'The Green Hills']
+};
+
+// A first part and an ending that sit well together: no "Brambleend" or
+// "Brookbrook"
+function village() {
+    for (;;) {
+        var first = choose(SHIRE.firsts);
+        var ending = choose(SHIRE.endings);
+        var clash = first.slice(-1) === ending[0] || first.toLowerCase().indexOf(ending) >= 0;
+        if (!clash) return first + ending;
+    }
+}
+
 var STYLES = {
     pirate: {
         city: [
@@ -48,6 +80,24 @@ var STYLES = {
             function () {return choose(PIRATE.things) + ' ' + choose(PIRATE.regions)},
             function () {return choose(PIRATE.owners) + ' ' + choose(PIRATE.regions)}
         ]
+    },
+    shire: {
+        city: [
+            village,
+            village,
+            village,
+            village,
+            function () {return choose(SHIRE.sizes) + ' ' + village()},
+            function () {return choose(SHIRE.sizes) + ' ' + village()},
+            function () {return village() + ' ' + choose(SHIRE.villageWords)},
+            function () {return village() + '-under-Hill'}
+        ],
+        region: [
+            function () {return 'The ' + choose(SHIRE.regionAdjectives) + ' ' + choose(SHIRE.regionWords)},
+            function () {return village() + ' ' + choose(SHIRE.regionWords)},
+            function () {return choose(SHIRE.firsts) + 'shire'}
+        ],
+        avoid: SHIRE.avoid
     },
     military: {
         city: [
@@ -78,7 +128,8 @@ export function makeWordName(lang, key) {
     var patterns = STYLES[lang.wordStyle][key === 'region' ? 'region' : 'city'];
     for (var tries = 0; tries < 200; tries++) {
         var name = capitalized(choose(patterns)());
-        if (lang.names.indexOf(name) < 0) {
+        var avoid = STYLES[lang.wordStyle].avoid || [];
+        if (lang.names.indexOf(name) < 0 && avoid.indexOf(name) < 0) {
             lang.names.push(name);
             return name;
         }

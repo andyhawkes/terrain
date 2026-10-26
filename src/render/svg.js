@@ -3,7 +3,7 @@
 // setMapSize sets before drawing; text, lines and symbols are sized in SVG
 // user units.
 import * as d3 from 'd3';
-import {derive, seaShading} from '../core/derive.js';
+import {derive, seaShading, relief} from '../core/derive.js';
 import {meshTris} from '../core/terrain.js';
 import {itemPos} from '../core/steps.js';
 import {getTheme, fontChoice, backgroundChoice} from '../themes/index.js';
@@ -36,12 +36,13 @@ export function setMapSize(svg, params) {
 }
 
 // Layers in drawing order; each is a <g> so redraws keep the stacking order
-var LAYERS = ['background', 'field', 'sea', 'river', 'coast', 'border', 'slope', 'grid', 'city', 'wreck', 'poi', 'marker',
+var LAYERS = ['background', 'field', 'sea', 'river', 'coast', 'border', 'slope', 'relief', 'grid', 'city', 'wreck', 'poi', 'marker',
     'label', 'extras'];
 
 // Layers the user can switch off in the Style panel
 export var TOGGLE_LAYERS = [
     ['coast', 'Coastline'], ['sea', 'Sea shading'], ['river', 'Rivers'], ['border', 'Borders'], ['slope', 'Slope shading'],
+    ['relief', 'Hills and forests'],
     ['city', 'Cities'], ['label', 'Labels'], ['wreck', 'Wrecks'], ['poi', 'Points of interest'],
     ['marker', 'Markers']
 ];
@@ -243,6 +244,35 @@ export function drawCities(svg, state, theme) {
         .attr('r', function (d, i) {return i < n ? theme.cities.capitalRadius : theme.cities.townRadius});
 }
 
+// Mountains, hills and trees, for themes with relief symbols. They're left
+// out around cities, so places stay clear.
+var CITY_CLEARANCE = 16;
+
+function drawRelief(svg, state, theme) {
+    var spec = theme.symbols.relief;
+    if (unchanged(svg, 'relief', [state.h, spec, state.cities, SCALE])) return;
+    if (!spec) {
+        clear(svg, 'relief');
+        return;
+    }
+    var kinds = ['mountain', 'hill', 'tree'];
+    kinds.forEach(function (kind) {ensureSymbols(svg, 'relief-' + kind, spec[kind], theme.parts)});
+    var places = state.cities.map(function (c) {return itemPos(state, c)});
+    var near = CITY_CLEARANCE / SCALE;
+    var symbols = relief(state.h, SCALE, spec.spacing).filter(function (s) {
+        return !places.some(function (p) {
+            return Math.abs(p[0] - s.x) < near && Math.abs(p[1] - s.y) < near;
+        });
+    });
+    var prefix = '#' + svg.attr('id') + '-relief-';
+    // Drawn in order, back to front, so no key: nearer symbols overlap
+    join(svg, 'relief', 'use', 'relief', symbols)
+        .attr('href', function (d) {return prefix + d.kind + (d.variant % spec[d.kind].variants.length)})
+        .attr('transform', function (d) {
+            return 'translate(' + coord(d.x) + ',' + coord(d.y) + ') scale(' + d.size.toFixed(2) + ')';
+        });
+}
+
 // Points of interest and wrecks, drawn with the theme's symbols
 function drawSymbols(svg, layerName, cls, data, spec, parts) {
     if (spec.kind === 'text') {
@@ -376,9 +406,13 @@ export function drawMap(svg, state) {
     }, [d.borders, dash[0], dash[1]]);
     // Hershey lettering is drawn with hatching cleared from under it
     var boxes = hersheyLabelBoxes(d.labels, state.notes, theme, t.font);
+    // A theme can draw relief with symbols instead of hatching
+    var hatching = theme.slopeShading !== false;
     drawSlopes(svg, function () {
+        if (!hatching) return [];
         return boxes.length ? d.slopes.filter(outsideBoxes(boxes)) : d.slopes;
-    }, [d.slopes, boxes.length ? JSON.stringify(boxes) : '']);
+    }, [d.slopes, boxes.length ? JSON.stringify(boxes) : '', hatching]);
+    drawRelief(svg, state, theme);
     drawFeatures(svg, state, theme);
     drawLabels(svg, d.labels, state.notes, theme, t.font);
     drawExtras(svg, state, theme, t.font);

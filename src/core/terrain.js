@@ -3,7 +3,7 @@
 import {ascending, min, max, mean, maxIndex, quantileSorted} from 'd3-array';
 import {Delaunay} from 'd3-delaunay';
 import PriorityQueue from 'js-priority-queue';
-import {random, runif, rnorm, randomVector, withStream} from './random.js';
+import {random, runif, rnorm, randomVector, randrange, shuffled, withStream} from './random.js';
 
 export var defaultExtent = {
     width: 1,
@@ -898,6 +898,88 @@ function seaStrokes(h, width) {
     return strokes;
 }
 
+// Mountains, hills and trees drawn as little pictures, the way hand-drawn
+// maps show relief. The highest land gets mountains (bigger on higher
+// peaks), the middle ground hills, and trees grow in clumps on lower land.
+// Symbols keep their distance from each other, the coast and rivers.
+// spacing gives each kind's distance in SVG units, and scale is SVG units
+// per map unit, so symbols are spaced the same however detailed the grid.
+// Returns [{kind, x, y, size, variant}], back to front so nearer symbols
+// overlap those behind.
+function reliefSymbols(h, scale, spacing) {
+    var mesh = h.mesh;
+    var flux = getFlux(h);
+    var land = [];
+    var above = 0;
+    for (var i = 0; i < h.length; i++) {
+        if (h[i] > 0) above++;
+    }
+    var riverFlux = 0.01 * above / h.length;
+    for (var i = 0; i < h.length; i++) {
+        if (h[i] <= 0 || isnearedge(mesh, i) || flux[i] > riverFlux) continue;
+        var nbs = neighbours(mesh, i);
+        if (nbs.some(function (n) {return h[n] <= 0})) continue;
+        land.push(i);
+    }
+    if (!land.length) return [];
+    var heights = land.map(function (i) {return h[i]}).sort(ascending);
+    var hills = quantileSorted(heights, 0.6);
+    var peaks = quantileSorted(heights, 0.82);
+    var top = heights[heights.length - 1];
+
+    // Forests clump where a smooth random field is high
+    var woods = [];
+    for (var k = 0; k < Math.round(30 * WORLD * WORLD); k++) {
+        woods.push([WORLD * (random() - 0.5), WORLD * (random() - 0.5)]);
+    }
+    function forest(v) {
+        var f = 0;
+        for (var k = 0; k < woods.length; k++) {
+            var dx = v[0] - woods[k][0];
+            var dy = v[1] - woods[k][1];
+            f += Math.exp(-(dx * dx + dy * dy) / (2 * 0.06 * 0.06));
+        }
+        return f;
+    }
+
+    // Accept symbols in a random order, each far enough from those taken
+    var cell = Math.max(spacing.mountain, spacing.hill, spacing.tree) / scale;
+    var grid = new Map();
+    var symbols = [];
+    function clear(x, y, gap) {
+        var cx = Math.floor(x / cell);
+        var cy = Math.floor(y / cell);
+        for (var gx = cx - 1; gx <= cx + 1; gx++) {
+            for (var gy = cy - 1; gy <= cy + 1; gy++) {
+                var near = grid.get(gx + ',' + gy);
+                if (!near) continue;
+                for (var n = 0; n < near.length; n++) {
+                    var s = near[n];
+                    var need = Math.max(gap, s.gap);
+                    if ((s.x - x) * (s.x - x) + (s.y - y) * (s.y - y) < need * need) return false;
+                }
+            }
+        }
+        return true;
+    }
+    shuffled(land).forEach(function (i) {
+        var v = mesh.vxs[i];
+        var kind = h[i] >= peaks ? 'mountain' : h[i] >= hills ? 'hill' : forest(v) > 1.2 ? 'tree' : null;
+        if (!kind) return;
+        var size = kind === 'mountain' ? 1 + 0.6 * (h[i] - peaks) / (top - peaks || 1) : 1;
+        var gap = spacing[kind] * size / scale;
+        if (!clear(v[0], v[1], gap)) return;
+        var symbol = {kind: kind, x: v[0], y: v[1], size: size, variant: randrange(1000), gap: gap};
+        var key = Math.floor(v[0] / cell) + ',' + Math.floor(v[1] / cell);
+        if (!grid.has(key)) grid.set(key, []);
+        grid.get(key).push(symbol);
+        symbols.push(symbol);
+    });
+    return symbols.sort(function (a, b) {return a.y - b.y}).map(function (s) {
+        return {kind: s.kind, x: s.x, y: s.y, size: s.size, variant: s.variant};
+    });
+}
+
 export {
     generatePoints, improvePoints, generateGoodPoints, makeMesh, generateGoodMesh, meshTris,
     isedge, isnearedge, neighbours, distance, quantile,
@@ -906,5 +988,5 @@ export {
     setSeaLevel, cleanCoast, trislope, dropEdge, generateCoast, coastHeightmap,
     cityScore, wreckScore, POIScore, pickCity, pickWreck, pickPOI,
     contour, getRivers, getTerritories, getBorders, mergeSegments, relaxPath,
-    terrCenter, slopeStrokes, seaStrokes
+    terrCenter, slopeStrokes, seaStrokes, reliefSymbols
 };
