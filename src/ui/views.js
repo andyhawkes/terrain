@@ -52,7 +52,8 @@ var draw = {
 var shown = null;
 
 export function renderView(svg, view, state) {
-    if (view !== shown) {
+    var resized = state.h && R.setMapSize(svg, state.params);
+    if (view !== shown || resized) {
         R.clearAll(svg);
         shown = view;
     }

@@ -39,7 +39,8 @@ export function derive(state) {
         cities.map(function (c) {return c.name}),
         cities.map(function (c) {return c.regionName}),
         state.params.fontsizes,
-        [layers.rivers, layers.coasts, borders]);
+        [layers.rivers, layers.coasts, borders],
+        state.params.scale);
     // Labels are placed around each city's original vertex, so moving a city
     // doesn't reshuffle the other labels. The chosen placement becomes an
     // offset that travels with the city, unless the label was moved by hand.

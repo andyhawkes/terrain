@@ -1,5 +1,7 @@
 // Draws map states into SVG with D3, styled by the map's theme. Map units
-// (roughly -0.5..0.5) are scaled by 1000 into SVG user units.
+// (centred on 0) are scaled into SVG user units by the map's scale, which
+// setMapSize sets before drawing; text, lines and symbols are sized in SVG
+// user units.
 import * as d3 from 'd3';
 import {derive} from '../core/derive.js';
 import {itemPos} from '../core/steps.js';
@@ -7,6 +9,29 @@ import {getTheme, fontChoice, backgroundChoice} from '../themes/index.js';
 import {themeCSS, labelText, hersheyPath, hersheyBox, dashPaths} from './theme.js';
 
 export var SCALE = 1000;
+var extent = {width: 1, height: 1};
+
+// The SVG's drawing area for a map: [x, y, width, height] in SVG units
+export function mapBox(params) {
+    var scale = params.scale || 1000;
+    var e = params.extent || extent;
+    return [-scale * e.width / 2, -scale * e.height / 2, scale * e.width, scale * e.height];
+}
+
+// Fits the SVG to a map's shape. Returns true if the size changed, in which
+// case everything needs redrawing.
+export function setMapSize(svg, params) {
+    var scale = params.scale || 1000;
+    var e = params.extent || extent;
+    var changed = scale !== SCALE || e.width !== extent.width || e.height !== extent.height;
+    SCALE = scale;
+    extent = e;
+    var box = mapBox(params);
+    if (svg.attr('viewBox') !== box.join(' ')) {
+        svg.attr('viewBox', box.join(' ')).style('--map-ratio', box[2] / box[3]);
+    }
+    return changed;
+}
 
 // Layers in drawing order; each is a <g> so redraws keep the stacking order
 var LAYERS = ['background', 'field', 'river', 'coast', 'border', 'slope', 'city', 'wreck', 'poi', 'marker', 'label'];
@@ -103,12 +128,15 @@ export function applyTheme(svg, style) {
 function drawBackground(svg, background) {
     var g = layer(svg, 'background');
     g.selectAll('*').remove();
+    var w = SCALE * extent.width;
+    var h = SCALE * extent.height;
     if (background.color) {
-        g.append('rect').attr('x', -500).attr('y', -500).attr('width', 1000).attr('height', 1000)
+        g.append('rect').attr('x', -w / 2).attr('y', -h / 2).attr('width', w).attr('height', h)
             .attr('fill', background.color);
     }
     if (background.image) {
-        var size = 1000 * (background.imageScale || 1);
+        // Scaled from the map's longer side, so it covers any shape
+        var size = Math.max(w, h) * (background.imageScale || 1);
         g.append('image').attr('href', background.image)
             .attr('x', -size / 2).attr('y', -size / 2).attr('width', size).attr('height', size)
             .attr('preserveAspectRatio', 'xMidYMid slice');

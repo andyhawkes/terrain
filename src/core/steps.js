@@ -6,7 +6,9 @@ import {randomVector, runif, randrange} from './random.js';
 import {makeLanguage, makeName} from './language.js';
 
 export var defaultParams = {
+    shape: 'square',
     extent: T.defaultExtent,
+    scale: 1000,  // SVG units per map unit (see SHAPES)
     npts: 16384,
     ncities: 15,
     nwrecks: 1,
@@ -20,6 +22,34 @@ export var defaultParams = {
         poi: 60
     }
 };
+
+// Map shapes. extent is the size of the world in map units; scale is how
+// many SVG units each map unit is drawn at. Text, lines and symbols have
+// fixed sizes in SVG units, so the A4 shapes use a smaller scale: printed
+// on A4 with a border, everything comes out the same size as on a square
+// map printed across A4, but there's about three times as much world.
+// detail lists the grid sizes offered (low, medium, high); bigger maps get
+// more points but not proportionally more, to stay quick enough to edit.
+// counts are the default numbers of places for a random map.
+export var SHAPES = [
+    {id: 'square', name: 'Square', extent: {width: 1, height: 1}, scale: 1000,
+        detail: [4096, 16384, 65536], counts: {ncities: 15, nterrs: 5, npoi: 1, nwrecks: 1}},
+    {id: 'a4-landscape', name: 'A4 landscape', extent: {width: 2.12, height: 1.5}, scale: 700,
+        detail: [16384, 32768, 65536], counts: {ncities: 30, nterrs: 8, npoi: 2, nwrecks: 2}},
+    {id: 'a4-portrait', name: 'A4 portrait', extent: {width: 1.5, height: 2.12}, scale: 700,
+        detail: [16384, 32768, 65536], counts: {ncities: 30, nterrs: 8, npoi: 2, nwrecks: 2}}
+];
+
+export function getShape(id) {
+    return SHAPES.find(function (s) {return s.id === id}) || SHAPES[0];
+}
+
+// Settings for a new map: defaults, then the shape's, then those given
+export function newParams(given) {
+    var shape = getShape(given && given.shape);
+    var params = Object.assign({}, defaultParams, shape.counts, {npts: shape.detail[1]}, given);
+    return Object.assign(params, {shape: shape.id, extent: shape.extent, scale: shape.scale});
+}
 
 // How the map is drawn: a theme id plus the user's choices within it.
 // font and background are ids from the theme (null means its default);
@@ -171,8 +201,8 @@ export var steps = {
     newBlank: {
         label: 'New blank map',
         apply: function (state, args) {
-            var params = Object.assign({}, defaultParams, {npts: args.npts || defaultParams.npts,
-                language: args.language || defaultParams.language});
+            var params = newParams({shape: args.shape, language: args.language || defaultParams.language});
+            if (args.npts) params.npts = args.npts;
             var mesh = T.generateGoodMesh(params.npts, params.extent);
             return Object.assign(emptyState(), {params: params, style: args.style || state.style, h: T.zero(mesh)});
         }
@@ -180,7 +210,7 @@ export var steps = {
     generate: {
         label: 'Generate random map',
         apply: function (state, args) {
-            var params = Object.assign({}, defaultParams, args.params);
+            var params = newParams(args.params);
             var s = Object.assign(emptyState(), {params: params, style: args.style || state.style});
             s.h = T.generateCoast(params);
             s.lang = makeLanguage(params.language);

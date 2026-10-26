@@ -241,6 +241,32 @@ test('place names can use a chosen language, and random stays the default', func
     assert.equal(blank.state.params.language, 'arctic');
 });
 
+test('maps can be square or A4-shaped, and square maps are unchanged', function () {
+    var square = new MapDocument();
+    square.dispatch('generate', {params: small}, 'shape');
+    var plain = new MapDocument();
+    plain.dispatch('generate', {params: Object.assign({shape: 'square'}, small)}, 'shape');
+    assert.equal(fingerprint(square.state), fingerprint(plain.state));
+    assert.deepEqual([square.state.params.extent, square.state.params.scale], [{width: 1, height: 1}, 1000]);
+
+    var a4 = new MapDocument();
+    a4.dispatch('generate', {params: {shape: 'a4-portrait', npts: 2048}}, 'shape');
+    var p = a4.state.params;
+    assert.deepEqual([p.extent, p.scale, p.ncities], [{width: 1.5, height: 2.12}, 700, 30]);
+    // Everything stays inside the map, including labels
+    var d = derive(a4.state);
+    a4.state.h.mesh.vxs.forEach(function (v) {
+        assert.ok(Math.abs(v[0]) <= 0.75 + 1e-9 && Math.abs(v[1]) <= 1.06 + 1e-9);
+    });
+    d.labels.cities.forEach(function (l) {
+        assert.ok(Math.abs(l.x) < 0.75 && Math.abs(l.y) < 1.06, l.text);
+    });
+
+    var blank = new MapDocument();
+    blank.dispatch('newBlank', {shape: 'a4-landscape', npts: 1024});
+    assert.deepEqual(blank.state.params.extent, {width: 2.12, height: 1.5});
+});
+
 test('jumping through the history', function () {
     var doc = new MapDocument();
     doc.dispatch('newBlank', {npts: 512});

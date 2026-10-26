@@ -6,7 +6,9 @@ import {terrCenter} from './terrain.js';
 // cityNames[i] / regionNames[i] name cities[i] (vertex indices) and the
 // territory of capital cities[i]. avoids is a list of path lists (rivers,
 // coasts, borders) that city labels should try not to cover.
-export function placeLabels(h, terr, cities, nterrs, cityNames, regionNames, fontsizes, avoids) {
+// fontsizes are in SVG units; scale is SVG units per map unit
+export function placeLabels(h, terr, cities, nterrs, cityNames, regionNames, fontsizes, avoids, scale) {
+    scale = scale || 1000;
     nterrs = Math.min(nterrs, cities.length);
     var citylabels = [];
     function penalty(label) {
@@ -15,6 +17,9 @@ export function placeLabels(h, terr, cities, nterrs, cityNames, regionNames, fon
         if (label.x1 > 0.45 * h.mesh.extent.width) pen += 100;
         if (label.y0 < -0.45 * h.mesh.extent.height) pen += 100;
         if (label.y1 > 0.45 * h.mesh.extent.height) pen += 100;
+        // Past the edge itself, the label would be cut off
+        if (label.x0 < -0.5 * h.mesh.extent.width || label.x1 > 0.5 * h.mesh.extent.width ||
+            label.y0 < -0.5 * h.mesh.extent.height || label.y1 > 0.5 * h.mesh.extent.height) pen += 10000;
         for (var i = 0; i < citylabels.length; i++) {
             var olabel = citylabels[i];
             if (label.x0 < olabel.x1 && label.x1 > olabel.x0 &&
@@ -48,8 +53,8 @@ export function placeLabels(h, terr, cities, nterrs, cityNames, regionNames, fon
         var y = h.mesh.vxs[cities[i]][1];
         var text = cityNames[i];
         var size = i < nterrs ? fontsizes.city : fontsizes.town;
-        var sx = 0.65 * size/1000 * text.length;
-        var sy = size/1000;
+        var sx = 0.65 * size/scale * text.length;
+        var sy = size/scale;
         var posslabels = [
         {
             x: x + 0.8 * sy,
@@ -98,7 +103,7 @@ export function placeLabels(h, terr, cities, nterrs, cityNames, regionNames, fon
     for (var i = 0; i < nterrs; i++) {
         var city = cities[i];
         var text = regionNames[i];
-        var sy = fontsizes.region / 1000;
+        var sy = fontsizes.region / scale;
         var sx = 0.6 * text.length * sy;
         var lc = terrCenter(h, terr, city, true);
         var oc = terrCenter(h, terr, city, false);

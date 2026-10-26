@@ -1,7 +1,7 @@
 // Share links. A random map that hasn't been edited gets a short, readable
 // link (?seed=…&cities=…&theme=…); anything else gets its steps compressed
 // into the link (#map=…), so hand-built and edited maps can be shared too.
-import {defaultParams, defaultStyle} from '../core/steps.js';
+import {defaultParams, defaultStyle, newParams} from '../core/steps.js';
 import {resolveSeed} from '../core/random.js';
 
 // Link parameter names for the generation settings
@@ -41,9 +41,12 @@ export async function shareLink(doc) {
         steps.slice(1).every(function (s) {return s.type === 'setStyle'});
     if (plain) {
         var query = new URLSearchParams({seed: steps[0].seed});
+        // Only settings that differ from the shape's defaults go in the link
         var params = steps[0].args.params || {};
+        var defaults = newParams({shape: params.shape});
+        if (defaults.shape !== defaultParams.shape) query.set('shape', defaults.shape);
         Object.keys(PARAMS).forEach(function (key) {
-            if (params[key] != null && params[key] !== defaultParams[key]) query.set(PARAMS[key], params[key]);
+            if (params[key] != null && params[key] !== defaults[key]) query.set(PARAMS[key], params[key]);
         });
         if (params.language && params.language !== defaultParams.language) query.set('names', params.language);
         STYLE.forEach(function (key) {
@@ -66,6 +69,7 @@ export async function readLink() {
         if (n >= 0) params[key] = n;
     });
     if (query.get('names')) params.language = query.get('names');
+    if (query.get('shape')) params.shape = query.get('shape');
     var style = Object.assign({}, defaultStyle);
     STYLE.forEach(function (key) {
         if (query.get(key)) style[key] = query.get(key);

@@ -99,12 +99,21 @@ Each phase leaves the app working.
 ### Phase 6: Autosave and sharing
 - [x] Autosave: the current map, with its undo/redo history, is kept in this browser and restored on reload. Earlier maps from the session aren't kept.
 - [x] Share links, via the Share button:
-  - An unedited random map gets a short, readable link: `?seed=…`, plus any non-default settings (`detail`, `territories`, `cities`, `poi`, `wrecks`) and style (`theme`, `font`, `background`).
+  - An unedited random map gets a short, readable link: `?seed=…`, plus any non-default settings (`shape`, `detail`, `territories`, `cities`, `poi`, `wrecks`, `names`) and style (`theme`, `font`, `background`).
   - Anything else (edited or hand-built maps) gets its steps compressed into the link: `#map=…`.
   - Opening a link adds that map on top of the current history, so the previous map can still be reached with Undo or History. The link is then removed from the address bar.
 - [x] Map of the day: the seed `today` stands for today's date (`?seed=today`, the Map of the day button, `npm run generate -- --seed today`).
 - [x] Each map's steps are self-contained: a new map depends on nothing before it except the style, which is written into its first step when saved on its own. Save, autosave and links all hold just the current map.
 - Note: map files saved before this that contain several maps may name places differently on reload, because a blank map used to carry over the previous map's naming language.
+
+### Map shapes
+- [x] Square (the original size and detail levels) or A4 landscape/portrait, chosen under New map. Shapes live in `SHAPES` in `steps.js`.
+- [x] An A4 map has about three times the square's area (2.12 × 1.5 map units). It's drawn at 700 SVG units per map unit instead of 1000, so text, lines and symbols, which are sized in SVG units, print the same size on A4 with a border as a square map printed across A4: town names about 3.8 mm tall.
+- [x] Detail levels per shape: square 4k/16k/65k points, A4 16k/32k/65k. 65k is the practical cap: about 3–4 s to generate. Beyond that it gets slow fast, and the cells are already finer (about 0.9 mm) than A4 print or a plotter pen shows. A4 maps default to 30 cities, 8 territories, 2 points of interest and 2 wrecks.
+- [x] Terrain that assumed a 1 × 1 map scales with its area: the number of random hills and the slope hatching length.
+- [x] City labels never go past the map's edge. Before, that cost no more than covering about 100 river or coast points, which on the A4 shapes it occasionally lost to.
+- [x] Saved maps and share links record the shape (`shape=`); older maps open as square, unchanged. The CLI takes `--shape`.
+- Later: A3, set a physical paper size in exports (and for the plotter).
 
 ### Later
 - A 3D view of the terrain, probably with three.js, and sculpting tools that record brush strokes as steps.

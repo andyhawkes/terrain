@@ -118,6 +118,10 @@ function isedge(mesh, i) {
     return (mesh.adj[i].length < 3);
 }
 
+function area(mesh) {
+    return mesh.extent.width * mesh.extent.height;
+}
+
 function isnearedge(mesh, i) {
     var x = mesh.vxs[i][0];
     var y = mesh.vxs[i][1];
@@ -690,7 +694,7 @@ function coastHeightmap(mesh) {
     var h = add(
             slope(mesh, randomVector(4)),
             cone(mesh, runif(-1, -1)),
-            mountains(mesh, 50)
+            mountains(mesh, Math.round(50 * area(mesh)))
             );
     for (var i = 0; i < 10; i++) {
         h = relax(h);
@@ -721,7 +725,7 @@ function terrCenter(h, terr, city, landOnly) {
 // Hatching strokes for slope shading, in map units
 function slopeStrokes(h) {
     var strokes = [];
-    var r = 0.25 / Math.sqrt(h.length);
+    var r = 0.25 * Math.sqrt(area(h.mesh) / h.length);
     for (var i = 0; i < h.length; i++) {
         if (h[i] <= 0 || isnearedge(h.mesh, i)) continue;
         var nbs = neighbours(h.mesh, i);

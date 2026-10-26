@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Generates a map from a seed without a browser, and prints its layers as JSON.
 // Usage: npm run generate -- [--seed abc|today] [--npts 16384] [--ncities 15] [--nterrs 5]
-//                           [--nwrecks 1] [--npoi 1] [--language random|english|…] [--out map.json]
+//                           [--nwrecks 1] [--npoi 1] [--language random|english|…]
+//                           [--shape square|a4-landscape|a4-portrait] [--out map.json]
 import {writeFileSync} from 'node:fs';
 import {parseArgs} from 'node:util';
 import {MapDocument} from '../src/core/document.js';
@@ -10,7 +11,7 @@ import {itemPos} from '../src/core/steps.js';
 import {newSeed, resolveSeed} from '../src/core/random.js';
 
 var numeric = ['npts', 'ncities', 'nterrs', 'nwrecks', 'npoi'];
-var options = {seed: {type: 'string'}, out: {type: 'string'}, language: {type: 'string'}};
+var options = {seed: {type: 'string'}, out: {type: 'string'}, language: {type: 'string'}, shape: {type: 'string'}};
 numeric.forEach(function (name) {options[name] = {type: 'string'}});
 var args = parseArgs({options: options}).values;
 
@@ -19,6 +20,7 @@ numeric.forEach(function (name) {
     if (args[name] != null) params[name] = parseInt(args[name], 10);
 });
 if (args.language) params.language = args.language;
+if (args.shape) params.shape = args.shape;
 var seed = args.seed ? resolveSeed(args.seed) : newSeed();
 
 var doc = new MapDocument();
@@ -36,6 +38,7 @@ var output = {
     seed: seed,
     document: doc.toJSON(),
     extent: state.params.extent,
+    scale: state.params.scale,  // SVG units per map unit, which text sizes assume
     layers: {
         coasts: d.coasts,
         rivers: d.rivers,

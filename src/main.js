@@ -4,7 +4,7 @@ import './fonts.js';
 import * as d3 from 'd3';
 import {saveSvg, saveSvgAsPng} from 'save-svg-as-png';
 import {MapDocument} from './core/document.js';
-import {defaultParams} from './core/steps.js';
+import {defaultParams, SHAPES, getShape} from './core/steps.js';
 import {LANGUAGES} from './core/language.js';
 import {newSeed, resolveSeed} from './core/random.js';
 import {shareLink, readLink, clearLink} from './ui/share.js';
@@ -203,11 +203,8 @@ d3.selectAll('.popover').each(function () {
 
 var newMap = d3.select('#newMapPanel');
 
-var detailLevels = [
-    [4096, 'Low (fast)'],
-    [16384, 'Medium'],
-    [65536, 'High (slow)']
-];
+// Names for each shape's three detail levels
+var detailNames = ['Low (fast)', 'Medium', 'High (slow)'];
 
 var settings = [
     {id: 'nterrs', label: 'Territories'},
@@ -218,11 +215,16 @@ var settings = [
 
 var detailSection = newMap.append('section');
 var grid = detailSection.append('div').attr('class', 'form-grid').style('margin-bottom', 0);
+grid.append('label').attr('for', 'shape').text('Shape');
+var shapeSelect = grid.append('select').attr('id', 'shape').on('change', function () {
+    showShape(getShape(this.value));
+});
+SHAPES.forEach(function (s) {
+    shapeSelect.append('option').attr('value', s.id).text(s.name);
+});
+grid.append('small').attr('class', 'field-hint').text('A4 maps fit the page with a border, with text sized for print');
 grid.append('label').attr('for', 'npts').text('Detail');
 var detailSelect = grid.append('select').attr('id', 'npts');
-detailLevels.forEach(function (d) {
-    detailSelect.append('option').attr('value', d[0]).text(d[1]);
-});
 
 grid.append('label').attr('for', 'language').text('Place names');
 var languageSelect = grid.append('select').attr('id', 'language');
@@ -241,18 +243,29 @@ settings.forEach(function (f) {
     grid.append('input').attr('id', f.id).attr('type', 'number').attr('min', 0).attr('max', 200);
 });
 
+// Each shape has its own detail levels and default numbers of places
+function showShape(shape) {
+    var options = detailSelect.selectAll('option').data(shape.detail);
+    options.enter().append('option').merge(options)
+        .attr('value', function (n) {return n})
+        .text(function (n, i) {return detailNames[i]});
+    detailSelect.property('value', shape.detail[1]);
+    settings.forEach(function (f) {
+        d3.select('#' + f.id).property('value', shape.counts[f.id]);
+    });
+}
+
 function resetSettings() {
-    detailSelect.property('value', defaultParams.npts);
+    shapeSelect.property('value', defaultParams.shape);
+    showShape(getShape(defaultParams.shape));
     languageSelect.property('value', defaultParams.language);
     d3.select('#seed').property('value', '');
-    settings.forEach(function (f) {
-        d3.select('#' + f.id).property('value', defaultParams[f.id]);
-    });
 }
 resetSettings();
 
 function readSettings() {
-    var params = {npts: +detailSelect.property('value'), language: languageSelect.property('value')};
+    var params = {shape: shapeSelect.property('value'), npts: +detailSelect.property('value'),
+        language: languageSelect.property('value')};
     settings.forEach(function (f) {
         var n = parseInt(d3.select('#' + f.id).property('value'), 10);
         params[f.id] = n >= 0 ? n : defaultParams[f.id];
@@ -289,13 +302,14 @@ blank.append('div').attr('class', 'button-row')
         newMap.node().hidePopover();
         setView('heightmap');
         panels.show('build');
-        act('newBlank', {npts: +detailSelect.property('value'), language: languageSelect.property('value')})();
+        act('newBlank', {shape: shapeSelect.property('value'), npts: +detailSelect.property('value'),
+            language: languageSelect.property('value')})();
     });
 
 // Export: always the finished map, whatever view is showing
 
 var exportMenu = d3.select('#exportMenu');
-var exportOptions = {left: -500, top: -500, width: 1000, height: 1000, excludeUnusedCss: true};
+// PNGs are drawn at twice the SVG size: about 280 dpi printed across A4
 
 // The @font-face rules for the fonts the current theme uses, for embedding.
 // (Left to itself the exporter would embed every font on the page.)
@@ -331,7 +345,9 @@ function exportMap(save, name, options) {
     exportMenu.node().hidePopover();
     var previous = view;
     if (view !== 'map') setView('map');
-    var opts = Object.assign({fonts: exportFonts(doc.state.style)}, exportOptions, options);
+    var box = R.mapBox(doc.state.params);
+    var opts = Object.assign({fonts: exportFonts(doc.state.style), excludeUnusedCss: true,
+        left: box[0], top: box[1], width: box[2], height: box[3]}, options);
     save(svg.node(), name, opts).finally(function () {
         if (previous !== 'map') setView(previous);
     });
