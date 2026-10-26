@@ -49,6 +49,10 @@ export default {
 
     borderDash: [6, 5],
 
+    // Short strokes on the sea along the coast, like old charts' water-lining
+    // (colour colors.sea and width widths.sea, or the coast's and 1)
+    seaShading: false,
+
     labels: {
         regionCase: 'upper',    // 'upper' or 'normal'
         regionSpacing: '0.15em',

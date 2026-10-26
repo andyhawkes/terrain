@@ -3,7 +3,7 @@
 // setMapSize sets before drawing; text, lines and symbols are sized in SVG
 // user units.
 import * as d3 from 'd3';
-import {derive} from '../core/derive.js';
+import {derive, seaShading} from '../core/derive.js';
 import {meshTris} from '../core/terrain.js';
 import {itemPos} from '../core/steps.js';
 import {getTheme, fontChoice, backgroundChoice} from '../themes/index.js';
@@ -35,11 +35,11 @@ export function setMapSize(svg, params) {
 }
 
 // Layers in drawing order; each is a <g> so redraws keep the stacking order
-var LAYERS = ['background', 'field', 'river', 'coast', 'border', 'slope', 'city', 'wreck', 'poi', 'marker', 'label'];
+var LAYERS = ['background', 'field', 'sea', 'river', 'coast', 'border', 'slope', 'city', 'wreck', 'poi', 'marker', 'label'];
 
 // Layers the user can switch off in the Style panel
 export var TOGGLE_LAYERS = [
-    ['coast', 'Coastline'], ['river', 'Rivers'], ['border', 'Borders'], ['slope', 'Slope shading'],
+    ['coast', 'Coastline'], ['sea', 'Sea shading'], ['river', 'Rivers'], ['border', 'Borders'], ['slope', 'Slope shading'],
     ['city', 'Cities'], ['label', 'Labels'], ['wreck', 'Wrecks'], ['poi', 'Points of interest'],
     ['marker', 'Markers']
 ];
@@ -215,16 +215,20 @@ function coord(x) {
     return Math.round(SCALE * x * 100) / 100;
 }
 
-// All the hatching strokes go in one path: there can be tens of thousands,
-// and one element is far quicker to draw and redraw than one each.
-// keys and strokes work as for drawPaths.
+// Short strokes (slope hatching, sea shading) go in one path: there can be
+// tens of thousands, and one element is far quicker to draw and redraw
+// than one each. keys and strokes work as for drawPaths.
 export function drawSlopes(svg, strokes, keys) {
-    if (unchanged(svg, 'slope', keys || [strokes])) return;
+    drawStrokes(svg, 'slope', strokes, keys);
+}
+
+function drawStrokes(svg, layerName, strokes, keys) {
+    if (unchanged(svg, layerName, keys || [strokes])) return;
     if (typeof strokes === 'function') strokes = strokes();
     var d = strokes.map(function (s) {
         return 'M' + coord(s[0][0]) + ',' + coord(s[0][1]) + 'L' + coord(s[1][0]) + ',' + coord(s[1][1]);
     }).join('');
-    join(svg, 'slope', 'path', 'slope', d ? [d] : [])
+    join(svg, layerName, 'path', layerName, d ? [d] : [])
         .attr('d', function (d) {return d})
         .attr('fill', 'none');
 }
@@ -358,6 +362,9 @@ export function drawMap(svg, state) {
     var t = applyTheme(svg, state.style);
     var theme = t.theme;
     drawBackground(svg, t.background);
+    drawStrokes(svg, 'sea', function () {
+        return theme.seaShading ? seaShading(state.h) : [];
+    }, [state.h, !!theme.seaShading]);
     drawPaths(svg, 'river', d.rivers);
     drawPaths(svg, 'coast', d.coasts);
     // Plotters ignore dash patterns, so draw each dash as its own line

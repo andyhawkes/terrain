@@ -4,8 +4,9 @@
 import simple from './simple.js';
 import fantasy from './fantasy.js';
 import plotter from './plotter.js';
+import pirate from './pirate.js';
 
-export var THEMES = [simple, fantasy, plotter];
+export var THEMES = [simple, fantasy, pirate, plotter];
 
 // Old theme ids, so earlier map files still open with the right look
 var RENAMED = {lovecraftian: 'fantasy'};

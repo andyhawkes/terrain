@@ -21,6 +21,7 @@ export function themeCSS(theme, font, background, scope) {
         'S .border { stroke: ' + c.border + '; stroke-width: ' + w.border + 'px;' +
             (theme.strokeOnly ? '' : ' stroke-dasharray: ' + theme.borderDash.join(' ') + ';') + ' }',
         'S .slope { stroke: ' + c.slope + '; stroke-width: ' + w.slope + 'px; }',
+        'S .sea { stroke: ' + (c.sea || c.coast) + '; stroke-width: ' + (w.sea || 1) + 'px; }',
         'S circle.city { fill: ' + c.cityFill + '; fill-opacity: ' + theme.cities.fillOpacity +
             '; stroke: ' + c.city + '; stroke-width: ' + w.city + 'px; }',
         'S text { ' + halo + (h.shadow ? ' filter: drop-shadow(' + h.shadow + ');' : '') + ' }',

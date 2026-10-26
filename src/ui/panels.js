@@ -160,8 +160,9 @@ function stylePanel(body, ctx) {
     s = section(body, 'Layers');
     var list = s.append('div').attr('class', 'check-list');
     var boxes = {};
+    var labels = {};
     TOGGLE_LAYERS.forEach(function (l) {
-        var label = list.append('label');
+        var label = labels[l[0]] = list.append('label');
         boxes[l[0]] = label.append('input')
             .attr('type', 'checkbox')
             .on('change', function () {
@@ -192,6 +193,8 @@ function stylePanel(body, ctx) {
         TOGGLE_LAYERS.forEach(function (l) {
             boxes[l[0]].property('checked', style.hidden.indexOf(l[0]) < 0);
         });
+        // Only some themes shade the sea
+        labels.sea.style('display', theme.seaShading ? null : 'none');
     });
 }
 

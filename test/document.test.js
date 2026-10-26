@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {MapDocument, GENERATOR_VERSION} from '../src/core/document.js';
-import {derive} from '../src/core/derive.js';
+import {derive, seaShading} from '../src/core/derive.js';
 import {itemPos} from '../src/core/steps.js';
 
 var small = {npts: 1024, ncities: 6, nterrs: 3};
@@ -353,6 +353,32 @@ test('a long terrain history keeps fewer snapshots, and replays the same map', f
     assert.deepEqual(Array.from(replay.state.h), expected);
     doc.goTo(5);
     assert.deepEqual(Array.from(doc.state.h), expected);
+});
+
+test('sea shading only goes on the sea, near the coast', function () {
+    var doc = new MapDocument();
+    doc.dispatch('generate', {params: {npts: 4096}}, 'sea');
+    var h = doc.state.h;
+    var strokes = seaShading(h);
+    assert.ok(strokes.length > 50, strokes.length + ' strokes');
+    assert.equal(seaShading(h), strokes);
+    var vxs = h.mesh.vxs;
+    strokes.forEach(function (s) {
+        var mid = [(s[0][0] + s[1][0]) / 2, (s[0][1] + s[1][1]) / 2];
+        var nearest = 0;
+        var best = Infinity;
+        var nearestLand = Infinity;
+        for (var i = 0; i < vxs.length; i++) {
+            var d = Math.hypot(vxs[i][0] - mid[0], vxs[i][1] - mid[1]);
+            if (d < best) {
+                best = d;
+                nearest = i;
+            }
+            if (h[i] > 0) nearestLand = Math.min(nearestLand, d);
+        }
+        assert.ok(h[nearest] <= 0, 'a stroke on land');
+        assert.ok(nearestLand < 0.07, 'a stroke far out to sea');
+    });
 });
 
 test('jumping through the history', function () {

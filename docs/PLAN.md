@@ -79,11 +79,10 @@ Each phase leaves the app working.
 ### Phase 3: Themes
 - [x] A theme format (`src/themes/`; `simple.js` documents every field) and a renderer that uses it. The theme's stylesheet is written into the SVG, so exports carry it.
 - [x] The style is part of the map: theme, font, background and hidden layers are a step, so they can be undone, are saved in map files and carry over to new maps.
-- [x] **Simple** (the default), **Fantasy** (the original look: parchment, IM Fell type, tentacle wrecks; first called Lovecraftian) and **Plotter**.
+- [x] **Simple** (the default), **Fantasy** (the original look: parchment, IM Fell type, tentacle wrecks; first called Lovecraftian) and **Plotter**. **Pirate** came later (see Phase 7).
 - [x] Plotter: strokes only, single-stroke Hershey lettering, borders drawn as separate dashes, slope hatching cleared from under labels.
 - [x] Fonts are bundled (`@fontsource`), and exports embed only the current theme's fonts, so labels keep their font in PNG/SVG.
-- Later: pirate, military, high fantasy, and theme-specific naming styles.
-- Later, for plotting: clear rivers and borders from under labels too, optimise pen travel, set a physical paper size.
+- Later, for plotting (waiting for the plotter build): clear rivers and borders from under labels too, optimise pen travel, set a physical paper size.
 
 ### Phase 4: Tools
 - [x] Tools: Pointer (V), Move (G), Edit text (E), Add text (T), Add symbol (S), Add marker (M), Delete (D). Esc returns to Pointer. The status bar explains the active tool.
@@ -108,7 +107,6 @@ Each phase leaves the app working.
   - Opening a link adds that map on top of the current history, so the previous map can still be reached with Undo or History. The link is then removed from the address bar.
 - [x] Map of the day: the seed `today` stands for today's date (`?seed=today`, the Map of the day button, `npm run generate -- --seed today`).
 - [x] Each map's steps are self-contained: a new map depends on nothing before it except the style, which is written into its first step when saved on its own. Save, autosave and links all hold just the current map.
-- Note: map files saved before this that contain several maps may name places differently on reload, because a blank map used to carry over the previous map's naming language.
 
 ### Map shapes
 - [x] Square (the original size and detail levels) or A4 landscape/portrait, chosen under New map. Shapes live in `SHAPES` in `steps.js`.
@@ -117,7 +115,17 @@ Each phase leaves the app working.
 - [x] Terrain that assumed a 1 × 1 map scales with its area: the number of random hills and the slope hatching length.
 - [x] City labels never go past the map's edge. Before, that cost no more than covering about 100 river or coast points, which on the A4 shapes it occasionally lost to.
 - [x] Saved maps and share links record the shape (`shape=`); older maps open as square, unchanged. The CLI takes `--shape`.
-- Later: A3, set a physical paper size in exports (and for the plotter).
+- Deferred: A3. It's A4 printed bigger, and few people have an A3 printer at home.
+
+### Phase 7: More themes
+- [x] **Pirate**: an old sea chart. Sepia ink on parchment (or plain sand), Pirata One blackletter for regions and IM Fell DW Pica for towns, dotted red borders, and water-lining: short strokes on the sea along the coast, thinning out further from land (`seaShading` in the theme format; a "Sea shading" layer for themes that use it). Wrecks: a sinking ship, a sea serpent, a shark's fin. Points of interest: skull and crossbones, palm tree, treasure chest, cannon. A bold brushy X.
+- [ ] A grid and ornaments layer that themes can switch on: a square grid with lettered and numbered edges ("Grid C4"), a scale bar, a compass rose and a title box. A hex grid option for tabletop games comes almost free once this exists.
+- [ ] **Military**, on top of that layer: a topographic or ops map, with a stencil face for regions, a square coordinate grid, and map-style symbols (objective, target, hazard, bunker, radio mast).
+- [ ] Theme naming styles, as an option alongside the made-up languages: English-sounding pirate names ("Dead Man's Cove", "Port Blackwater") and military codenames ("Objective Granite", "Hill 312"). They're word lists and patterns, not sounds, so they're a new kind of name generator.
+- Later: high fantasy.
+
+### Phase 8: D3 v7
+- [ ] Move to D3 v7 and `d3-delaunay`. This removes the `d3-color` audit warning and makes generation lighter, but the grid is built differently, so it needs a `GENERATOR_VERSION` bump and every seed gives a different map.
 
 ### Later
 - A 3D view of the terrain, probably with three.js, and sculpting tools that record brush strokes as steps.
@@ -127,7 +135,6 @@ Each phase leaves the app working.
   - Done: the grid and heightmaps use typed arrays (grid 60 → 15 MB). Undo keeps the last 30 steps but at most 2 million heightmap vertices (16 terrain snapshots on A4 High), plus the map's first step; undoing further replays from there. Rivers, coasts, hatching, territories and labels are kept for the 3–10 most recent heightmaps, depending on size. 60 terrain steps on A4 High hold about 100 MB (30 steps used to hold 337 MB).
   - Done: redraws skip layers drawn from the same data as last time, and slope hatching is one SVG path instead of an element per stroke (thousands of elements). On A4 High, undo/redo between terrain steps takes about 30–50 ms of script time (was 75–115) and adding a marker 3 ms (was about 70). Diagnostic views keep their cells when switching between them and only recolour.
   - Next, if needed: slope hatching as a typed array (it's most of what's left per heightmap).
-- Possibly moving to D3 v7 and `d3-delaunay`. This means reworking the mesh code, which relies on D3 v4's voronoi edge structure.
 
 ## Decisions so far
 - **Desktop first.** Phone layouts aren't a goal for now. Screens narrower than 760px or shorter than 500px (phones, either way up) get a notice asking for a bigger screen, and the editor doesn't start until the window is big enough.

@@ -54,6 +54,14 @@ export function terrainLayers(h) {
     return entry.layers;
 }
 
+// Sea shading along the coast, for themes that draw it (see seaShading in
+// simple.js)
+export function seaShading(h) {
+    var entry = cacheFor(h);
+    if (!entry.sea) entry.sea = withSeed('sea', function () {return T.seaStrokes(h, 0.05)});
+    return entry.sea;
+}
+
 // Everything drawn from a map state. The same state, or one that differs
 // only in style, gets exactly the same result.
 export function derive(state) {
