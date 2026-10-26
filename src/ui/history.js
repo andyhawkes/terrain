@@ -32,6 +32,15 @@ function describeStyle(args, previous) {
         if (shown.length === 1 && !hidden.length) return 'Show ' + LAYER_NAMES[shown[0]];
         return 'Change layers';
     }
+    if (args.positions) return 'Move ' + (args.what || 'extras');
+    if (args.grid) return args.grid === 'none' ? 'Remove grid' : args.grid === 'hex' ? 'Hex grid' : 'Square grid';
+    if (args.gridSize) return 'Grid size';
+    if ('gridLabels' in args) return (args.gridLabels ? 'Show' : 'Hide') + ' grid labels';
+    if (args.units) return 'Units: ' + args.units;
+    if (args.perUnit) return 'Map width';
+    if ('scaleBar' in args) return (args.scaleBar ? 'Show' : 'Hide') + ' scale bar';
+    if ('compass' in args) return (args.compass ? 'Show' : 'Hide') + ' compass rose';
+    if ('title' in args) return args.title ? 'Title: ' + quoted(args.title) : 'Remove title';
     return 'Change style';
 }
 

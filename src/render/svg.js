@@ -8,6 +8,7 @@ import {meshTris} from '../core/terrain.js';
 import {itemPos} from '../core/steps.js';
 import {getTheme, fontChoice, backgroundChoice} from '../themes/index.js';
 import {themeCSS, labelText, hersheyPath, hersheyBox, dashPaths} from './theme.js';
+import {extrasChoice, squareGrid, hexGrid, scaleBar, defaultPosition, formatDistance} from './extras.js';
 
 export var SCALE = 1000;
 var extent = {width: 1, height: 1};
@@ -35,7 +36,8 @@ export function setMapSize(svg, params) {
 }
 
 // Layers in drawing order; each is a <g> so redraws keep the stacking order
-var LAYERS = ['background', 'field', 'sea', 'river', 'coast', 'border', 'slope', 'city', 'wreck', 'poi', 'marker', 'label'];
+var LAYERS = ['background', 'field', 'sea', 'river', 'coast', 'border', 'slope', 'grid', 'city', 'wreck', 'poi', 'marker',
+    'label', 'extras'];
 
 // Layers the user can switch off in the Style panel
 export var TOGGLE_LAYERS = [
@@ -379,5 +381,147 @@ export function drawMap(svg, state) {
     }, [d.slopes, boxes.length ? JSON.stringify(boxes) : '']);
     drawFeatures(svg, state, theme);
     drawLabels(svg, d.labels, state.notes, theme, t.font);
+    drawExtras(svg, state, theme, t.font);
     showLayers(svg, state.style.hidden);
+}
+
+// --- Extras: grid, scale bar, compass rose, title (see extras.js) ---
+
+// A line of text, as <text> or as Hershey strokes. size is in SVG units,
+// x and y in SVG units too.
+function appendText(g, family, cls, text, x, y, size, anchor) {
+    if (family.hershey) {
+        return g.append('path').attr('class', cls)
+            .attr('d', hersheyPath(family.hershey, text, x, y, size, anchor));
+    }
+    return g.append('text').attr('class', cls)
+        .attr('x', x).attr('y', y)
+        .style('font-size', size + 'px')
+        .style('text-anchor', anchor)
+        .text(text);
+}
+
+function textWidth(node, family, text, size) {
+    if (family.hershey) {
+        var b = hersheyBox(family.hershey, text, 0, 0, size, 'start');
+        return b.x1 - b.x0;
+    }
+    var width = node.getComputedTextLength ? node.getComputedTextLength() : 0;
+    // Not laid out yet (e.g. the map is hidden): an estimate
+    return width || 0.6 * size * text.length;
+}
+
+function polylinePath(lines) {
+    return lines.map(function (line) {
+        return line.map(function (p, i) {
+            return (i ? 'L' : 'M') + coord(p[0]) + ',' + coord(p[1]);
+        }).join('');
+    }).join('');
+}
+
+function drawGrid(svg, extras, extent, font) {
+    if (unchanged(svg, 'grid', [extras.grid, extras.gridSize, extras.perUnit, extras.gridLabels,
+        extent, font])) return;
+    var g = layer(svg, 'grid');
+    g.selectAll('*').remove();
+    if (extras.grid === 'none') return;
+    var size = extras.gridSize / extras.perUnit;
+    if (extras.grid === 'hex') {
+        var hex = hexGrid(extent, size);
+        g.append('path').attr('class', 'grid').attr('d', polylinePath(hex.lines));
+        if (extras.gridLabels) {
+            var labelSize = Math.min(10, SCALE * size * 0.18);
+            hex.labels.forEach(function (l) {
+                appendText(g, font.label, 'grid-label hex-label', l.text, SCALE * l.x, SCALE * l.y + labelSize / 2,
+                    labelSize, 'middle');
+            });
+        }
+        return;
+    }
+    var grid = squareGrid(extent, size);
+    g.append('path').attr('class', 'grid').attr('d', polylinePath(grid.lines));
+    if (extras.gridLabels) {
+        var edgeSize = 14;
+        var top = -SCALE * extent.height / 2;
+        var left = -SCALE * extent.width / 2;
+        grid.columns.forEach(function (c) {
+            appendText(g, font.label, 'grid-label', c.text, SCALE * c.x, top + edgeSize + 6, edgeSize, 'middle');
+        });
+        grid.rows.forEach(function (r) {
+            appendText(g, font.label, 'grid-label', r.text, left + 8, SCALE * r.y + edgeSize / 2, edgeSize, 'start');
+        });
+    }
+}
+
+// The 8-point star of a compass rose: each point is two triangles, one dark
+// and one light, like the classic printed rose
+function compassPoints(long, short, width) {
+    var dark = [];
+    var light = [];
+    for (var i = 0; i < 8; i++) {
+        var a = i * Math.PI / 4;
+        var len = i % 2 ? short : long;
+        var w = i % 2 ? width * 0.7 : width;
+        var tip = [Math.sin(a) * len, -Math.cos(a) * len];
+        var l = [Math.sin(a - Math.PI / 2) * w, -Math.cos(a - Math.PI / 2) * w];
+        var r = [Math.sin(a + Math.PI / 2) * w, -Math.cos(a + Math.PI / 2) * w];
+        dark.push('M0,0L' + tip.join(',') + 'L' + l.join(',') + 'Z');
+        light.push('M0,0L' + tip.join(',') + 'L' + r.join(',') + 'Z');
+    }
+    return {dark: dark.join(''), light: light.join('')};
+}
+
+var ORNAMENTS = {
+    scaleBar: function (g, extras, extent, font) {
+        var bar = scaleBar(extent, extras.perUnit);
+        var length = SCALE * bar.mapLength;
+        var parts = bar.marks.length - 1;
+        for (var i = 0; i < parts; i++) {
+            g.append('rect').attr('class', i % 2 ? 'extras-paper' : 'extras-fill')
+                .attr('x', length * i / parts).attr('y', -8)
+                .attr('width', length / parts).attr('height', 8);
+        }
+        bar.marks.forEach(function (m, i) {
+            var text = formatDistance(m.value) + (i === parts ? ' ' + extras.units.name : '');
+            appendText(g, font.label, 'extras-label', text, SCALE * m.x, 17, 14, 'middle');
+        });
+    },
+    compass: function (g, extras, extent, font) {
+        g.append('path').attr('class', 'extras-line')
+            .attr('d', 'M-30,0a30,30 0 1,0 60,0a30,30 0 1,0 -60,0M-24,0a24,24 0 1,0 48,0a24,24 0 1,0 -48,0');
+        var points = compassPoints(46, 24, 7);
+        g.append('path').attr('class', 'extras-paper').attr('d', points.light);
+        g.append('path').attr('class', 'extras-fill').attr('d', points.dark);
+        appendText(g, font.region, 'extras-label compass-north', 'N', 0, -52, 16, 'middle');
+    },
+    title: function (g, extras, extent, font) {
+        var size = 30;
+        var pad = 12;
+        var frame = g.append('g');
+        var text = appendText(g, font.region, 'title-text', extras.title, pad, 0, size, 'start');
+        var width = textWidth(text.node(), font.region, extras.title, size) + 2 * pad;
+        frame.append('rect').attr('class', 'extras-paper')
+            .attr('x', 0).attr('y', -size - pad / 2).attr('width', width).attr('height', size + 1.5 * pad);
+        frame.append('rect').attr('class', 'extras-line')
+            .attr('x', 4).attr('y', -size - pad / 2 + 4).attr('width', width - 8).attr('height', size + 1.5 * pad - 8);
+    }
+};
+
+function drawExtras(svg, state, theme, font) {
+    var extras = extrasChoice(theme, state.style, state.params);
+    var extent = state.params.extent;
+    drawGrid(svg, extras, extent, font);
+    var shown = Object.keys(ORNAMENTS).filter(function (id) {
+        return id === 'title' ? !!extras.title : extras[id];
+    });
+    var data = shown.map(function (id) {
+        return {id: id, kind: 'ornament', pos: extras.positions[id] || defaultPosition(id, extent)};
+    });
+    var groups = join(svg, 'extras', 'g', 'ornament', data, function (d) {return d.id})
+        .attr('transform', function (d) {return 'translate(' + coord(d.pos[0]) + ',' + coord(d.pos[1]) + ')'});
+    groups.each(function (d) {
+        var g = d3.select(this);
+        g.selectAll('*').remove();
+        ORNAMENTS[d.id](g, extras, extent, font);
+    });
 }

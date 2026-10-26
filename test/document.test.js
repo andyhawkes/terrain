@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {MapDocument, GENERATOR_VERSION} from '../src/core/document.js';
 import {derive, seaShading} from '../src/core/derive.js';
-import {itemPos} from '../src/core/steps.js';
+import {itemPos, defaultStyle} from '../src/core/steps.js';
 
 var small = {npts: 1024, ncities: 6, nterrs: 3};
 
@@ -151,7 +151,8 @@ test('the style is part of the map: undoable, saved, and kept for new maps', fun
     var before = derive(doc.state);
     doc.dispatch('setStyle', {theme: 'fantasy', font: 'cinzel'});
     doc.dispatch('setStyle', {hidden: ['slope']});
-    assert.deepEqual(doc.state.style, {theme: 'fantasy', font: 'cinzel', background: null, hidden: ['slope']});
+    assert.deepEqual(doc.state.style, Object.assign({}, defaultStyle,
+        {theme: 'fantasy', font: 'cinzel', background: null, hidden: ['slope']}));
     // Style changes don't recompute territories and labels
     assert.equal(derive(doc.state), before);
 
@@ -168,6 +169,12 @@ test('the style is part of the map: undoable, saved, and kept for new maps', fun
     assert.equal(doc.state.style.theme, 'fantasy');
     doc.dispatch('newBlank', {npts: 512});
     assert.equal(doc.state.style.theme, 'fantasy');
+
+    // Extras carry over too, but not the old map's title or where its
+    // extras were moved to
+    doc.dispatch('setStyle', {grid: 'hex', title: 'Old map', positions: {compass: [0.1, 0.1]}});
+    doc.dispatch('newBlank', {npts: 512});
+    assert.deepEqual([doc.state.style.grid, doc.state.style.title, doc.state.style.positions], ['hex', '', {}]);
 });
 
 test('markers have types, and notes can be added, edited, moved and deleted', function () {

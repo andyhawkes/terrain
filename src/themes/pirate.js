@@ -56,6 +56,9 @@ export default {
 
     seaShading: true,
 
+    // Defaults for the extras drawn over the map (see extras.js)
+    extras: {units: 'leagues', perUnit: 40, compass: true},
+
     labels: {
         regionCase: 'normal',
         regionSpacing: '0.04em',

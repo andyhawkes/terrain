@@ -119,7 +119,13 @@ Each phase leaves the app working.
 
 ### Phase 7: More themes
 - [x] **Pirate**: an old sea chart. Sepia ink on parchment (or plain sand), Pirata One blackletter for regions and IM Fell DW Pica for towns, dotted red borders, and water-lining: short strokes on the sea along the coast, thinning out further from land (`seaShading` in the theme format; a "Sea shading" layer for themes that use it). Wrecks: a sinking ship, a sea serpent, a shark's fin. Points of interest: skull and crossbones, palm tree, treasure chest, cannon. A bold brushy X.
-- [ ] A grid and ornaments layer that themes can switch on: a square grid with lettered and numbered edges ("Grid C4"), a scale bar, a compass rose and a title box. A hex grid option for tabletop games comes almost free once this exists.
+- Later: better wreck drawings for Pirate; the current ones are rudimentary.
+- [x] Extras drawn over the map, under Style → Extras (`src/render/extras.js` works out what to draw; `svg.js` draws it):
+  - A map width, in miles, km or leagues. It sets the scale bar and the grid size.
+  - A grid: none, square (lettered columns and numbered rows, "Grid C4") or hex (flat-topped, numbered 0101 for hex crawls), every N units.
+  - A scale bar, a compass rose and a title box, each in the theme's colours and lettering. Plotter draws them stroke-only, with single-stroke lettering.
+  - The scale bar, compass and title can be dragged with Move and removed with Delete, and the title edited with Edit text.
+  - All of these are part of the style, so they can be undone and are saved. A theme can set defaults (`extras` in the theme format), which apply until the map sets its own; Pirate defaults to leagues and a compass rose. A new map keeps the previous one's extras, except its title and where things were moved to. Maps with extras share as full `#map=` links.
 - [ ] **Military**, on top of that layer: a topographic or ops map, with a stencil face for regions, a square coordinate grid, and map-style symbols (objective, target, hazard, bunker, radio mast).
 - [ ] Theme naming styles, as an option alongside the made-up languages: English-sounding pirate names ("Dead Man's Cove", "Port Blackwater") and military codenames ("Objective Granite", "Hill 312"). They're word lists and patterns, not sounds, so they're a new kind of name generator.
 - Later: high fantasy.

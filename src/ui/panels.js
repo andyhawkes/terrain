@@ -2,6 +2,7 @@
 // drawn) and History (every step, with replay).
 import {THEMES, getTheme, fontChoice, backgroundChoice} from '../themes/index.js';
 import {TOGGLE_LAYERS} from '../render/svg.js';
+import {UNITS, GRIDS, extrasChoice} from '../render/extras.js';
 import {historyPanel} from './history.js';
 import {LANGUAGES} from '../core/language.js';
 
@@ -173,6 +174,56 @@ function stylePanel(body, ctx) {
         label.append('span').text(l[1]);
     });
 
+    // Extras drawn over the map. Inputs apply when changed (Enter or leaving
+    // the field), so typing doesn't add a step per key.
+    s = section(body, 'Extras', 'Drawn over the map. Drag them with the Move tool; Delete removes them.');
+    row = s.append('div').attr('class', 'control-row');
+    row.append('label').attr('for', 'mapWidth').text('Map width');
+    var widthInput = row.append('input').attr('id', 'mapWidth').attr('type', 'number').attr('min', 1).attr('step', 'any')
+        .on('change', function () {
+            var width = parseFloat(this.value);
+            if (width > 0) setStyle({perUnit: width / ctx.doc.state.params.extent.width});
+        });
+    var unitsSelect = row.append('select').attr('aria-label', 'Units')
+        .on('change', function () {setStyle({units: this.value})});
+    UNITS.forEach(function (u) {unitsSelect.append('option').attr('value', u.id).text(u.name)});
+
+    row = s.append('div').attr('class', 'control-row');
+    row.append('label').attr('for', 'gridSelect').text('Grid');
+    var gridSelect = row.append('select').attr('id', 'gridSelect')
+        .on('change', function () {setStyle({grid: this.value})});
+    GRIDS.forEach(function (g) {gridSelect.append('option').attr('value', g.id).text(g.name)});
+
+    var gridSizeRow = s.append('div').attr('class', 'control-row');
+    gridSizeRow.append('label').attr('for', 'gridSize').text('Every');
+    var gridSizeInput = gridSizeRow.append('input').attr('id', 'gridSize').attr('type', 'number').attr('min', 0.1).attr('step', 'any')
+        .on('change', function () {
+            var size = parseFloat(this.value);
+            if (size > 0) setStyle({gridSize: size});
+        });
+    var gridSizeUnits = gridSizeRow.append('span').attr('class', 'muted');
+
+    var extrasList = s.append('div').attr('class', 'check-list');
+    var extrasBoxes = {};
+    var gridLabelText;
+    [['gridLabels', 'Grid labels'], ['scaleBar', 'Scale bar'], ['compass', 'Compass rose']].forEach(function (x) {
+        var label = extrasList.append('label');
+        extrasBoxes[x[0]] = label.append('input').attr('type', 'checkbox')
+            .on('change', function () {
+                var change = {};
+                change[x[0]] = this.checked;
+                setStyle(change);
+            });
+        var text = label.append('span').text(x[1]);
+        if (x[0] === 'gridLabels') gridLabelText = text;
+    });
+
+    row = s.append('div').attr('class', 'control-row');
+    row.append('label').attr('for', 'mapTitle').text('Title');
+    var titleInput = row.append('input').attr('id', 'mapTitle').attr('type', 'text').attr('placeholder', 'None')
+        .style('flex', 1)
+        .on('change', function () {setStyle({title: this.value.trim()})});
+
     function options(select, items, value) {
         var opts = select.selectAll('option').data(items, function (d) {return d.id});
         opts.exit().remove();
@@ -195,6 +246,24 @@ function stylePanel(body, ctx) {
         });
         // Only some themes shade the sea
         labels.sea.style('display', theme.seaShading ? null : 'none');
+
+        if (!state.params) return;
+        var extras = extrasChoice(theme, style, state.params);
+        var round = function (x) {return Math.round(x * 100) / 100};
+        if (document.activeElement !== widthInput.node()) {
+            widthInput.property('value', round(extras.perUnit * state.params.extent.width));
+        }
+        unitsSelect.property('value', extras.units.id);
+        gridSelect.property('value', extras.grid);
+        gridSizeRow.style('display', extras.grid === 'none' ? 'none' : null);
+        if (document.activeElement !== gridSizeInput.node()) gridSizeInput.property('value', round(extras.gridSize));
+        gridSizeUnits.text(extras.units.name);
+        extrasBoxes.gridLabels.property('checked', !!extras.gridLabels)
+            .property('disabled', extras.grid === 'none');
+        gridLabelText.text(extras.grid === 'hex' ? 'Number the hexes' : 'Label the grid edges');
+        extrasBoxes.scaleBar.property('checked', !!extras.scaleBar);
+        extrasBoxes.compass.property('checked', !!extras.compass);
+        if (document.activeElement !== titleInput.node()) titleInput.property('value', extras.title);
     });
 }
 

@@ -35,6 +35,20 @@ export function themeCSS(theme, font, background, scope) {
         'S path.city-label { stroke: ' + c.label + '; }',
         'S path.region-label { stroke: ' + c.region + '; }',
         'S text.poi { fill: var(--symbol); stroke: none; filter: none; }',
+        // Extras: grid, scale bar, compass rose, title box
+        'S .grid { stroke: ' + (c.grid || c.ink) + '; stroke-width: ' + (w.grid || 1) + 'px; stroke-opacity: ' +
+            (theme.extras && theme.extras.gridOpacity || 0.45) + '; }',
+        'S .grid-label { fill: ' + (c.grid || c.ink) + '; stroke-width: 3px; }',
+        'S path.grid-label { fill: none; stroke: ' + (c.grid || c.ink) + '; stroke-width: 1px; }',
+        typeof font.label === 'string' ? 'S text.grid-label, S text.extras-label { font-family: ' + font.label + '; }' : '',
+        typeof font.region === 'string' ? 'S text.title-text, S text.compass-north { font-family: ' + font.region + '; }' : '',
+        'S text.extras-label { fill: ' + c.label + '; }',
+        'S text.title-text { fill: ' + c.region + '; stroke: none; }',
+        'S path.extras-label, S path.title-text { fill: none; stroke: ' + c.label + '; stroke-width: 1.5px; }',
+        'S .extras-line { fill: none; stroke: ' + c.ink + '; stroke-width: 1.5px; }',
+        'S .extras-fill { fill: ' + (theme.strokeOnly ? 'none' : c.ink) + '; stroke: ' + c.ink + '; stroke-width: 1.5px; }',
+        'S .extras-paper { fill: ' + (theme.strokeOnly ? 'none' : h.color === 'none' ? '#ffffff' : h.color) +
+            '; stroke: ' + c.ink + '; stroke-width: 1.5px; }',
         theme.css || ''
     ];
     return rules.join('\n').replace(/\bS\b/g, scope).replace(/\bMAP\b/g, scope);
