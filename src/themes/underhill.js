@@ -1,6 +1,7 @@
 // A hand-drawn storybook map: black and red ink on cream paper, little
 // mountains, hills and trees, and names in an uncial hand.
 import {markerSymbols} from './markers.js';
+import {mountains, hills} from './relief-drawings.js';
 
 var parchment = new URL('../../images/parchment.jpg', import.meta.url).href;
 
@@ -8,14 +9,9 @@ var INK = '#1a1a1a';
 var RED = '#a3221b';
 var PAPER = '#f3ead2';
 
-// Relief drawings sit on y = 0 (their base) and are about 22 units wide
-// (mountains are then scaled up a little).
-// mask fills the shape with paper so nearer ones hide those behind; ridge
-// is the outline, shadow the solid dark side of a mountain and shade the
-// hatching on a hill.
-function mountain(outline, shadow) {
-    return [{d: outline + ' Z', cls: 'mask'}, {d: shadow, cls: 'shadow'}, {d: outline, cls: 'ridge'}];
-}
+// Relief: mountains and hills are generated (see relief-drawings.js); trees
+// are drawn here. Drawings sit on y = 0 (their base). mask fills the shape
+// with paper so nearer ones hide those behind; ridge is the outline.
 
 export default {
     id: 'underhill',
@@ -88,19 +84,9 @@ export default {
         relief: {
             // Mountains close together, so they read as ranges
             spacing: {mountain: 17, hill: 18, tree: 8},
-            mountain: {kind: 'path', transform: 'scale(1.25)', variants: [
-                // Tall and narrow, the far side in solid shadow
-                mountain('M-8,0 L-1,-20 L1,-19 L8,0', 'M1,-19 L8,0 L3,0 L2.5,-7 L1.5,-13 Z'),
-                mountain('M-10,0 L-4,-15 L-2,-11 L2,-21 L10,0', 'M2,-21 L10,0 L5,0 L4,-9 Z M-4,-15 L-2,-11 L-2.5,-6 Z'),
-                mountain('M-7,0 L0,-15 L7,0', 'M0,-15 L7,0 L2.5,0 L1.5,-6 Z'),
-                mountain('M-9,0 L-2,-18 L0,-16 L2,-19 L9,0', 'M2,-19 L9,0 L4,0 L3,-8 Z M-2,-18 L0,-16 L-0.5,-10 Z')
-            ]},
-            hill: {kind: 'path', variants: [
-                [{d: 'M-9,0 Q0,-10 9,0 Z', cls: 'mask'}, {d: 'M-9,0 Q0,-10 9,0', cls: 'ridge'},
-                    {d: 'M3,-4 L5,-1.5 M5,-3 L6.5,-1', cls: 'shade'}],
-                [{d: 'M-10,0 Q-4,-8 1,-2 Q5,-9 10,0 Z', cls: 'mask'}, {d: 'M-10,0 Q-4,-8 1,-2 Q5,-9 10,0', cls: 'ridge'},
-                    {d: 'M6,-3 L7.5,-1', cls: 'shade'}]
-            ]},
+            // Generated, so the ranges vary (see relief-drawings.js)
+            mountain: {kind: 'path', variants: mountains(14, 7)},
+            hill: {kind: 'path', variants: hills(8, 11)},
             tree: {kind: 'path', variants: [
                 // Round-topped
                 [{d: 'M-4,-3 C-7,-4 -6,-10 -2,-10 C-1,-13 4,-12 4,-9 C7,-8 6,-3 3,-3 Z', cls: 'mask'},
@@ -143,7 +129,7 @@ export default {
         mask: {fill: PAPER, stroke: 'none'},
         ridge: {fill: 'none', stroke: INK, 'stroke-width': 1.3},
         shadow: {fill: INK, stroke: 'none'},
-        shade: {fill: 'none', stroke: INK, 'stroke-width': 1},
+        crease: {fill: 'none', stroke: INK, 'stroke-width': 0.9},
         mark: {fill: 'none', stroke: 'currentColor', 'stroke-width': 2.5}
     },
 

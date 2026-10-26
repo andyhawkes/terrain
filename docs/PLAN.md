@@ -139,7 +139,7 @@ Each phase leaves the app working.
   - A theme supplies the drawings (`symbols.relief`) and can turn slope hatching off (`slopeShading: false`). A "Hills and forests" layer toggle shows for themes that use it.
 - [x] **Underhill**: a storybook map in black and red ink on cream paper (or parchment), in the style of Tolkien's own maps:
   - Lettering: Uncial Antiqua regions in red with Almendra towns (both OFL), or Almendra throughout.
-  - Bold mountains: tall, narrow peaks with a solid black shadow side, packed into ranges on the highest ground.
+  - Bold, rugged mountains packed into ranges on the highest ground. They're generated (`src/themes/relief-drawings.js`, from a fixed seed): spires to broad massifs, slightly rough ridgelines, some with a second summit, a solid black east face with a ragged edge, and rock creases on the lit side. Hills are generated the same way, with a dark east crescent.
   - Hills, woods, and dashed red borders.
   - A heavy, smoothed coastline with two finer lines following it out at sea.
   - Its own towers, ruins, standing stones, caves and wrecks.
