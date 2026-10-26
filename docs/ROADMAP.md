@@ -45,7 +45,6 @@ Make the symbols as good as the relief drawings.
 - **Roads:** an option for random maps to join towns with roads that follow easy ground, using the same cost-of-travel idea as territories. Hand-built maps can draw them too.
 - **Routes:** draw a path by clicking points, for a journey, a quest or a ship's course. Routes have a style (dotted, dashed, with arrows) and an optional label.
 - **Drawing:** themes style roads and routes: dashed or double lines, red journey dots for Underhill, sepia for Throne-ish, plain strokes for Plotter.
-- **Measuring:** a route's length in the map's units (miles, km, leagues), shown while drawing and optionally on the map. This also covers "how far is it from here to there".
 - **Editing:** roads and routes are steps like everything else. They can be moved by their points, deleted and saved.
 
 ## 5. Legend
@@ -109,6 +108,7 @@ A modern British survey map:
 - **Magical world:** points of interest for wizards' towers, portals, crystal formations, enchanted forests and floating islands, with optional glowing ley lines between magical sites. Parked for now; it could become part of a theme later.
 - **Relief for Fantasy and Pirate:** they could use relief symbols or hachures. Mock it up before changing either theme.
 - **Pen-plotter output and A3,** until the plotter build starts. That covers clearing rivers and borders from under labels, ordering strokes to cut pen travel, and a physical paper size.
+- **Measuring:** a route's length in the map's units (miles, km, leagues), shown while drawing and optionally on the map. This also covers "how far is it from here to there".
 - **Smaller leftovers:**
   - Capitals can change between detail levels, so region names move.
   - Plotter lettering drops accents ("š" shows as "s").
