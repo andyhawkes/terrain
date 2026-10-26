@@ -93,17 +93,24 @@ export default {
         ]]},
         relief: {
             spacing: {mountain: 17, hill: 18, tree: 8},
-            mountain: {kind: 'path', variants: mountains(12, 23)},
-            hill: {kind: 'path', variants: hills(6, 29)},
-            tree: {kind: 'path', variants: [
-                // Mostly pines, for cold northern woods
+            // Engraved: a sepia wash crossed with hatching on the dark side
+            mountain: {kind: 'path', variants: mountains(12, 23, {style: 'engraved', spacing: 1.5})},
+            hill: {kind: 'path', variants: hills(6, 29, {style: 'engraved', spacing: 1.5})},
+            // Pines in the cold north and high ground, broadleaf trees elsewhere
+            tree: {kind: 'path', climate: {cold: [0, 1], warm: [2, 3, 4]}, variants: [
                 [{d: 'M0,-13 L-3,-7 L-1.5,-7 L-4,-2 L4,-2 L1.5,-7 L3,-7 Z', cls: 'mask'},
                     {d: 'M0,-13 L-3,-7 L-1.5,-7 L-4,-2 L4,-2 L1.5,-7 L3,-7 Z M0,-2 L0,1', cls: 'ridge'}],
                 [{d: 'M0,-11 L-3.5,-3 L3.5,-3 Z', cls: 'mask'},
                     {d: 'M0,-11 L-3.5,-3 L3.5,-3 Z M0,-3 L0,0.5', cls: 'ridge'}],
                 [{d: 'M-3,-2 C-5,-4 -4,-9 0,-9 C4,-9 5,-4 3,-2 Z', cls: 'mask'},
-                    {d: 'M-3,-2 C-5,-4 -4,-9 0,-9 C4,-9 5,-4 3,-2 Z M0,-2 L0,1', cls: 'ridge'}]
-            ]}
+                    {d: 'M-3,-2 C-5,-4 -4,-9 0,-9 C4,-9 5,-4 3,-2 Z M0,-2 L0,1', cls: 'ridge'}],
+                [{d: 'M-4,-3 C-7,-4 -6,-10 -2,-10 C-1,-13 4,-12 4,-9 C7,-8 6,-3 3,-3 Z', cls: 'mask'},
+                    {d: 'M-4,-3 C-7,-4 -6,-10 -2,-10 C-1,-13 4,-12 4,-9 C7,-8 6,-3 3,-3 Z M0,-3 L0,1', cls: 'ridge'}],
+                [{d: 'M-4.5,-3 C-6,-6 -3,-8 -2,-7 C-2,-11 3,-11 3,-8 C6,-8 6,-4 4,-3 Z', cls: 'mask'},
+                    {d: 'M-4.5,-3 C-6,-6 -3,-8 -2,-7 C-2,-11 3,-11 3,-8 C6,-8 6,-4 4,-3 Z M-0.5,-3 L0,1 M0,-3 L1.5,-5', cls: 'ridge'}]
+            ]},
+            // A soft green wash under the woods
+            treeWash: {color: '#5f7a3a', opacity: 0.35, radius: 7}
         },
         poi: {kind: 'path', transform: 'scale(1.4)', variants: [
             // Ruined tower
@@ -132,6 +139,8 @@ export default {
         mask: {fill: 'currentColor', stroke: 'none'},
         ridge: {fill: 'none', stroke: INK, 'stroke-width': 1.2},
         shadow: {fill: INK, stroke: 'none'},
+        wash: {fill: '#7a5c3a', 'fill-opacity': 0.45, stroke: 'none'},
+        hatch: {fill: 'none', stroke: INK, 'stroke-width': 0.55},
         crease: {fill: 'none', stroke: INK, 'stroke-width': 0.9},
         mark: {fill: 'none', stroke: 'currentColor', 'stroke-width': 2.5}
     },

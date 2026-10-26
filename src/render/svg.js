@@ -320,6 +320,16 @@ function drawCoastLines(svg, h, theme) {
         .attr('stroke-width', function (d) {return d.width});
 }
 
+// Which drawing a relief symbol uses. A spec with climate ({cold: [...],
+// warm: [...]}, lists of variant numbers) picks from one list or the other
+// by how cold the spot is, blurring the change-over a little.
+function reliefVariant(spec, d) {
+    if (!spec.climate) return d.variant % spec.variants.length;
+    var cold = d.cold + ((d.variant % 100) / 100 - 0.5) * 0.3 > 0.5;
+    var group = cold ? spec.climate.cold : spec.climate.warm;
+    return group[d.variant % group.length];
+}
+
 // Mountains, hills and trees, for themes with relief symbols. They're left
 // out around cities, so places stay clear.
 var CITY_CLEARANCE = 16;
@@ -340,13 +350,35 @@ function drawRelief(svg, state, theme) {
             return Math.abs(p[0] - s.x) < near && Math.abs(p[1] - s.y) < near;
         });
     });
+    drawTreeWash(svg, spec.treeWash, symbols);
     var prefix = '#' + svg.attr('id') + '-relief-';
     // Drawn in order, back to front, so no key: nearer symbols overlap
     join(svg, 'relief', 'use', 'relief', symbols)
-        .attr('href', function (d) {return prefix + d.kind + (d.variant % spec[d.kind].variants.length)})
+        .attr('href', function (d) {return prefix + d.kind + reliefVariant(spec[d.kind], d)})
         .attr('transform', function (d) {
             return 'translate(' + coord(d.x) + ',' + coord(d.y) + ') scale(' + d.size.toFixed(2) + ')';
         });
+}
+
+// A soft watercolour wash under forests, for themes with treeWash
+// ({color, opacity, radius}, radius in SVG units): a blob under each tree,
+// run together by the watercolour filter. It's part of the relief layer,
+// under the trees, so it hides with them.
+function drawTreeWash(svg, wash, symbols) {
+    var g = layer(svg, 'relief');
+    g.selectAll('g.tree-wash').remove();
+    if (!wash) return;
+    ensureWatercolour(svg);
+    var r = wash.radius;
+    var blobs = symbols.filter(function (s) {return s.kind === 'tree'}).map(function (s) {
+        // Centred a little above the tree's base
+        return 'M' + (coord(s.x) - r) + ',' + (coord(s.y) - r / 2) + 'a' + r + ',' + r + ' 0 1,0 ' + 2 * r + ',0' +
+            'a' + r + ',' + r + ' 0 1,0 ' + -2 * r + ',0';
+    }).join('');
+    g.insert('g', ':first-child').attr('class', 'tree-wash').attr('opacity', wash.opacity)
+        .attr('filter', 'url(#' + svg.attr('id') + '-watercolour)')
+        .append('path').attr('d', blobs)
+        .style('fill', wash.color).style('stroke', 'none');
 }
 
 // Points of interest and wrecks, drawn with the theme's symbols

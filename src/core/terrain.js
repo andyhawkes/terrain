@@ -949,8 +949,9 @@ function coastLines(h, offsets) {
 // Symbols keep their distance from each other, the coast and rivers.
 // spacing gives each kind's distance in SVG units, and scale is SVG units
 // per map unit, so symbols are spaced the same however detailed the grid.
-// Returns [{kind, x, y, size, variant}], back to front so nearer symbols
-// overlap those behind.
+// Returns [{kind, x, y, size, variant, cold}], back to front so nearer
+// symbols overlap those behind. cold (0 to 1) is how far north and how high
+// a symbol is, for themes that draw different trees by climate.
 function reliefSymbols(h, scale, spacing) {
     var mesh = h.mesh;
     var flux = getFlux(h);
@@ -1015,14 +1016,18 @@ function reliefSymbols(h, scale, spacing) {
         var size = (kind === 'mountain' ? 1 + 0.5 * (h[i] - peaks) / (top - peaks || 1) : 1) * runif(0.85, 1.15);
         var gap = spacing[kind] * size / scale;
         if (!clear(v[0], v[1], gap)) return;
-        var symbol = {kind: kind, x: v[0], y: v[1], size: size, variant: randrange(1000), gap: gap};
+        var symbol = {kind: kind, x: v[0], y: v[1], size: size, variant: randrange(1000), gap: gap, vx: i};
         var key = Math.floor(v[0] / cell) + ',' + Math.floor(v[1] / cell);
         if (!grid.has(key)) grid.set(key, []);
         grid.get(key).push(symbol);
         symbols.push(symbol);
     });
+    var bottom = heights[0];
+    var north = mesh.extent.height / 2;
     return symbols.sort(function (a, b) {return a.y - b.y}).map(function (s) {
-        return {kind: s.kind, x: s.x, y: s.y, size: s.size, variant: s.variant};
+        var high = (h[s.vx] - bottom) / (top - bottom || 1);
+        var cold = Math.max(0, Math.min(1, 0.7 * (0.5 - s.y / (2 * north)) + 0.3 * high));
+        return {kind: s.kind, x: s.x, y: s.y, size: s.size, variant: s.variant, cold: cold};
     });
 }
 

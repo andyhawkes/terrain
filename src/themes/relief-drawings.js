@@ -10,6 +10,8 @@
 //   shadow: the dark east face, filled with ink
 //   ridge: the outline
 //   crease: a few rock folds on the lit side
+// The engraved style (options.style: 'engraved') shades the east face with
+// a wash part (a see-through fill) and hatch lines instead of shadow.
 
 // A small seeded generator, separate from the map's random numbers
 function generator(seed) {
@@ -94,7 +96,7 @@ function mountain(rand) {
 
     return [
         {d: line(outline) + ' Z', cls: 'mask'},
-        {d: line(shadow) + ' Z', cls: 'shadow'},
+        {d: line(shadow) + ' Z', cls: 'shadow', shade: shadow},
         {d: line(outline), cls: 'ridge'},
         {d: creases.join(' '), cls: 'crease'}
     ];
@@ -128,22 +130,79 @@ function hill(rand) {
     }
     return [
         {d: outline + ' Z', cls: 'mask'},
-        {d: line(shade.concat(inner.slice(1))) + ' Z', cls: 'shadow'},
+        {d: line(shade.concat(inner.slice(1))) + ' Z', cls: 'shadow', shade: shade.concat(inner.slice(1))},
         {d: outline, cls: 'ridge'},
         {d: strokes.join(' '), cls: 'crease'}
     ];
 }
 
-export function mountains(count, seed) {
+// Parallel lines across a polygon, a given distance apart, running in
+// direction dir (a unit vector)
+function hatch(polygon, dir, spacing) {
+    var n = [-dir[1], dir[0]];
+    var across = polygon.map(function (p) {return p[0] * n[0] + p[1] * n[1]});
+    var lo = Math.min.apply(null, across);
+    var hi = Math.max.apply(null, across);
+    var lines = [];
+    for (var c = lo + spacing / 2; c < hi; c += spacing) {
+        var hits = [];
+        for (var i = 0; i < polygon.length; i++) {
+            var a = polygon[i];
+            var b = polygon[(i + 1) % polygon.length];
+            var da = a[0] * n[0] + a[1] * n[1] - c;
+            var db = b[0] * n[0] + b[1] * n[1] - c;
+            if ((da < 0) === (db < 0)) continue;
+            var t = da / (da - db);
+            var x = a[0] + (b[0] - a[0]) * t;
+            var y = a[1] + (b[1] - a[1]) * t;
+            hits.push(x * dir[0] + y * dir[1]);
+        }
+        hits.sort(function (p, q) {return p - q});
+        for (var k = 0; k + 1 < hits.length; k += 2) {
+            lines.push(line([
+                [n[0] * c + dir[0] * hits[k], n[1] * c + dir[1] * hits[k]],
+                [n[0] * c + dir[0] * hits[k + 1], n[1] * c + dir[1] * hits[k + 1]]
+            ]));
+        }
+    }
+    return lines.join(' ');
+}
+
+// Engraving: the dark side becomes a see-through wash crossed by hatching,
+// running down the slope
+var FALL = (function () {
+    var x = 0.35;
+    var length = Math.sqrt(x * x + 1);
+    return [x / length, 1 / length];
+})();
+
+function styled(drawing, options) {
+    if (!options || options.style !== 'engraved') {
+        return drawing.map(function (part) {return {d: part.d, cls: part.cls}});
+    }
+    var parts = [];
+    drawing.forEach(function (part) {
+        if (part.cls !== 'shadow') {
+            parts.push({d: part.d, cls: part.cls});
+            return;
+        }
+        parts.push({d: part.d, cls: 'wash'});
+        parts.push({d: hatch(part.shade, FALL, options.spacing || 1.6), cls: 'hatch'});
+    });
+    return parts;
+}
+
+// options: {style: 'engraved', spacing} for hatched shading (see above)
+export function mountains(count, seed, options) {
     var rand = generator(seed);
     var drawings = [];
-    for (var i = 0; i < count; i++) drawings.push(mountain(rand));
+    for (var i = 0; i < count; i++) drawings.push(styled(mountain(rand), options));
     return drawings;
 }
 
-export function hills(count, seed) {
+export function hills(count, seed, options) {
     var rand = generator(seed);
     var drawings = [];
-    for (var i = 0; i < count; i++) drawings.push(hill(rand));
+    for (var i = 0; i < count; i++) drawings.push(styled(hill(rand), options));
     return drawings;
 }
