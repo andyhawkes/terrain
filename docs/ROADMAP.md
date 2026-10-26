@@ -54,36 +54,62 @@ Make the symbols as good as the relief drawings.
 - **Built from the map itself,** so it only lists what's actually there, in the theme's own drawings and lettering.
 - **Like the other extras:** switched on under Style → Extras, movable, and deletable. Entries can be renamed, for example "Dragon lair" for a danger marker.
 
+## 6. Several peoples on one map
+
+A naming feature that any theme can use.
+
+- **Different names per region:** each region (or group of regions) named in its own made-up language, e.g. elvish-sounding, dwarvish-sounding and human. The languages already exist; this assigns them per region and names the region's towns to match.
+- **Matching lettering (optional):** a theme can give each people its own lettering, such as flowing script for one and blocky capitals for another. That depends on typography roles (item 2).
+- **Choices:** under New map and Rename all, "Several peoples" alongside Random and the named languages, with how many peoples there are.
+- **Open question:** should neighbouring regions tend to share a people, so peoples form larger areas rather than a patchwork?
+
+## 7. New themes
+
+The order among these is still open. Several need the same new drawing features, so those come first:
+
+- **Sea and land fills:** filling the sea (or the land) with a colour, not just drawing the coastline. Most themes so far rely on the paper colour.
+- **Colour by height:** colouring land by elevation, in bands or smoothly.
+- **Contour lines:** lines at fixed height intervals, optionally labelled. The coastline is already a contour at sea level.
+- **Woodland areas:** forests drawn as filled shapes as well as, or instead of, tree symbols.
+
+### Illuminated atlas
+
+High fantasy as a richly coloured old atlas, closer to a medieval manuscript or a 16th-century atlas than to an ink sketch:
+
+- Bright colour: deep blue seas, green lowlands, gold accents.
+- A decorative border around the whole map, an ornate compass rose and a title cartouche.
+- Sea creatures and ships in the margins.
+- It would suit several peoples' names (item 6).
+
+### Coloured relief
+
+A physical atlas or video-game world map:
+
+- Land coloured by height: green lowlands, ochre hills, grey rock, white peaks.
+- Blue seas, deeper offshore.
+- Clean modern lettering, rivers in blue, and light hill shading.
+
+### Ordnance Survey style
+
+A modern British survey map:
+
+- Brown contour lines at regular intervals.
+- Blue water, with the sea filled.
+- Green woodland areas.
+- A numbered kilometre grid (eastings and northings), not lettered squares.
+- Survey-style symbols: church, triangulation pillar, castle, viewpoint, campsite and so on.
+- Roads in survey colours, once roads exist (item 4).
+- **Lettering:** a clean humanist sans. The real survey fonts aren't openly licensed, so an OFL one with a similar feel.
+- **Name:** "Ordnance Survey" is a trademark, so the theme should be called something like "Survey".
+
 ## Deferred
 
 - **Replaying how a random map is made** (the algorithm-explorer side): stepping through the stages inside "New random map". Not a priority. It may be dropped altogether if the 3D view and sculpting tools happen.
 - **3D view and sculpting tools.** Sculpting would record brush strokes as steps.
-- **High fantasy theme:** see the ideas below; pick a direction first.
+- **Magical world:** points of interest for wizards' towers, portals, crystal formations, enchanted forests and floating islands, with optional glowing ley lines between magical sites. Parked for now; it could become part of a theme later.
 - **Relief for Fantasy and Pirate:** they could use relief symbols or hachures. Mock it up before changing either theme.
 - **Pen-plotter output and A3,** until the plotter build starts. That covers clearing rivers and borders from under labels, ordering strokes to cut pen travel, and a physical paper size.
 - **Smaller leftovers:**
   - Capitals can change between detail levels, so region names move.
   - Plotter lettering drops accents ("š" shows as "s").
   - Slope hatching could use a typed array if memory becomes a concern again.
-
-## High fantasy: ideas
-
-Underhill already covers the Tolkien-style storybook map, and Throne-ish the rival-kingdoms map. High fantasy could be something neither does. Some directions, which could be combined:
-
-- **Illuminated atlas.**
-  - Bright colour where the others are muted: deep blue seas, green lowlands, gold accents.
-  - A decorative border around the whole map, an ornate compass rose, and a title cartouche.
-  - Sea creatures and ships in the margins.
-  - Closer to a medieval manuscript or a 16th-century atlas than to an ink sketch.
-- **Coloured relief.**
-  - Land coloured by height (green lowlands, ochre hills, grey rock, white peaks), the way physical atlases and video-game world maps do it.
-  - That's a new kind of drawing for this project: no theme colours land by height yet. It would suit a bright, painterly theme.
-- **A magical world.**
-  - Points of interest for wizards' towers, portals, crystal formations, enchanted forests and floating islands.
-  - Optional ley lines: glowing lines connecting magical sites.
-- **Several peoples on one map.**
-  - Each region named in a different language (elvish-sounding, dwarvish-sounding, human), using the existing made-up languages.
-  - Matching lettering per people, for example flowing script for elves and blocky runes for dwarves.
-  - That's mostly a naming feature, and other themes could use it too.
-
-A first version could be the illuminated atlas with coloured relief, plus several peoples' names.
