@@ -54,11 +54,31 @@ export function newParams(given) {
 // How the map is drawn: a theme id plus the user's choices within it.
 // font and background are ids from the theme (null means its default);
 // hidden lists layers that are switched off.
+// The rest are extras drawn over the map (see render/extras.js). null means
+// the theme's default (theme.extras), so they follow the theme until set.
+//   units: 'miles', 'km' or 'leagues'; perUnit: how many across one map
+//     unit (a square map is one map unit across)
+//   grid: 'none', 'square' or 'hex'; gridSize: in units, null to pick one
+//     to suit the map; gridLabels: lettered edges, or numbered hexes
+//   scaleBar, compass: true or false; compassSize: how big the compass rose
+//     is, as a multiple of its normal size; title: text for a title box, or ''
+//   positions: where the scale bar, compass and title have been moved to,
+//     in map units, e.g. {compass: [0.4, -0.4]}
 export var defaultStyle = {
     theme: 'simple',
     font: null,
     background: null,
-    hidden: []
+    hidden: [],
+    units: null,
+    perUnit: null,
+    grid: null,
+    gridSize: null,
+    gridLabels: null,
+    scaleBar: null,
+    compass: null,
+    compassSize: null,
+    title: '',
+    positions: {}
 };
 
 // Upper bound for "variant" numbers, which pick a symbol from whatever set
@@ -121,6 +141,12 @@ export function itemPos(state, item) {
 
 function vxsOf(items) {
     return items.map(function (c) {return c.vx});
+}
+
+// A new map keeps the last one's style, except what belonged to that map:
+// its title, and where its extras were moved to
+function carriedStyle(style) {
+    return Object.assign({}, style, {title: '', positions: {}});
 }
 
 // Copy-on-write for the naming language, which makeName mutates
@@ -204,14 +230,14 @@ export var steps = {
             var params = newParams({shape: args.shape, language: args.language || defaultParams.language});
             if (args.npts) params.npts = args.npts;
             var mesh = T.generateGoodMesh(params.npts, params.extent);
-            return Object.assign(emptyState(), {params: params, style: args.style || state.style, h: T.zero(mesh)});
+            return Object.assign(emptyState(), {params: params, style: args.style || carriedStyle(state.style), h: T.zero(mesh)});
         }
     },
     generate: {
         label: 'Generate random map',
         apply: function (state, args) {
             var params = newParams(args.params);
-            var s = Object.assign(emptyState(), {params: params, style: args.style || state.style});
+            var s = Object.assign(emptyState(), {params: params, style: args.style || carriedStyle(state.style)});
             // Each stage has its own random stream (see withStream), so
             // changing the detail, shape or counts changes only what it must
             s.h = T.generateCoast(params);
@@ -330,11 +356,14 @@ export var steps = {
 
     // --- Style ---
     // Merges the given fields into the style; changing theme resets the
-    // font and background to that theme's defaults.
+    // font and background to that theme's defaults. args.what, if given,
+    // names what changed for the History panel and isn't kept.
     setStyle: {
         label: 'Change style',
         apply: function (state, args) {
-            var style = Object.assign({}, state.style, args);
+            var changes = Object.assign({}, args);
+            delete changes.what;
+            var style = Object.assign({}, state.style, changes);
             if (args.theme && args.theme !== state.style.theme) {
                 if (!('font' in args)) style.font = null;
                 if (!('background' in args)) style.background = null;

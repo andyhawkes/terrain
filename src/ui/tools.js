@@ -24,7 +24,9 @@ export var TOOLS = [
 ];
 
 var DRAGGABLE = '.layer-city .city, .layer-wreck .wreck, .layer-poi .poi, .layer-marker .placedMarker, ' +
-    '.city-label, .region-label, .note-label';
+    '.city-label, .region-label, .note-label, .layer-extras .ornament';
+
+var ORNAMENT_NAMES = {scaleBar: 'the scale bar', compass: 'the compass rose', title: 'the title'};
 
 function isLabel(d) {
     return d && (d.kind === 'cityLabel' || d.kind === 'regionLabel');
@@ -36,6 +38,7 @@ function nameOf(d) {
     var named = d.kind === 'city' ? d.item.name : (d.label && d.label.text);
     if (named && d.kind !== 'note') return named;
     if (d.kind === 'note') return '“' + d.item.text + '”';
+    if (d.kind === 'ornament') return ORNAMENT_NAMES[d.id];
     if (d.kind === 'marker') {
         var type = MARKER_TYPES.find(function (t) {return t.id === d.item.type});
         return (type ? type.name.toLowerCase() : 'a') + ' marker';
@@ -50,6 +53,7 @@ function editable(d) {
     if (d.kind === 'regionLabel') return {kind: 'region', text: d.label.text};
     if (d.kind === 'note') return {kind: 'note', text: d.item.text};
     if (d.kind === 'city') return {kind: 'city', text: d.item.name};
+    if (d.kind === 'ornament' && d.id === 'title') return {kind: 'title', text: d3.select('.layer-extras .title-text').text()};
     return null;
 }
 
@@ -276,7 +280,8 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
             if (!label.empty()) anchor = label.node();
         }
         editText(stage.node(), anchor.getBoundingClientRect(), target.text, function (text) {
-            if (target.kind === 'note' && !text) doc.dispatch('deleteItem', {id: d.id, what: nameOf(d)});
+            if (target.kind === 'title') doc.dispatch('setStyle', {title: text.trim()});
+            else if (target.kind === 'note' && !text) doc.dispatch('deleteItem', {id: d.id, what: nameOf(d)});
             else doc.dispatch('editLabel', {id: d.id, kind: target.kind, text: text, what: nameOf(d)});
         }, {hide: anchor === node && d.kind !== 'city' ? node : null, label: 'Edit text'});
         return true;
@@ -300,6 +305,10 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
             editText(stage.node(), {x: d3.event.clientX, y: d3.event.clientY}, '', function (text) {
                 if (text) doc.dispatch('addNote', {pos: pos, text: text});
             }, {placeholder: 'Type, then press Enter', label: 'New text'});
+        } else if (active === 'delete' && d && d.kind === 'ornament') {
+            var off = {what: nameOf(d)};
+            off[d.id] = d.id === 'title' ? '' : false;
+            doc.dispatch('setStyle', off);
         } else if (active === 'delete' && d && d.id != null) {
             // Names of places are hidden; everything else is removed
             if (isLabel(d)) doc.dispatch('editLabel', {id: d.id, kind: d.kind === 'regionLabel' ? 'region' : 'city', text: '', what: nameOf(d)});
@@ -338,7 +347,11 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
             var dy = (d3.event.y - dragStart.y) / R.SCALE;
             if (dx === 0 && dy === 0) return;
             var pos = [d.pos[0] + dx, d.pos[1] + dy];
-            if (isLabel(d)) doc.dispatch('moveLabel', {id: d.id, kind: d.kind === 'regionLabel' ? 'region' : 'city', pos: pos, what: nameOf(d)});
+            if (d.kind === 'ornament') {
+                var positions = Object.assign({}, doc.state.style.positions);
+                positions[d.id] = pos;
+                doc.dispatch('setStyle', {positions: positions, what: nameOf(d)});
+            } else if (isLabel(d)) doc.dispatch('moveLabel', {id: d.id, kind: d.kind === 'regionLabel' ? 'region' : 'city', pos: pos, what: nameOf(d)});
             else doc.dispatch('moveItem', {id: d.id, pos: pos, what: nameOf(d)});
         });
 

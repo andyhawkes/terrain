@@ -49,6 +49,16 @@ export default {
 
     borderDash: [6, 5],
 
+    // Short strokes on the sea along the coast, like old charts' water-lining
+    // (colour colors.sea and width widths.sea, or the coast's and 1)
+    seaShading: false,
+
+    // Defaults for extras drawn over the map, used until the map sets its
+    // own (see render/extras.js): units ('miles', 'km', 'leagues'), perUnit
+    // (units across one map unit), grid ('none', 'square', 'hex'),
+    // gridLabels, scaleBar, compass, and gridOpacity for the grid's lines
+    extras: {units: 'miles', perUnit: 100},
+
     labels: {
         regionCase: 'upper',    // 'upper' or 'normal'
         regionSpacing: '0.15em',

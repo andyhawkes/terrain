@@ -846,6 +846,55 @@ function slopeStrokes(h) {
     return strokes;
 }
 
+// Short horizontal strokes on the sea along the coast, thinning out further
+// from land, like the water-lining on old charts. width is how far out
+// they go, in map units. The same number of strokes per area at any level
+// of detail.
+function seaStrokes(h, width) {
+    var mesh = h.mesh;
+    var spacing = Math.sqrt(area(mesh) / h.length);
+    var maxHops = Math.max(1, Math.round(width / spacing));
+    // How many cells out from the coast each sea vertex is
+    var hops = new Int32Array(h.length).fill(-1);
+    var frontier = [];
+    for (var i = 0; i < h.length; i++) {
+        if (h[i] > 0) continue;
+        var nbs = neighbours(mesh, i);
+        for (var j = 0; j < nbs.length; j++) {
+            if (h[nbs[j]] > 0) {
+                hops[i] = 0;
+                frontier.push(i);
+                break;
+            }
+        }
+    }
+    for (var hop = 1; hop <= maxHops && frontier.length; hop++) {
+        var next = [];
+        for (var k = 0; k < frontier.length; k++) {
+            var nbs = neighbours(mesh, frontier[k]);
+            for (var j = 0; j < nbs.length; j++) {
+                var n = nbs[j];
+                if (hops[n] >= 0 || h[n] > 0) continue;
+                hops[n] = hop;
+                next.push(n);
+            }
+        }
+        frontier = next;
+    }
+    var chance = Math.min(1, 16384 / (h.length / area(mesh)));
+    var strokes = [];
+    for (var i = 0; i < h.length; i++) {
+        if (hops[i] < 0 || isnearedge(mesh, i)) continue;
+        var nearness = 1 - hops[i] / (maxHops + 1);
+        if (random() > chance * nearness * nearness) continue;
+        var x = mesh.vxs[i][0];
+        var y = mesh.vxs[i][1];
+        var l = runif(0.01, 0.02);
+        strokes.push([[x - l / 2, y], [x + l / 2, y]]);
+    }
+    return strokes;
+}
+
 export {
     generatePoints, improvePoints, generateGoodPoints, makeMesh, generateGoodMesh, meshTris,
     isedge, isnearedge, neighbours, distance, quantile,
@@ -854,5 +903,5 @@ export {
     setSeaLevel, cleanCoast, trislope, dropEdge, generateCoast, coastHeightmap,
     cityScore, wreckScore, POIScore, pickCity, pickWreck, pickPOI,
     contour, getRivers, getTerritories, getBorders, mergeSegments, relaxPath,
-    terrCenter, slopeStrokes
+    terrCenter, slopeStrokes, seaStrokes
 };

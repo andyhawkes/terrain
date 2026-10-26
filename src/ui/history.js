@@ -17,7 +17,7 @@ function symbolName(kind) {
     return k ? k.name.toLowerCase() : 'a symbol';
 }
 
-var LAYER_NAMES = {coast: 'coastline', river: 'rivers', border: 'borders', slope: 'slope shading', city: 'cities',
+var LAYER_NAMES = {coast: 'coastline', sea: 'sea shading', river: 'rivers', border: 'borders', slope: 'slope shading', city: 'cities',
     label: 'labels', wreck: 'wrecks', poi: 'points of interest', marker: 'markers'};
 
 function describeStyle(args, previous) {
@@ -32,6 +32,16 @@ function describeStyle(args, previous) {
         if (shown.length === 1 && !hidden.length) return 'Show ' + LAYER_NAMES[shown[0]];
         return 'Change layers';
     }
+    if (args.positions) return 'Move ' + (args.what || 'extras');
+    if (args.grid) return args.grid === 'none' ? 'Remove grid' : args.grid === 'hex' ? 'Hex grid' : 'Square grid';
+    if (args.gridSize) return 'Grid size';
+    if ('gridLabels' in args) return (args.gridLabels ? 'Show' : 'Hide') + ' grid labels';
+    if (args.units) return 'Units: ' + args.units;
+    if (args.perUnit) return 'Map width';
+    if ('scaleBar' in args) return (args.scaleBar ? 'Show' : 'Hide') + ' scale bar';
+    if ('compass' in args) return (args.compass ? 'Show' : 'Hide') + ' compass rose';
+    if (args.compassSize) return 'Compass rose size';
+    if ('title' in args) return args.title ? 'Title: ' + quoted(args.title) : 'Remove title';
     return 'Change style';
 }
 

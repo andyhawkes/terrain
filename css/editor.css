@@ -495,6 +495,17 @@ input[type=checkbox] {
     color: var(--muted);
 }
 
+.control-row .muted {
+    color: var(--muted);
+    min-width: 3.5em;
+}
+
+/* The Extras section's check boxes sit between rows of controls */
+.panel-section .check-list + .control-row,
+.panel-section .control-row + .check-list {
+    margin-top: 10px;
+}
+
 .button-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -579,7 +590,8 @@ input[type=checkbox] {
 }
 
 .tool-label #mapSVG .city-label,
-.tool-label #mapSVG .region-label {
+.tool-label #mapSVG .region-label,
+.tool-label #mapSVG .layer-extras .title-text {
     cursor: text;
 }
 
@@ -587,6 +599,7 @@ input[type=checkbox] {
 .tool-label #mapSVG .region-label:hover,
 .tool-label #mapSVG .note-label:hover,
 .tool-label #mapSVG .layer-city .city:hover,
+.tool-label #mapSVG .layer-extras .title-text:hover,
 .tool-note #mapSVG .note-label:hover {
     filter: drop-shadow(0 0 3px var(--accent)) drop-shadow(0 0 2px var(--accent));
 }
@@ -597,7 +610,8 @@ input[type=checkbox] {
 .tool-move #mapSVG .layer-marker .placedMarker,
 .tool-move #mapSVG .city-label,
 .tool-move #mapSVG .region-label,
-.tool-move #mapSVG .note-label {
+.tool-move #mapSVG .note-label,
+.tool-move #mapSVG .layer-extras .ornament {
     cursor: grab;
 }
 
@@ -607,7 +621,8 @@ input[type=checkbox] {
 .tool-move #mapSVG .layer-marker .placedMarker:hover,
 .tool-move #mapSVG .city-label:hover,
 .tool-move #mapSVG .region-label:hover,
-.tool-move #mapSVG .note-label:hover {
+.tool-move #mapSVG .note-label:hover,
+.tool-move #mapSVG .layer-extras .ornament:hover {
     filter: drop-shadow(0 0 3px var(--move)) drop-shadow(0 0 2px var(--move));
 }
 
@@ -617,7 +632,8 @@ input[type=checkbox] {
 .tool-delete #mapSVG .layer-marker .placedMarker,
 .tool-delete #mapSVG .city-label,
 .tool-delete #mapSVG .region-label,
-.tool-delete #mapSVG .note-label {
+.tool-delete #mapSVG .note-label,
+.tool-delete #mapSVG .layer-extras .ornament {
     cursor: pointer;
 }
 
@@ -627,7 +643,8 @@ input[type=checkbox] {
 .tool-delete #mapSVG .layer-marker .placedMarker:hover,
 .tool-delete #mapSVG .city-label:hover,
 .tool-delete #mapSVG .region-label:hover,
-.tool-delete #mapSVG .note-label:hover {
+.tool-delete #mapSVG .note-label:hover,
+.tool-delete #mapSVG .layer-extras .ornament:hover {
     filter: drop-shadow(0 0 3px var(--danger)) drop-shadow(0 0 2px var(--danger));
 }
 
