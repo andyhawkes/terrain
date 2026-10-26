@@ -8,7 +8,7 @@ import {meshTris} from '../core/terrain.js';
 import {itemPos} from '../core/steps.js';
 import {getTheme, fontChoice, backgroundChoice} from '../themes/index.js';
 import {themeCSS, labelText, hersheyPath, hersheyBox, dashPaths} from './theme.js';
-import {extrasChoice, squareGrid, hexGrid, scaleBar, defaultPosition, formatDistance} from './extras.js';
+import {extrasChoice, squareGrid, hexGrid, scaleBar, defaultPosition, formatDistance, wrapLines} from './extras.js';
 
 export var SCALE = 1000;
 var extent = {width: 1, height: 1};
@@ -401,16 +401,6 @@ function appendText(g, family, cls, text, x, y, size, anchor) {
         .text(text);
 }
 
-function textWidth(node, family, text, size) {
-    if (family.hershey) {
-        var b = hersheyBox(family.hershey, text, 0, 0, size, 'start');
-        return b.x1 - b.x0;
-    }
-    var width = node.getComputedTextLength ? node.getComputedTextLength() : 0;
-    // Not laid out yet (e.g. the map is hidden): an estimate
-    return width || 0.6 * size * text.length;
-}
-
 function polylinePath(lines) {
     return lines.map(function (line) {
         return line.map(function (p, i) {
@@ -496,18 +486,50 @@ var ORNAMENTS = {
         appendText(g, font.region, 'extras-label compass-north', 'N', 0, -52, 16, 'middle');
         g.selectAll('path').attr('vector-effect', 'non-scaling-stroke');
     },
+    // The box fits the title, up to half the map's width; longer titles wrap
     title: function (g, extras, extent, font) {
-        var size = 30;
-        var pad = 12;
-        var frame = g.append('g');
-        var text = appendText(g, font.region, 'title-text', extras.title, pad, 0, size, 'start');
-        var width = textWidth(text.node(), font.region, extras.title, size) + 2 * pad;
-        frame.append('rect').attr('class', 'extras-paper')
-            .attr('x', 0).attr('y', -size - pad / 2).attr('width', width).attr('height', size + 1.5 * pad);
-        frame.append('rect').attr('class', 'extras-line')
-            .attr('x', 4).attr('y', -size - pad / 2 + 4).attr('width', width - 8).attr('height', size + 1.5 * pad - 8);
+        var maxWidth = SCALE * extent.width / 2;
+        layoutTitle(g, extras.title, font.region, maxWidth);
+        // Text is measured in whatever font is showing, so measure again
+        // once the theme's own font has loaded
+        if (!font.region.hershey && typeof document !== 'undefined' && document.fonts) {
+            document.fonts.load(TITLE_SIZE + 'px ' + font.region, extras.title).then(function () {
+                if (g.node().isConnected) layoutTitle(g, extras.title, font.region, maxWidth);
+            });
+        }
     }
 };
+
+var TITLE_SIZE = 30;
+var TITLE_PAD = 14;
+
+// Draws the title box with its top-left corner at (0, 0)
+function layoutTitle(g, title, family, maxWidth) {
+    g.selectAll('*').remove();
+    var size = TITLE_SIZE;
+    var pad = TITLE_PAD;
+    var probe = family.hershey ? null : g.append('text').attr('class', 'title-text').style('font-size', size + 'px');
+    var wrapped = wrapLines(title, function (text) {
+        if (family.hershey) {
+            var b = hersheyBox(family.hershey, text, 0, 0, size, 'start');
+            return b.x1 - b.x0;
+        }
+        probe.text(text);
+        // Not laid out (e.g. the map is hidden): an estimate
+        return probe.node().getComputedTextLength() || 0.6 * size * text.length;
+    }, maxWidth - 2 * pad);
+    if (probe) probe.remove();
+    var lineHeight = 1.2 * size;
+    var width = Math.max.apply(null, wrapped.widths.concat([size])) + 2 * pad;
+    var height = 2 * pad + (wrapped.lines.length - 1) * lineHeight + size;
+    g.append('rect').attr('class', 'extras-paper')
+        .attr('x', 0).attr('y', 0).attr('width', width).attr('height', height);
+    g.append('rect').attr('class', 'extras-line')
+        .attr('x', 4).attr('y', 4).attr('width', width - 8).attr('height', height - 8);
+    wrapped.lines.forEach(function (line, i) {
+        appendText(g, family, 'title-text', line, width / 2, pad + 0.8 * size + i * lineHeight, size, 'middle');
+    });
+}
 
 function drawExtras(svg, state, theme, font) {
     var extras = extrasChoice(theme, state.style, state.params);
@@ -517,7 +539,8 @@ function drawExtras(svg, state, theme, font) {
         return id === 'title' ? !!extras.title : extras[id];
     });
     var data = shown.map(function (id) {
-        return {id: id, kind: 'ornament', pos: extras.positions[id] || defaultPosition(id, extent, SCALE, extras.compassSize),
+        return {id: id, kind: 'ornament', text: id === 'title' ? extras.title : null,
+            pos: extras.positions[id] || defaultPosition(id, extent, SCALE, extras.compassSize),
             scale: id === 'compass' ? extras.compassSize : 1};
     });
     var groups = join(svg, 'extras', 'g', 'ornament', data, function (d) {return d.id})

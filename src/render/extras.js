@@ -154,6 +154,27 @@ export function defaultPosition(id, extent, scale, compassSize) {
     return {
         scaleBar: [-w + 0.07, h - 0.06],
         compass: [w - 0.03 - reach, -h + 0.03 + reach],
-        title: [-w + 0.05, -h + 0.07]
+        // The title box's top-left corner
+        title: [-w + 0.04, -h + 0.04]
     }[id];
+}
+
+// Splits text into lines no wider than maxWidth, breaking between words
+// (a word longer than that gets a line to itself). measure gives a line's
+// width. Returns the lines and their widths.
+export function wrapLines(text, measure, maxWidth) {
+    var words = text.trim().split(/\s+/).filter(Boolean);
+    var lines = [];
+    var line = '';
+    words.forEach(function (word) {
+        var longer = line ? line + ' ' + word : word;
+        if (line && measure(longer) > maxWidth) {
+            lines.push(line);
+            line = word;
+        } else {
+            line = longer;
+        }
+    });
+    if (line) lines.push(line);
+    return {lines: lines, widths: lines.map(measure)};
 }
