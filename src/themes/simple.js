@@ -63,8 +63,9 @@ export default {
         fillOpacity: 1
     },
 
-    // Point symbols. Each item picks a variant using its own random number,
-    // so a theme can offer any number of variants.
+    // Point symbols. Each item has a variant number: random for generated
+    // items, or the one the user picked. Variant n draws the (n mod count)th
+    // drawing, so a theme can offer any number of variants.
     //   {kind: 'text', chars: [...], size, font}: a character from a font
     //   {kind: 'path', variants: [[{d, cls}...]...], transform}: SVG paths
     //     drawn around (0, 0), optionally transformed (e.g. scaled); cls lets
@@ -78,6 +79,11 @@ export default {
         wreck: {kind: 'path', transform: 'scale(1.5)', variants: [[
             {d: 'M-16,0 Q0,9 16,0 Z', cls: 'solid'},
             {d: 'M1,0 L6,-17 M6,-17 L13,-12', cls: 'line'},
+            {d: 'M-20,8 q5,-4 10,0 t10,0 t10,0 t10,0', cls: 'line'}
+        ], [
+            {d: 'M-3,-14 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 M0,-11 L0,12 M-7,-5 L7,-5 M-12,4 Q-10,12 0,12 Q10,12 12,4', cls: 'line'}
+        ], [
+            {d: 'M-12,4 L8,-14 Q15,-4 4,4 Z', cls: 'solid'},
             {d: 'M-20,8 q5,-4 10,0 t10,0 t10,0 t10,0', cls: 'line'}
         ]]},
         // One spec per marker type: x, danger, flag, camp, star

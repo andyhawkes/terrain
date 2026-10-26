@@ -2,7 +2,7 @@
 // "pointer" means no editing. Some tools show options above the map.
 import * as d3 from 'd3';
 import * as R from '../render/svg.js';
-import {MARKER_TYPES} from '../core/steps.js';
+import {MARKER_TYPES, SYMBOL_KINDS} from '../core/steps.js';
 import {getTheme} from '../themes/index.js';
 import {editText, close as closeEditor} from './textEditor.js';
 
@@ -15,6 +15,8 @@ export var TOOLS = [
         hint: 'Click a name or your own text to change it. Clicking a city lets you name it even if its label is hidden.'},
     {id: 'note', icon: 'title', name: 'Add text', key: 't',
         hint: 'Click the map to write something there, like "Here be dragons".'},
+    {id: 'symbol', icon: 'sailing', name: 'Add symbol', key: 's',
+        hint: 'Click the map to add the wreck or point of interest chosen above the map. Click an existing one to swap it for the chosen symbol.'},
     {id: 'marker', icon: 'location_on', name: 'Add marker', key: 'm',
         hint: 'Click the map to add a marker. Choose its kind and colour above the map.'},
     {id: 'delete', icon: 'delete', name: 'Delete', key: 'd',
@@ -70,13 +72,48 @@ function markerPreview(button, spec) {
     });
 }
 
+// A preview of one of the theme's wreck or point-of-interest drawings, styled
+// as on the map and fitted to the button
+function symbolPreview(button, spec, parts, i) {
+    var svg = button.append('svg').attr('aria-hidden', true);
+    var outer = svg.append('g');
+    if (spec.kind === 'text') {
+        outer.append('text')
+            .attr('text-anchor', 'middle')
+            .attr('fill', 'currentColor').attr('stroke', 'none')
+            .style('font-size', spec.size + 'px')
+            .style('font-family', spec.font || null)
+            .text(spec.chars[i]);
+    } else {
+        var g = outer.append('g').attr('transform', spec.transform || null);
+        spec.variants[i].forEach(function (part) {
+            var path = g.append('path').attr('d', part.d);
+            var style = parts[part.cls] || {};
+            Object.keys(style).forEach(function (prop) {path.attr(prop, style[prop])});
+        });
+    }
+    var box = outer.node().getBBox();
+    var side = Math.max(box.width, box.height) + 4;
+    svg.attr('viewBox', [box.x + box.width / 2 - side / 2, box.y + box.height / 2 - side / 2, side, side].join(' '));
+}
+
+function variantCount(spec) {
+    return spec.kind === 'text' ? spec.chars.length : spec.variants.length;
+}
+
+function isSymbol(d) {
+    return d && d.id != null && SYMBOL_KINDS.some(function (k) {return k.id === d.kind});
+}
+
 // stage gets a tool-<id> class; onChange is called with the new tool
 export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
     var active = 'pointer';
     var markerType = 'x';
     var markerColor = MARKER_COLORS[0].color;
+    var symbolKind = 'wreck';
+    var symbolVariant = {wreck: 0, poi: 0};
     var buttons = {};
-    var shownTheme = null;
+    var shown = null;
 
     TOOLS.forEach(function (tool) {
         buttons[tool.id] = strip.append('button')
@@ -98,26 +135,83 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
         onChange(TOOLS.find(function (t) {return t.id === id}));
     }
 
-    // Marker kinds, drawn with the current theme's symbols
+    // Options above the map for the marker and symbol tools, drawn with the
+    // current theme's symbols. Rebuilt when the tool or theme changes.
     function showOptions() {
-        optionsBar.attr('hidden', active === 'marker' ? null : true);
-        if (active !== 'marker') return;
-        var theme = getTheme(doc.state.style.theme);
-        if (shownTheme === theme) {
-            updateOptions();
+        var hasOptions = active === 'marker' || active === 'symbol';
+        optionsBar.attr('hidden', hasOptions ? null : true);
+        if (!hasOptions) {
+            shown = null;
             return;
         }
-        shownTheme = theme;
+        var theme = getTheme(doc.state.style.theme);
+        var key = active + ' ' + symbolKind;
+        if (shown && shown.theme === theme && shown.key === key) {
+            if (active === 'marker') updateOptions();
+            else updateSymbolOptions();
+            return;
+        }
+        shown = {theme: theme, key: key};
         optionsBar.html('');
+        if (active === 'marker') markerOptions(theme);
+        else symbolOptions(theme);
+    }
+
+    // Wreck or point of interest, then which drawing
+    function symbolOptions(theme) {
+        optionsBar.append('span').attr('class', 'tool-options-label').text('Symbol');
+        SYMBOL_KINDS.forEach(function (kind) {
+            optionsBar.append('button')
+                .datum(kind)
+                .attr('class', 'symbol-kind')
+                .on('click', function () {
+                    symbolKind = kind.id;
+                    showOptions();
+                })
+                .append('span').text(kind.name);
+        });
+        var spec = theme.symbols[symbolKind];
+        var count = variantCount(spec);
+        optionsBar.append('span').attr('class', 'tool-options-label tool-options-gap').text('Style');
+        var name = SYMBOL_KINDS.find(function (k) {return k.id === symbolKind}).name;
+        for (var i = 0; i < count; i++) {
+            var b = optionsBar.append('button')
+                .datum(i)
+                .attr('class', 'symbol-variant')
+                .attr('title', name + ' ' + (i + 1))
+                .attr('aria-label', name + ' ' + (i + 1))
+                .on('click', function (n) {
+                    symbolVariant[symbolKind] = n;
+                    updateSymbolOptions();
+                });
+            symbolPreview(b, spec, theme.parts, i);
+        }
+        updateSymbolOptions();
+    }
+
+    function updateSymbolOptions() {
+        var count = variantCount(getTheme(doc.state.style.theme).symbols[symbolKind]);
+        var chosen = symbolVariant[symbolKind] % count;
+        optionsBar.selectAll('.symbol-kind')
+            .classed('active', function (k) {return k.id === symbolKind})
+            .attr('aria-pressed', function (k) {return k.id === symbolKind});
+        optionsBar.selectAll('.symbol-variant')
+            .classed('active', function (n) {return n === chosen})
+            .attr('aria-pressed', function (n) {return n === chosen});
+    }
+
+    // Marker kinds and colours
+    function markerOptions(theme) {
         optionsBar.append('span').attr('class', 'tool-options-label').text('Marker');
         MARKER_TYPES.forEach(function (type) {
             var b = optionsBar.append('button')
                 .datum(type)
+                .attr('class', 'marker-type')
                 .attr('title', type.name)
                 .classed('active', type.id === markerType)
                 .on('click', function () {
                     markerType = type.id;
-                    showOptions();
+                    updateOptions();
                 });
             markerPreview(b, theme.symbols.markers[type.id]);
             b.append('span').text(type.name);
@@ -153,7 +247,7 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
 
     // Highlight the chosen kind and colour; previews show the colour too
     function updateOptions() {
-        optionsBar.selectAll('button[title]').filter(function (d) {return d && d.id})
+        optionsBar.selectAll('.marker-type')
             .classed('active', function (t) {return t.id === markerType})
             .select('svg').style('color', markerColor);
         var preset = MARKER_COLORS.some(function (c) {return c.color === markerColor});
@@ -191,7 +285,11 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
     svg.on('click', function () {
         var target = d3.event.target;
         var d = d3.select(target).datum();
-        if (active === 'marker') {
+        if (active === 'symbol') {
+            var variant = symbolVariant[symbolKind] % variantCount(getTheme(doc.state.style.theme).symbols[symbolKind]);
+            if (isSymbol(d)) doc.dispatch('setSymbol', {id: d.id, kind: symbolKind, variant: variant, what: nameOf(d)});
+            else doc.dispatch('addSymbol', {pos: mapPoint(this), kind: symbolKind, variant: variant});
+        } else if (active === 'marker') {
             doc.dispatch('addMarker', {pos: mapPoint(this), type: markerType, color: markerColor});
         } else if (active === 'note') {
             if (d && d.kind === 'note') {

@@ -1,6 +1,6 @@
 // The History panel: every step that built the map, in order. Click one to
 // go back to it; Replay plays the current map's steps back from its start.
-import {MARKER_TYPES} from '../core/steps.js';
+import {MARKER_TYPES, SYMBOL_KINDS} from '../core/steps.js';
 import {getTheme} from '../themes/index.js';
 
 function plural(n, one, many) {
@@ -10,6 +10,11 @@ function plural(n, one, many) {
 
 function quoted(text) {
     return '“' + (text.length > 24 ? text.slice(0, 23) + '…' : text) + '”';
+}
+
+function symbolName(kind) {
+    var k = SYMBOL_KINDS.find(function (s) {return s.id === kind});
+    return k ? k.name.toLowerCase() : 'a symbol';
 }
 
 var LAYER_NAMES = {coast: 'coastline', river: 'rivers', border: 'borders', slope: 'slope shading', city: 'cities',
@@ -57,6 +62,8 @@ export function describeStep(step, previousHidden) {
     case 'addMarker':
         var type = MARKER_TYPES.find(function (t) {return t.id === (a.type || 'x')});
         return {text: 'Add marker', detail: type ? type.name : null, color: a.color};
+    case 'addSymbol': return {text: 'Add ' + symbolName(a.kind)};
+    case 'setSymbol': return {text: 'Change' + what, detail: 'to ' + symbolName(a.kind) + ' ' + ((a.variant || 0) + 1)};
     case 'addNote': return {text: 'Add text', detail: quoted(a.text || '')};
     case 'moveItem': return {text: 'Move' + what};
     case 'moveLabel': return {text: 'Move label' + what};

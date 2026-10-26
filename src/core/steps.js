@@ -60,6 +60,17 @@ export var MARKER_TYPES = [
     {id: 'star', name: 'Landmark'}
 ];
 
+// Kinds of symbol the user can place, and the list each kind is kept in.
+// Which drawing a symbol uses is its variant, counted within the theme's set.
+export var SYMBOL_KINDS = [
+    {id: 'wreck', list: 'wrecks', name: 'Wreck'},
+    {id: 'poi', list: 'poi', name: 'Point of interest'}
+];
+
+function symbolKind(id) {
+    return SYMBOL_KINDS.find(function (k) {return k.id === id}) || SYMBOL_KINDS[0];
+}
+
 // Lists of map items that can be moved or deleted
 export var ITEM_LISTS = ['cities', 'wrecks', 'poi', 'markers', 'notes'];
 
@@ -300,6 +311,33 @@ export var steps = {
             var markers = state.markers.concat([{id: state.nextId, pos: args.pos, type: args.type || 'x',
                 color: args.color || null}]);
             return Object.assign({}, state, {markers: markers, nextId: state.nextId + 1});
+        }
+    },
+    // A wreck or point of interest placed by hand, rather than by the terrain
+    addSymbol: {
+        label: 'Add symbol',
+        apply: function (state, args) {
+            var list = symbolKind(args.kind).list;
+            var changes = {nextId: state.nextId + 1};
+            changes[list] = state[list].concat([{id: state.nextId, vx: null, pos: args.pos, variant: args.variant || 0}]);
+            return Object.assign({}, state, changes);
+        }
+    },
+    // Swaps the drawing used for a wreck or point of interest. Changing its
+    // kind moves it to the other list, keeping its id and position.
+    setSymbol: {
+        label: 'Change symbol',
+        apply: function (state, args) {
+            var found = findItem(state, args.id);
+            if (!found || !SYMBOL_KINDS.some(function (k) {return k.list === found.list})) return state;
+            var item = Object.assign({}, found.item, {variant: args.variant || 0});
+            var list = args.kind ? symbolKind(args.kind).list : found.list;
+            if (list !== found.list) item.pos = itemPos(state, found.item);
+            var changes = {};
+            changes[found.list] = state[found.list].filter(function (i) {return i.id !== args.id});
+            if (list === found.list) changes[list] = state[list].map(function (i) {return i.id === args.id ? item : i});
+            else changes[list] = state[list].concat([item]);
+            return Object.assign({}, state, changes);
         }
     },
     addNote: {

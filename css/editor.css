@@ -301,6 +301,15 @@ input[type=checkbox] {
     stroke-linecap: round;
 }
 
+.tool-options button.symbol-variant {
+    padding: 4px;
+}
+
+.tool-options button.symbol-variant svg {
+    width: 28px;
+    height: 28px;
+}
+
 .tool-options button.active {
     background: var(--accent-soft);
     border-color: var(--accent);
@@ -541,8 +550,20 @@ input[type=checkbox] {
     background: white;
 }
 
-.tool-marker #mapSVG {
+.tool-marker #mapSVG,
+.tool-symbol #mapSVG {
     cursor: crosshair;
+}
+
+/* Clicking an existing wreck or point of interest swaps its symbol */
+.tool-symbol #mapSVG .layer-wreck .wreck,
+.tool-symbol #mapSVG .layer-poi .poi {
+    cursor: pointer;
+}
+
+.tool-symbol #mapSVG .layer-wreck .wreck:hover,
+.tool-symbol #mapSVG .layer-poi .poi:hover {
+    filter: drop-shadow(0 0 3px var(--accent)) drop-shadow(0 0 2px var(--accent));
 }
 
 .tool-note #mapSVG {

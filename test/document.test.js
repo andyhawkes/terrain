@@ -2,6 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {MapDocument} from '../src/core/document.js';
 import {derive} from '../src/core/derive.js';
+import {itemPos} from '../src/core/steps.js';
 
 var small = {npts: 1024, ncities: 6, nterrs: 3};
 
@@ -183,6 +184,36 @@ test('markers have types, and notes can be added, edited, moved and deleted', fu
     assert.deepEqual(doc.state.notes[0], {id: note.id, pos: [0.3, 0.3], text: 'Dig here'});
     doc.dispatch('deleteItem', {id: note.id});
     assert.equal(doc.state.notes.length, 0);
+});
+
+test('wrecks and points of interest can be added by hand and have their symbol changed', function () {
+    var doc = new MapDocument();
+    doc.dispatch('generate', {params: small}, 'seed');
+    var generated = doc.state.wrecks[0];
+    var before = derive(doc.state);
+
+    doc.dispatch('addSymbol', {kind: 'poi', pos: [0.1, 0.2], variant: 2});
+    var poi = doc.state.poi[doc.state.poi.length - 1];
+    assert.deepEqual([poi.pos, poi.variant], [[0.1, 0.2], 2]);
+
+    // Same kind: only the drawing changes
+    doc.dispatch('setSymbol', {id: generated.id, kind: 'wreck', variant: 1});
+    assert.deepEqual(doc.state.wrecks[0], Object.assign({}, generated, {variant: 1}));
+
+    // Other kind: the item moves list, keeping its id and where it was drawn
+    var at = itemPos(doc.state, generated);
+    doc.dispatch('setSymbol', {id: generated.id, kind: 'poi', variant: 0});
+    assert.equal(doc.state.wrecks.length, 0);
+    var moved = doc.state.poi[doc.state.poi.length - 1];
+    assert.deepEqual([moved.id, moved.pos, moved.variant], [generated.id, at, 0]);
+
+    // None of this touches the terrain or labels
+    var after = derive(doc.state);
+    assert.deepEqual(after.labels, before.labels);
+    assert.equal(after.terr, before.terr);
+
+    var copy = MapDocument.fromJSON(JSON.parse(JSON.stringify(doc.toJSON())));
+    assert.equal(fingerprint(copy.state), fingerprint(doc.state));
 });
 
 test('jumping through the history', function () {

@@ -82,10 +82,11 @@ Each phase leaves the app working.
 - Later, for plotting: clear rivers and borders from under labels too, optimise pen travel, set a physical paper size.
 
 ### Phase 4: Tools
-- [x] Tools: Pointer (V), Move (G), Edit text (E), Add text (T), Add marker (M), Delete (D). Esc returns to Pointer. The status bar explains the active tool.
+- [x] Tools: Pointer (V), Move (G), Edit text (E), Add text (T), Add symbol (S), Add marker (M), Delete (D). Esc returns to Pointer. The status bar explains the active tool.
 - [x] Edit text in place with a text box on the map, replacing `prompt()`. Enter saves, Esc cancels. Double-click edits text with Pointer or Move. Clicking a city with Edit text names it even when its label is hidden.
 - [x] Add text: free text anywhere on the map ("Here be dragons"), drawn in the theme's lettering. It can be moved, edited and deleted.
 - [x] Marker types: X marks the spot, Danger, Flag, Camp and Landmark, chosen from a bar above the map. Each theme draws them in its own style, in the colour picked for each marker (black by default; swatches or any custom colour).
+- [x] Add symbol: place a wreck or point of interest by hand, choosing which of the theme's drawings to use from a bar above the map. Clicking an existing wreck or point of interest swaps it for the chosen symbol, which can also turn a wreck into a point of interest or back. Simple and Plotter have three wreck drawings (ship, anchor, sinking ship). A chosen drawing is stored as its number in the theme's set, so another theme with fewer drawings wraps round to one of its own.
 - [x] Symbol parts are styled straight from the theme (`parts`), since CSS can't reach inside SVG `<use>` elements. This also keeps plotter output free of fills.
 
 ### Phase 5: Undo/redo and history
