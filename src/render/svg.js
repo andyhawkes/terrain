@@ -3,7 +3,7 @@
 // setMapSize sets before drawing; text, lines and symbols are sized in SVG
 // user units.
 import * as d3 from 'd3';
-import {derive, seaShading, relief, coastOutlines, smoothCoasts} from '../core/derive.js';
+import {derive, seaShading, relief, coastOutlines, smoothCoasts, regionShapes} from '../core/derive.js';
 import {meshTris} from '../core/terrain.js';
 import {itemPos} from '../core/steps.js';
 import {getTheme, fontChoice, backgroundChoice} from '../themes/index.js';
@@ -36,12 +36,12 @@ export function setMapSize(svg, params) {
 }
 
 // Layers in drawing order; each is a <g> so redraws keep the stacking order
-var LAYERS = ['background', 'field', 'sea', 'river', 'coastLines', 'coast', 'border', 'slope', 'relief', 'grid', 'city', 'wreck', 'poi', 'marker',
+var LAYERS = ['background', 'field', 'tint', 'sea', 'river', 'coastLines', 'coast', 'border', 'slope', 'relief', 'grid', 'city', 'wreck', 'poi', 'marker',
     'label', 'extras'];
 
 // Layers the user can switch off in the Style panel
 export var TOGGLE_LAYERS = [
-    ['coast', 'Coastline'], ['sea', 'Sea shading'], ['river', 'Rivers'], ['border', 'Borders'], ['slope', 'Slope shading'],
+    ['coast', 'Coastline'], ['tint', 'Region colours'], ['sea', 'Sea shading'], ['river', 'Rivers'], ['border', 'Borders'], ['slope', 'Slope shading'],
     ['relief', 'Hills and forests'],
     ['city', 'Cities'], ['label', 'Labels'], ['wreck', 'Wrecks'], ['poi', 'Points of interest'],
     ['marker', 'Markers']
@@ -240,12 +240,70 @@ function drawStrokes(svg, layerName, strokes, keys) {
         .attr('fill', 'none');
 }
 
+// Towns are circles. Capitals are too, unless the theme has a symbol for
+// them (symbols.capital), such as a castle.
 export function drawCities(svg, state, theme) {
     var n = state.params.nterrs;
-    join(svg, 'city', 'circle', 'city', itemData(state, 'cities', 'city'), byId)
+    var spec = theme.symbols.capital;
+    var cities = itemData(state, 'cities', 'city');
+    cities.forEach(function (d, i) {d.capital = i < n});
+    var dots = spec ? cities.filter(function (d) {return !d.capital}) : cities;
+    join(svg, 'city', 'circle', 'city', dots, byId)
         .attr('cx', function (d) {return SCALE*d.pos[0]})
         .attr('cy', function (d) {return SCALE*d.pos[1]})
-        .attr('r', function (d, i) {return i < n ? theme.cities.capitalRadius : theme.cities.townRadius});
+        .attr('r', function (d) {return d.capital ? theme.cities.capitalRadius : theme.cities.townRadius});
+    if (spec) ensureSymbols(svg, 'capital', spec, theme.parts);
+    var prefix = '#' + svg.attr('id') + '-capital';
+    join(svg, 'city', 'use', 'capital-symbol', spec ? cities.filter(function (d) {return d.capital}) : [], byId)
+        .attr('x', function (d) {return SCALE*d.pos[0]})
+        .attr('y', function (d) {return SCALE*d.pos[1]})
+        .attr('href', function (d) {return prefix + (d.id % spec.variants.length)});
+}
+
+// Each region's land washed in a colour, for themes that tint regions. The
+// layer as a whole is see-through, so where cells meet they don't show
+// darker; each cell is outlined in its own colour to close the hairline
+// gaps between them. With watercolour, a filter roughens the edges and
+// makes the colour uneven, like pigment.
+function drawTints(svg, state, d, theme) {
+    var spec = theme.regionTints;
+    var capitals = state.cities.slice(0, state.params.nterrs).map(function (c) {return c.vx});
+    if (unchanged(svg, 'tint', [state.h, d.terr, spec, capitals.join(','), SCALE])) return;
+    var g = layer(svg, 'tint');
+    g.selectAll('*').remove();
+    if (!spec) return;
+    if (spec.watercolour) ensureWatercolour(svg);
+    var wash = g.append('g').attr('opacity', spec.opacity)
+        .attr('filter', spec.watercolour ? 'url(#' + svg.attr('id') + '-watercolour)' : null);
+    regionShapes(state.h, d.terr, capitals).forEach(function (cells, k) {
+        var color = spec.colors[k % spec.colors.length];
+        wash.append('path').attr('class', 'region-tint')
+            .attr('d', cells.map(function (c) {
+                return 'M' + coord(c[0][0]) + ',' + coord(c[0][1]) + 'L' + coord(c[1][0]) + ',' + coord(c[1][1]) +
+                    'L' + coord(c[2][0]) + ',' + coord(c[2][1]) + 'Z';
+            }).join(''))
+            // Inline, as the theme's stylesheet sets every path's fill and stroke
+            .style('fill', color).style('stroke', color).style('stroke-width', '0.8px').style('stroke-linejoin', 'round');
+    });
+}
+
+// Rough edges and uneven colour, like a watercolour wash
+function ensureWatercolour(svg) {
+    var id = svg.attr('id') + '-watercolour';
+    var defs = svg.select('defs.symbols');
+    if (!defs.select('#' + id).empty()) return;
+    var f = defs.append('filter').attr('id', id).attr('x', '-5%').attr('y', '-5%').attr('width', '110%').attr('height', '110%');
+    f.append('feTurbulence').attr('type', 'fractalNoise').attr('baseFrequency', 0.035).attr('numOctaves', 3)
+        .attr('seed', 3).attr('result', 'edges');
+    f.append('feDisplacementMap').attr('in', 'SourceGraphic').attr('in2', 'edges').attr('scale', 9)
+        .attr('xChannelSelector', 'R').attr('yChannelSelector', 'G').attr('result', 'rough');
+    f.append('feGaussianBlur').attr('in', 'rough').attr('stdDeviation', 1.2).attr('result', 'soft');
+    f.append('feTurbulence').attr('type', 'fractalNoise').attr('baseFrequency', 0.012).attr('numOctaves', 2)
+        .attr('seed', 8).attr('result', 'pigment');
+    // Pigment strength between about 55% and 100%
+    f.append('feColorMatrix').attr('in', 'pigment').attr('type', 'matrix')
+        .attr('values', '0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.9 0.45').attr('result', 'blotches');
+    f.append('feComposite').attr('in', 'soft').attr('in2', 'blotches').attr('operator', 'in');
 }
 
 // Lines out at sea following the coast, for themes that draw them
@@ -412,6 +470,7 @@ export function drawMap(svg, state) {
     var t = applyTheme(svg, state.style);
     var theme = t.theme;
     drawBackground(svg, t.background);
+    drawTints(svg, state, d, theme);
     drawStrokes(svg, 'sea', function () {
         return theme.seaShading ? seaShading(state.h) : [];
     }, [state.h, !!theme.seaShading]);

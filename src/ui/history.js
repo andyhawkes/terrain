@@ -17,7 +17,7 @@ function symbolName(kind) {
     return k ? k.name.toLowerCase() : 'a symbol';
 }
 
-var LAYER_NAMES = {coast: 'coastline', sea: 'sea shading', relief: 'hills and forests', river: 'rivers', border: 'borders', slope: 'slope shading', city: 'cities',
+var LAYER_NAMES = {coast: 'coastline', tint: 'region colours', sea: 'sea shading', relief: 'hills and forests', river: 'rivers', border: 'borders', slope: 'slope shading', city: 'cities',
     label: 'labels', wreck: 'wrecks', poi: 'points of interest', marker: 'markers'};
 
 function describeStyle(args, previous) {

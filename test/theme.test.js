@@ -38,7 +38,8 @@ test('every theme has what the renderer needs', function () {
         // Symbol parts are styled from theme.parts, not CSS, so every part needs one
         var relief = theme.symbols.relief;
         var specs = [theme.symbols.poi, theme.symbols.wreck].concat(Object.values(theme.symbols.markers))
-            .concat(relief ? [relief.mountain, relief.hill, relief.tree] : []);
+            .concat(relief ? [relief.mountain, relief.hill, relief.tree] : [])
+            .concat(theme.symbols.capital ? [theme.symbols.capital] : []);
         specs.filter(function (spec) {return spec.kind === 'path'}).forEach(function (spec) {
             spec.variants.forEach(function (parts) {
                 parts.forEach(function (part) {

@@ -13,4 +13,6 @@ import '@fontsource/black-ops-one/400.css';
 import '@fontsource/share-tech-mono/400.css';
 import '@fontsource/uncial-antiqua/400.css';
 import '@fontsource/almendra/400.css';
+import '@fontsource/marcellus-sc/400.css';
+import '@fontsource/cormorant-garamond/600.css';
 import '../css/fonts.css';

@@ -52,6 +52,10 @@ export default {
 
     borderDash: [6, 5],
 
+    // regionTints: {colors: [...], opacity, watercolour} washes each
+    // region's land in a colour (one per region, in turn), optionally with a
+    // watercolour effect (see throneish.js)
+
     // smoothCoast: true draws the coastline smoothed, rather than following
     // every corner of the grid (see underhill.js)
 

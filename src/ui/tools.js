@@ -23,7 +23,7 @@ export var TOOLS = [
         hint: 'Click a place, symbol, marker or text to remove it. Clicking a city or region name hides the name.'}
 ];
 
-var DRAGGABLE = '.layer-city .city, .layer-wreck .wreck, .layer-poi .poi, .layer-marker .placedMarker, ' +
+var DRAGGABLE = '.layer-city .city, .layer-city .capital-symbol, .layer-wreck .wreck, .layer-poi .poi, .layer-marker .placedMarker, ' +
     '.city-label, .region-label, .note-label, .layer-extras .ornament';
 
 var ORNAMENT_NAMES = {scaleBar: 'the scale bar', compass: 'the compass rose', title: 'the title'};

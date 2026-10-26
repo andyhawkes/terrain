@@ -67,6 +67,31 @@ function village() {
     }
 }
 
+// Castles and kingdoms: hard, old compounds
+var REALM = {
+    firsts: ['Storm', 'Iron', 'Winter', 'High', 'Red', 'Raven', 'Eagle', 'Grey', 'Black', 'Wolf', 'Dragon',
+        'Sun', 'Frost', 'Thorn', 'Bitter', 'Salt', 'Stone', 'Silver', 'Gold', 'Night', 'Ash', 'Bone',
+        'Bright', 'Dusk', 'Ember', 'Crow', 'Hawk', 'Blood', 'Shadow', 'Wind', 'Cold', 'Gull', 'Oak', 'Rose'],
+    seconds: ['hold', 'fell', 'watch', 'keep', 'garden', 'gate', 'rock', 'haven', 'spire', 'reach', 'mere',
+        'ford', 'crag', 'march', 'wall', 'bridge', 'holt', 'burgh', 'mark', 'tor', 'hall', 'moor', 'hollow'],
+    keeps: ['Keep', 'Hall', 'Tower', 'Castle', 'Fort', 'Watch'],
+    adjectives: ['Broken', 'Frozen', 'Sunken', 'Burning', 'Silent', 'Golden', 'Iron', 'Red', 'Black', 'Grey',
+        'Shattered', 'Crimson', 'Hollow', 'Bitter', 'Western', 'Eastern', 'Northern', 'Southern'],
+    lands: ['Reach', 'Marches', 'Wastes', 'Vale', 'Isles', 'Coast', 'Mountains', 'Moors', 'Barrens', 'Fens',
+        'Kingdom', 'Dominion', 'Wilds', 'Downs'],
+    // Places from the books and the show, which aren't ours to use
+    avoid: ['Winterfell', 'Casterly Rock', 'Riverrun', 'Highgarden', "Storm's End", "King's Landing",
+        'Dragonstone', 'Sunspear', 'The Eyrie', 'Pyke', 'Harrenhal', 'Oldtown', 'Lannisport', 'White Harbor',
+        'Moat Cailin', 'The Dreadfort', 'Castle Black', 'Eastwatch', 'Bear Island', 'Deepwood Motte',
+        'Last Hearth', 'Karhold', 'Starfall', 'Horn Hill', 'Hightower', 'Greywater Watch', 'Seagard',
+        'The Twins', 'Brightwater Keep', 'Ashford', 'Bitterbridge', 'Raventree Hall', 'Stoney Sept',
+        'Oldstones', 'Stormlands', 'The Stormlands', 'Westerlands', 'The Westerlands', 'The Reach',
+        'The Vale', 'Riverlands', 'The Riverlands', 'Crownlands', 'The Crownlands', 'Iron Islands',
+        'The Iron Islands', 'Dorne', 'Westeros', 'Essos', 'The North', 'Nightfort', 'Shadow Tower',
+        'Ironrath', 'Goldengrove', 'Crakehall', 'Blackhaven', 'Stonehelm', 'Griffin\'s Roost', 'Evenfall Hall',
+        'Ironoaks', 'Redfort', 'Gulltown', 'Wolfswood', 'Frostfangs', 'Oxcross', 'Silverhill', 'Goldtooth']
+};
+
 var STYLES = {
     pirate: {
         city: [
@@ -98,6 +123,20 @@ var STYLES = {
             function () {return choose(SHIRE.firsts) + 'shire'}
         ],
         avoid: SHIRE.avoid
+    },
+    realm: {
+        city: [
+            function () {return choose(REALM.firsts) + choose(REALM.seconds)},
+            function () {return choose(REALM.firsts) + choose(REALM.seconds)},
+            function () {return choose(REALM.firsts) + choose(REALM.seconds) + ' ' + choose(REALM.keeps)},
+            function () {return choose(REALM.firsts) + "'s " + choose(['End', 'Rest', 'Watch', 'Gate'])}
+        ],
+        region: [
+            function () {return 'The ' + choose(REALM.adjectives) + ' ' + choose(REALM.lands)},
+            function () {return 'The ' + choose(REALM.firsts) + 'lands'},
+            function () {return choose(REALM.firsts) + choose(REALM.seconds) + ' ' + choose(['Vale', 'Reach', 'Marches'])}
+        ],
+        avoid: REALM.avoid
     },
     military: {
         city: [

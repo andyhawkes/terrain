@@ -147,11 +147,14 @@ Each phase leaves the app working.
 - [x] Coast lines at sea (`coastLines` in the theme format): lines following the shore at set distances, worked out from each sea point's distance to land and drawn as contours of it, so they always sit on the sea side. They hide with the coastline.
 - [x] A theme can ask for its coastline smoothed (`smoothCoast`), so it doesn't follow every corner of the grid. Only Underhill does; other themes draw coasts as before, and labels are placed around the unsmoothed coast for every theme.
 - [x] **Shire names**, a word-list naming style: Bramblecombe, Little Cloverley, Teaselshire, The Apple Leas. Tolkien's own place names are never used.
-- [ ] **Throne-ish**: aged vellum, Roman capitals, sepia ink, plus:
-  - Region tints: a muted heraldic colour per region.
-  - Theme city symbols: castles for capitals.
-  - Its own naming style ("Stormhold"-type compounds, never the show's names).
-- Nice to have: watercolour-like washes for region tints (soft, uneven edges), for Underhill and Throne-ish.
+- [x] **Throne-ish**: rival kingdoms on aged vellum (or plain vellum):
+  - Lettering: Marcellus SC (or Cinzel) capitals for regions and Cormorant Garamond for towns (OFL).
+  - Sepia ink, sketched mountains and pine woods, and a smoothed coast with one line at sea.
+  - Dashed red borders, with its own ruined towers, battlefields, shrines, standing stones, longships and whirlpools.
+- [x] Region tints (`regionTints` in the theme format): each region's land washed in a colour from the theme's list. The layer is see-through as a whole, so cell edges don't show. A "Region colours" toggle shows for themes that use it.
+- [x] Watercolour washes (`regionTints.watercolour`): an SVG filter roughens the edges and makes the colour uneven, like pigment. It adds no noticeable time to redraws.
+- [x] Castles for capitals (`symbols.capital` in the theme format). They can be moved, renamed and deleted like any city. Other themes keep circles.
+- [x] **Kingdom names**: Stormhold-type compounds, keeps and halls (Embermoor, Greygarden Castle, Night's Rest), and regions like The Shattered Downs or Thornmarch Marches. Place names from the books and the show are never used.
 - Later: typography roles. Fonts per role (regions, towns, capitals, your own text, title), a size control, and case and spacing options, with themes offering presets. A font is only bundled once its licence is confirmed (the OlausMagnus font found online had none listed).
 - Later: Fantasy and Pirate could use relief symbols too.
 

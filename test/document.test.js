@@ -430,7 +430,7 @@ test('pirate and military names come from word lists, unique and repeatable', fu
         doc.dispatch('generate', {params: Object.assign({language: language}, small, {ncities: 40, nterrs: 10})}, seed);
         return doc.state.cities.map(function (c) {return c.name}).concat(doc.state.cities.map(function (c) {return c.regionName}));
     }
-    ['pirate', 'military', 'shire'].forEach(function (language) {
+    ['pirate', 'military', 'shire', 'realm'].forEach(function (language) {
         var all = names(language, 'words');
         assert.deepEqual(names(language, 'words'), all);
         assert.equal(new Set(all).size, all.length, language + ' names repeat');
@@ -440,6 +440,10 @@ test('pirate and military names come from word lists, unique and repeatable', fu
     // Shire names never borrow Tolkien's
     ['Hobbiton', 'Bywater', 'Tuckborough', 'Underhill'].forEach(function (n) {
         assert.ok(names('shire', 'words').indexOf(n) < 0);
+    });
+    // Kingdom names never borrow the books' or show's
+    ['Winterfell', "Storm's End", 'Riverrun', 'The Reach'].forEach(function (n) {
+        assert.ok(names('realm', 'words').indexOf(n) < 0);
     });
 });
 

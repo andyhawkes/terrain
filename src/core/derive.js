@@ -71,6 +71,24 @@ export function smoothCoasts(h) {
     return entry.smoothCoasts;
 }
 
+// The land of each territory, as the grid's triangles, for themes that
+// colour regions (see regionTints in simple.js). terr maps each vertex to its
+// capital's vertex; capitals lists those, in territory order.
+export function regionShapes(h, terr, capitals) {
+    var entry = cacheFor(h);
+    var key = capitals.join(',');
+    if (entry.regions && entry.regions.terr === terr && entry.regions.key === key) return entry.regions.shapes;
+    var tris = T.meshTris(h.mesh);
+    var shapes = capitals.map(function () {return []});
+    for (var i = 0; i < h.length; i++) {
+        if (h[i] <= 0) continue;
+        var k = capitals.indexOf(terr[i]);
+        if (k >= 0) shapes[k].push(tris[i]);
+    }
+    entry.regions = {terr: terr, key: key, shapes: shapes};
+    return shapes;
+}
+
 // Lines following the coast out at sea, for themes that draw them (see
 // coastLines in simple.js); offsets are in map units
 export function coastOutlines(h, offsets) {

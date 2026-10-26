@@ -264,6 +264,7 @@ function stylePanel(body, ctx) {
         // Only some themes shade the sea, or draw hills and forests
         labels.sea.style('display', theme.seaShading ? null : 'none');
         labels.relief.style('display', theme.symbols.relief ? null : 'none');
+        labels.tint.style('display', theme.regionTints ? null : 'none');
         labels.slope.style('display', theme.slopeShading === false ? 'none' : null);
 
         if (!state.params) return;
