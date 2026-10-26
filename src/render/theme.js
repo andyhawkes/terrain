@@ -35,6 +35,10 @@ export function themeCSS(theme, font, background, scope) {
         'S path.city-label { stroke: ' + c.label + '; }',
         'S path.region-label { stroke: ' + c.region + '; }',
         'S text.poi { fill: var(--symbol); stroke: none; filter: none; }',
+        // Fonts that hang below the baseline are raised (translate adds to
+        // any transform, such as a label being dragged)
+        font.rise ? 'S text.city-label, S text.region-label, S text.note-label, S text.grid-label, ' +
+            'S text.extras-label, S text.title-text { translate: 0 -' + font.rise + 'em; }' : '',
         // Extras: grid, scale bar, compass rose, title box
         'S .grid { stroke: ' + (c.grid || c.ink) + '; stroke-width: ' + (w.grid || 1) + 'px; stroke-opacity: ' +
             (theme.extras && theme.extras.gridOpacity || 0.45) + '; }',

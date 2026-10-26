@@ -9,7 +9,8 @@ export default {
     // Label fonts the user can pick from; the first is the default. label is
     // used for cities, region for region names. A value of the form
     // {hershey: 'name'} draws single-stroke Hershey text instead (see plotter.js).
-    // A font can also override labels.regionCase.
+    // A font can also override labels.regionCase, and set rise for fonts
+    // whose letters hang below the baseline: how far to raise text, in ems.
     fonts: [
         {id: 'sans', name: 'Source Sans', label: '"Source Sans 3", sans-serif', region: '"Source Sans 3", sans-serif'},
         {id: 'classic', name: 'Cinzel', label: '"Cinzel", serif', region: '"Cinzel", serif'}

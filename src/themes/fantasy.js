@@ -15,8 +15,10 @@ export default {
     fonts: [
         {id: 'fell', name: 'IM Fell English', label: '"IM Fell English", serif', region: '"IM Fell English SC", serif'},
         {id: 'cinzel', name: 'Cinzel', label: '"Cinzel", serif', region: '"Cinzel", serif'},
-        {id: 'rlyehian', name: 'R\'lyehian', label: '"Rlyehian", fantasy', region: '"Rlyehian", fantasy'},
-        {id: 'rlyehianBase', name: 'R\'lyehian (plain)', label: '"RlyehianBase", fantasy', region: '"RlyehianBase", fantasy'}
+        // These hang below the baseline, so they're raised to sit like other fonts
+        {id: 'rlyehian', name: 'R\'lyehian', label: '"Rlyehian", fantasy', region: '"Rlyehian", fantasy', rise: 0.76},
+        {id: 'rlyehianBase', name: 'R\'lyehian (plain)', label: '"RlyehianBase", fantasy', region: '"RlyehianBase", fantasy',
+            rise: 0.76}
     ],
 
     backgrounds: [

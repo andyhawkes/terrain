@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {niceNumber, columnName, squareGrid, hexGrid, scaleBar, extrasChoice} from '../src/render/extras.js';
+import {niceNumber, columnName, squareGrid, hexGrid, scaleBar, extrasChoice, wrapLines} from '../src/render/extras.js';
 import {defaultStyle} from '../src/core/steps.js';
 import {getTheme} from '../src/themes/index.js';
 
@@ -59,4 +59,16 @@ test('extras follow the theme until the map sets its own', function () {
     // Older maps without these fields get the defaults
     var old = extrasChoice(getTheme('simple'), {theme: 'simple', hidden: []}, params);
     assert.deepEqual([old.grid, old.title, old.positions], ['none', '', {}]);
+});
+
+test('long titles wrap between words, and short ones stay on one line', function () {
+    // Ten units per character
+    function measure(text) {return 10 * text.length}
+    assert.deepEqual(wrapLines('Isles of Woe', measure, 200).lines, ['Isles of Woe']);
+    var wrapped = wrapLines('The Kingdom of the Seven Shattered Isles', measure, 200);
+    assert.deepEqual(wrapped.lines, ['The Kingdom of the', 'Seven Shattered', 'Isles']);
+    assert.deepEqual(wrapped.widths, [180, 150, 50]);
+    // A word too long for any line gets one to itself
+    assert.deepEqual(wrapLines('A Supercalifragilistic Bay', measure, 100).lines, ['A', 'Supercalifragilistic', 'Bay']);
+    assert.deepEqual(wrapLines('  ', measure, 100).lines, []);
 });

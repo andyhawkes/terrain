@@ -53,7 +53,7 @@ function editable(d) {
     if (d.kind === 'regionLabel') return {kind: 'region', text: d.label.text};
     if (d.kind === 'note') return {kind: 'note', text: d.item.text};
     if (d.kind === 'city') return {kind: 'city', text: d.item.name};
-    if (d.kind === 'ornament' && d.id === 'title') return {kind: 'title', text: d3.select('.layer-extras .title-text').text()};
+    if (d.kind === 'ornament' && d.id === 'title') return {kind: 'title', text: d.text};
     return null;
 }
 

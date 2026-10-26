@@ -388,6 +388,21 @@ test('sea shading only goes on the sea, near the coast', function () {
     });
 });
 
+test('pirate and military names come from word lists, unique and repeatable', function () {
+    function names(language, seed) {
+        var doc = new MapDocument();
+        doc.dispatch('generate', {params: Object.assign({language: language}, small, {ncities: 40, nterrs: 10})}, seed);
+        return doc.state.cities.map(function (c) {return c.name}).concat(doc.state.cities.map(function (c) {return c.regionName}));
+    }
+    ['pirate', 'military'].forEach(function (language) {
+        var all = names(language, 'words');
+        assert.deepEqual(names(language, 'words'), all);
+        assert.equal(new Set(all).size, all.length, language + ' names repeat');
+        all.forEach(function (n) {assert.match(n, /^[A-Z0-9][A-Za-z0-9' -]+$/, n)});
+    });
+    assert.ok(names('military', 'words').some(function (n) {return /^(Hill \d{3}|Sector|Zone|Objective)/.test(n)}));
+});
+
 test('jumping through the history', function () {
     var doc = new MapDocument();
     doc.dispatch('newBlank', {npts: 512});

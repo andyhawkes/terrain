@@ -1,5 +1,6 @@
 // Place-name generation, from https://github.com/mewo2/naming-language/
 import {random, choose, randrange, shuffled} from './random.js';
+import {hasWordNames, makeWordName} from './wordnames.js';
 
 function join(list, sep) {
     if (list.length == 0) return '';
@@ -114,6 +115,7 @@ function getWord(lang, key) {
     }
 }
 export function makeName(lang, key) {
+    if (lang.wordStyle) return makeWordName(lang, key);
     key = key || '';
     lang.genitive = lang.genitive || getMorpheme(lang, 'of');
     lang.definite = lang.definite || getMorpheme(lang, 'the');
@@ -229,7 +231,10 @@ export var LANGUAGES = [
     {id: 'arctic', name: 'Greenlandic-ish', C: 'ptkqvsgrmnŋlj', V: 'aiu', F: 'sk',
         structure: 'CVF?', cortho: 'Default', vortho: 'Doubles', minsyll: 2, maxsyll: 4, joiner: ' '},
     {id: 'desert', name: 'Arabic-ish', C: 'tksʃdbqɣxmnlrwj', V: 'aiuAI', L: 'wj',
-        structure: 'CVC', cortho: 'Default', vortho: 'Ácutes', minsyll: 1, maxsyll: 3, joiner: ' '}
+        structure: 'CVC', cortho: 'Default', vortho: 'Ácutes', minsyll: 1, maxsyll: 3, joiner: ' '},
+    // Names from English word lists (see wordnames.js), not made-up sounds
+    {id: 'pirate', name: 'Pirate names', hint: 'Port Blackwater, Dead Man\'s Cove, the Bone Isles', words: true},
+    {id: 'military', name: 'Military codenames', hint: 'Objective Granite, Hill 312, Sector Kilo', words: true}
 ];
 
 function byName(sets, name) {
@@ -240,6 +245,7 @@ function byName(sets, name) {
 export function makeLanguage(id) {
     var preset = LANGUAGES.find(function (l) {return l.id === id});
     if (!preset || preset.id === 'random') return makeRandomLanguage();
+    if (preset.words && hasWordNames(preset.id)) return {wordStyle: preset.id, names: []};
     var lang = makeBasicLanguage();
     lang.noortho = false;
     lang.nomorph = false;
