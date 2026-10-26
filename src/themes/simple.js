@@ -50,6 +50,10 @@ export default {
 
     borderDash: [6, 5],
 
+    // Lines on the sea following the coast, like hand-drawn maps: each at an
+    // offset from the shore, with a stroke width, in SVG units, e.g.
+    // coastLines: [{offset: 6, width: 1}, {offset: 13, width: 0.6}],
+
     // Short strokes on the sea along the coast, like old charts' water-lining
     // (colour colors.sea and width widths.sea, or the coast's and 1)
     seaShading: false,

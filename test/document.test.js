@@ -373,12 +373,13 @@ test('mountains, hills and trees go on land, spaced apart, highest ground first'
     assert.deepEqual(Array.from(kinds).sort(), ['hill', 'mountain', 'tree']);
     // Back to front
     for (var i = 1; i < symbols.length; i++) assert.ok(symbols[i].y >= symbols[i - 1].y);
-    // None closer than the smaller of two spacings
+    // None closer than the smaller of two spacings (symbols vary in size by
+    // up to 15%, and their spacing with them)
     for (var i = 0; i < symbols.length; i++) {
         for (var j = i + 1; j < symbols.length; j++) {
             var a = symbols[i];
             var b = symbols[j];
-            var gap = Math.min(spacing[a.kind], spacing[b.kind]) / 1000;
+            var gap = 0.85 * Math.min(spacing[a.kind], spacing[b.kind]) / 1000;
             assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= gap - 1e-9);
         }
     }

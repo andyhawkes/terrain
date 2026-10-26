@@ -898,9 +898,54 @@ function seaStrokes(h, width) {
     return strokes;
 }
 
+// How far each sea vertex is from the shore, in map units (land is 0)
+function seaDistance(h) {
+    var mesh = h.mesh;
+    var dist = new Float64Array(h.length).fill(Infinity);
+    var queue = new PriorityQueue({comparator: function (a, b) {return dist[a] - dist[b]}});
+    for (var i = 0; i < h.length; i++) {
+        if (h[i] > 0) {
+            dist[i] = 0;
+            continue;
+        }
+        var nbs = neighbours(mesh, i);
+        for (var j = 0; j < nbs.length; j++) {
+            if (h[nbs[j]] > 0) {
+                dist[i] = 0;
+                queue.queue(i);
+                break;
+            }
+        }
+    }
+    while (queue.length) {
+        var u = queue.dequeue();
+        var nbs = neighbours(mesh, u);
+        for (var j = 0; j < nbs.length; j++) {
+            var v = nbs[j];
+            var d = dist[u] + distance(mesh, u, v);
+            if (d < dist[v]) {
+                dist[v] = d;
+                queue.queue(v);
+            }
+        }
+    }
+    return dist;
+}
+
+// Lines on the sea following the coast at the given distances (map units),
+// like the outlines around coasts on hand-drawn maps
+function coastLines(h, offsets) {
+    var dist = seaDistance(h);
+    var field = map(h, function (x, i) {return x > 0 ? 1 : -dist[i]});
+    return offsets.map(function (offset) {
+        return contour(field, -offset).map(relaxPath).map(relaxPath);
+    });
+}
+
 // Mountains, hills and trees drawn as little pictures, the way hand-drawn
 // maps show relief. The highest land gets mountains (bigger on higher
-// peaks), the middle ground hills, and trees grow in clumps on lower land.
+// peaks), so they gather into ranges; the middle ground gets hills, and
+// trees grow in clumps on lower land.
 // Symbols keep their distance from each other, the coast and rivers.
 // spacing gives each kind's distance in SVG units, and scale is SVG units
 // per map unit, so symbols are spaced the same however detailed the grid.
@@ -924,7 +969,7 @@ function reliefSymbols(h, scale, spacing) {
     if (!land.length) return [];
     var heights = land.map(function (i) {return h[i]}).sort(ascending);
     var hills = quantileSorted(heights, 0.6);
-    var peaks = quantileSorted(heights, 0.82);
+    var peaks = quantileSorted(heights, 0.88);
     var top = heights[heights.length - 1];
 
     // Forests clump where a smooth random field is high
@@ -966,7 +1011,8 @@ function reliefSymbols(h, scale, spacing) {
         var v = mesh.vxs[i];
         var kind = h[i] >= peaks ? 'mountain' : h[i] >= hills ? 'hill' : forest(v) > 1.2 ? 'tree' : null;
         if (!kind) return;
-        var size = kind === 'mountain' ? 1 + 0.6 * (h[i] - peaks) / (top - peaks || 1) : 1;
+        // Higher peaks are bigger, and every symbol varies a little
+        var size = (kind === 'mountain' ? 1 + 0.5 * (h[i] - peaks) / (top - peaks || 1) : 1) * runif(0.85, 1.15);
         var gap = spacing[kind] * size / scale;
         if (!clear(v[0], v[1], gap)) return;
         var symbol = {kind: kind, x: v[0], y: v[1], size: size, variant: randrange(1000), gap: gap};
@@ -988,5 +1034,5 @@ export {
     setSeaLevel, cleanCoast, trislope, dropEdge, generateCoast, coastHeightmap,
     cityScore, wreckScore, POIScore, pickCity, pickWreck, pickPOI,
     contour, getRivers, getTerritories, getBorders, mergeSegments, relaxPath,
-    terrCenter, slopeStrokes, seaStrokes, reliefSymbols
+    terrCenter, slopeStrokes, seaStrokes, reliefSymbols, coastLines
 };

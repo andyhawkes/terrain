@@ -11,9 +11,10 @@ var PAPER = '#f3ead2';
 // Relief drawings sit on y = 0 (their base) and are about 22 units wide
 // (mountains are then scaled up a little).
 // mask fills the shape with paper so nearer ones hide those behind; ridge
-// is the outline and shade the hatching on the far side.
-function mountain(outline, shade) {
-    return [{d: outline + ' Z', cls: 'mask'}, {d: outline, cls: 'ridge'}, {d: shade, cls: 'shade'}];
+// is the outline, shadow the solid dark side of a mountain and shade the
+// hatching on a hill.
+function mountain(outline, shadow) {
+    return [{d: outline + ' Z', cls: 'mask'}, {d: shadow, cls: 'shadow'}, {d: outline, cls: 'ridge'}];
 }
 
 export default {
@@ -48,7 +49,7 @@ export default {
     },
 
     widths: {
-        coast: 1.8,
+        coast: 2.6,
         river: 1.1,
         border: 1.4,
         slope: 1,
@@ -60,6 +61,9 @@ export default {
 
     // Relief is drawn with the symbols below, not hatching
     slopeShading: false,
+
+    // A bold coast with fainter lines following it out at sea
+    coastLines: [{offset: 5, width: 1}, {offset: 10, width: 0.6}],
 
     extras: {units: 'miles', perUnit: 300},
 
@@ -81,14 +85,14 @@ export default {
         // Mountains, hills and trees, placed from the terrain (spacing is
         // how far apart each kind is kept, in SVG units)
         relief: {
-            spacing: {mountain: 30, hill: 18, tree: 8},
-            mountain: {kind: 'path', transform: 'scale(1.3)', variants: [
-                mountain('M-11,0 L-3,-13 L-1,-11 L2,-16 L11,0',
-                    'M2,-16 L4,-8 M3.5,-12 L6.5,-5 M5.5,-8 L8.5,-2 M-1,-11 L0,-6'),
-                mountain('M-10,0 L1,-15 L10,0',
-                    'M1,-15 L3,-7 M2.5,-11 L6,-4 M4.5,-7 L8,-2'),
-                mountain('M-12,0 L-5,-12 L-1,-6 L4,-14 L12,0',
-                    'M4,-14 L6,-6 M5.5,-10 L8.5,-4 M-5,-12 L-3.5,-6 M7.5,-6 L10,-2')
+            // Mountains close together, so they read as ranges
+            spacing: {mountain: 17, hill: 18, tree: 8},
+            mountain: {kind: 'path', transform: 'scale(1.25)', variants: [
+                // Tall and narrow, the far side in solid shadow
+                mountain('M-8,0 L-1,-20 L1,-19 L8,0', 'M1,-19 L8,0 L3,0 L2.5,-7 L1.5,-13 Z'),
+                mountain('M-10,0 L-4,-15 L-2,-11 L2,-21 L10,0', 'M2,-21 L10,0 L5,0 L4,-9 Z M-4,-15 L-2,-11 L-2.5,-6 Z'),
+                mountain('M-7,0 L0,-15 L7,0', 'M0,-15 L7,0 L2.5,0 L1.5,-6 Z'),
+                mountain('M-9,0 L-2,-18 L0,-16 L2,-19 L9,0', 'M2,-19 L9,0 L4,0 L3,-8 Z M-2,-18 L0,-16 L-0.5,-10 Z')
             ]},
             hill: {kind: 'path', variants: [
                 [{d: 'M-9,0 Q0,-10 9,0 Z', cls: 'mask'}, {d: 'M-9,0 Q0,-10 9,0', cls: 'ridge'},
@@ -136,8 +140,9 @@ export default {
 
     parts: {
         mask: {fill: PAPER, stroke: 'none'},
-        ridge: {fill: 'none', stroke: INK, 'stroke-width': 1.2},
-        shade: {fill: 'none', stroke: INK, 'stroke-width': 0.8},
+        ridge: {fill: 'none', stroke: INK, 'stroke-width': 1.3},
+        shadow: {fill: INK, stroke: 'none'},
+        shade: {fill: 'none', stroke: INK, 'stroke-width': 1},
         mark: {fill: 'none', stroke: 'currentColor', 'stroke-width': 2.5}
     },
 

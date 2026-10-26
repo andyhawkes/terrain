@@ -137,7 +137,14 @@ Each phase leaves the app working.
   - They're spaced in SVG units, so they look the same at any detail.
   - They're drawn back to front so nearer ones overlap.
   - A theme supplies the drawings (`symbols.relief`) and can turn slope hatching off (`slopeShading: false`). A "Hills and forests" layer toggle shows for themes that use it.
-- [x] **Underhill**: a storybook map in black and red ink on cream paper (or parchment). Uncial Antiqua regions in red with Almendra towns (both OFL), or Almendra throughout. Inked mountains with shading, hills and woods, dashed red borders, and its own towers, ruins, standing stones, caves and wrecks.
+- [x] **Underhill**: a storybook map in black and red ink on cream paper (or parchment), in the style of Tolkien's own maps:
+  - Lettering: Uncial Antiqua regions in red with Almendra towns (both OFL), or Almendra throughout.
+  - Bold mountains: tall, narrow peaks with a solid black shadow side, packed into ranges on the highest ground.
+  - Hills, woods, and dashed red borders.
+  - A heavy coastline with two finer lines following it out at sea.
+  - Its own towers, ruins, standing stones, caves and wrecks.
+- [x] Coast lines at sea (`coastLines` in the theme format): lines following the shore at set distances, worked out from each sea point's distance to land and drawn as contours of it, so they always sit on the sea side. They hide with the coastline.
+- [x] Coastlines are smoothed once, for every theme, so they no longer follow every corner of the grid.
 - [x] **Shire names**, a word-list naming style: Bramblecombe, Little Cloverley, Teaselshire, The Apple Leas. Tolkien's own place names are never used.
 - [ ] **Throne-ish**: aged vellum, Roman capitals, sepia ink, plus:
   - Region tints: a muted heraldic colour per region.

@@ -46,7 +46,8 @@ export function terrainLayers(h) {
     if (!entry.layers) {
         entry.layers = {
             rivers: T.getRivers(h, 0.01),
-            coasts: T.contour(h, 0),
+            // Smoothed once, so it doesn't follow every corner of the grid
+            coasts: T.contour(h, 0).map(T.relaxPath),
             // The hatching is random, but should be the same on every redraw
             slopes: withSeed('slopes', function () {return T.slopeStrokes(h)})
         };
@@ -60,6 +61,17 @@ export function seaShading(h) {
     var entry = cacheFor(h);
     if (!entry.sea) entry.sea = withSeed('sea', function () {return T.seaStrokes(h, 0.05)});
     return entry.sea;
+}
+
+// Lines following the coast out at sea, for themes that draw them (see
+// coastLines in simple.js); offsets are in map units
+export function coastOutlines(h, offsets) {
+    var entry = cacheFor(h);
+    var key = offsets.join(' ');
+    if (!entry.coastLines || entry.coastLines.key !== key) {
+        entry.coastLines = {key: key, lines: T.coastLines(h, offsets)};
+    }
+    return entry.coastLines.lines;
 }
 
 // Mountain, hill and tree symbols, for themes that draw relief that way
