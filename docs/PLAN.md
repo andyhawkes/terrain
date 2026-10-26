@@ -141,10 +141,10 @@ Each phase leaves the app working.
   - Lettering: Uncial Antiqua regions in red with Almendra towns (both OFL), or Almendra throughout.
   - Bold mountains: tall, narrow peaks with a solid black shadow side, packed into ranges on the highest ground.
   - Hills, woods, and dashed red borders.
-  - A heavy coastline with two finer lines following it out at sea.
+  - A heavy, smoothed coastline with two finer lines following it out at sea.
   - Its own towers, ruins, standing stones, caves and wrecks.
 - [x] Coast lines at sea (`coastLines` in the theme format): lines following the shore at set distances, worked out from each sea point's distance to land and drawn as contours of it, so they always sit on the sea side. They hide with the coastline.
-- [x] Coastlines are smoothed once, for every theme, so they no longer follow every corner of the grid.
+- [x] A theme can ask for its coastline smoothed (`smoothCoast`), so it doesn't follow every corner of the grid. Only Underhill does; other themes draw coasts as before, and labels are placed around the unsmoothed coast for every theme.
 - [x] **Shire names**, a word-list naming style: Bramblecombe, Little Cloverley, Teaselshire, The Apple Leas. Tolkien's own place names are never used.
 - [ ] **Throne-ish**: aged vellum, Roman capitals, sepia ink, plus:
   - Region tints: a muted heraldic colour per region.

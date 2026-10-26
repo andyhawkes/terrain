@@ -3,7 +3,7 @@
 // setMapSize sets before drawing; text, lines and symbols are sized in SVG
 // user units.
 import * as d3 from 'd3';
-import {derive, seaShading, relief, coastOutlines} from '../core/derive.js';
+import {derive, seaShading, relief, coastOutlines, smoothCoasts} from '../core/derive.js';
 import {meshTris} from '../core/terrain.js';
 import {itemPos} from '../core/steps.js';
 import {getTheme, fontChoice, backgroundChoice} from '../themes/index.js';
@@ -417,7 +417,7 @@ export function drawMap(svg, state) {
     }, [state.h, !!theme.seaShading]);
     drawPaths(svg, 'river', d.rivers);
     drawCoastLines(svg, state.h, theme);
-    drawPaths(svg, 'coast', d.coasts);
+    drawPaths(svg, 'coast', theme.smoothCoast ? smoothCoasts(state.h) : d.coasts);
     // Plotters ignore dash patterns, so draw each dash as its own line
     var dash = theme.strokeOnly ? theme.borderDash : [];
     drawPaths(svg, 'border', function () {

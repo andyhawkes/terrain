@@ -50,6 +50,9 @@ export default {
 
     borderDash: [6, 5],
 
+    // smoothCoast: true draws the coastline smoothed, rather than following
+    // every corner of the grid (see underhill.js)
+
     // Lines on the sea following the coast, like hand-drawn maps: each at an
     // offset from the shore, with a stroke width, in SVG units, e.g.
     // coastLines: [{offset: 6, width: 1}, {offset: 13, width: 0.6}],

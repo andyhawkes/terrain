@@ -62,7 +62,8 @@ export default {
     // Relief is drawn with the symbols below, not hatching
     slopeShading: false,
 
-    // A bold coast with fainter lines following it out at sea
+    // A bold, smoothed coast with fainter lines following it out at sea
+    smoothCoast: true,
     coastLines: [{offset: 5, width: 1}, {offset: 10, width: 0.6}],
 
     extras: {units: 'miles', perUnit: 300},

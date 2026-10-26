@@ -1,7 +1,8 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {MapDocument, GENERATOR_VERSION} from '../src/core/document.js';
-import {derive, seaShading, relief} from '../src/core/derive.js';
+import {derive, seaShading, relief, smoothCoasts} from '../src/core/derive.js';
+import {contour} from '../src/core/terrain.js';
 import {itemPos, defaultStyle} from '../src/core/steps.js';
 
 var small = {npts: 1024, ncities: 6, nterrs: 3};
@@ -383,6 +384,18 @@ test('mountains, hills and trees go on land, spaced apart, highest ground first'
             assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= gap - 1e-9);
         }
     }
+});
+
+test('coastlines follow the grid unless a theme asks for them smoothed', function () {
+    var doc = new MapDocument();
+    doc.dispatch('generate', {params: {npts: 4096}}, 'coast');
+    var h = doc.state.h;
+    // What every theme draws, and labels are placed around
+    assert.deepEqual(derive(doc.state).coasts, contour(h, 0));
+    // Only for themes with smoothCoast
+    var smooth = smoothCoasts(h);
+    assert.equal(smooth.length, contour(h, 0).length);
+    assert.notDeepEqual(smooth, contour(h, 0));
 });
 
 test('sea shading only goes on the sea, near the coast', function () {

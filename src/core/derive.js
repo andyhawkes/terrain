@@ -46,8 +46,7 @@ export function terrainLayers(h) {
     if (!entry.layers) {
         entry.layers = {
             rivers: T.getRivers(h, 0.01),
-            // Smoothed once, so it doesn't follow every corner of the grid
-            coasts: T.contour(h, 0).map(T.relaxPath),
+            coasts: T.contour(h, 0),
             // The hatching is random, but should be the same on every redraw
             slopes: withSeed('slopes', function () {return T.slopeStrokes(h)})
         };
@@ -61,6 +60,15 @@ export function seaShading(h) {
     var entry = cacheFor(h);
     if (!entry.sea) entry.sea = withSeed('sea', function () {return T.seaStrokes(h, 0.05)});
     return entry.sea;
+}
+
+// The coastline smoothed once, so it doesn't follow every corner of the
+// grid, for themes that ask for it (see smoothCoast in simple.js). Only
+// drawing uses it: labels are placed around the coastline as it is.
+export function smoothCoasts(h) {
+    var entry = cacheFor(h);
+    if (!entry.smoothCoasts) entry.smoothCoasts = terrainLayers(h).coasts.map(T.relaxPath);
+    return entry.smoothCoasts;
 }
 
 // Lines following the coast out at sea, for themes that draw them (see
