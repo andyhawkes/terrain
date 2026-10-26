@@ -319,6 +319,25 @@ test('saved maps record the generator version, and newer ones are refused', func
     assert.throws(function () {MapDocument.fromJSON(json)}, /newer version/);
 });
 
+test('moving or renaming a city reuses the territories it already worked out', function () {
+    var doc = new MapDocument();
+    doc.dispatch('generate', {params: small}, 'reuse');
+    var before = derive(doc.state);
+    var city = doc.state.cities[1];
+    doc.dispatch('moveItem', {id: city.id, pos: [0.2, 0.2]});
+    var moved = derive(doc.state);
+    assert.equal(moved.terr, before.terr);
+    assert.equal(moved.borders, before.borders);
+    doc.dispatch('editLabel', {id: city.id, kind: 'city', text: 'Somewhere new'});
+    var renamed = derive(doc.state);
+    assert.equal(renamed.terr, before.terr);
+    assert.equal(renamed.labels.cities[1].text, 'Somewhere new');
+    // Undoing gets the earlier labels back, positions included
+    doc.undo();
+    doc.undo();
+    assert.deepEqual(derive(doc.state).labels, before.labels);
+});
+
 test('jumping through the history', function () {
     var doc = new MapDocument();
     doc.dispatch('newBlank', {npts: 512});

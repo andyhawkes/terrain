@@ -63,7 +63,6 @@ function makeMesh(pts, extent) {
     var vxids = {};
     var adj = [];
     var edges = [];
-    var tris = [];
     for (var i = 0; i < vor.edges.length; i++) {
         var e = vor.edges[i];
         if (e == undefined) continue;
@@ -84,20 +83,14 @@ function makeMesh(pts, extent) {
         adj[e1] = adj[e1] || [];
         adj[e1].push(e0);
         edges.push([e0, e1, e.left, e.right]);
-        tris[e0] = tris[e0] || [];
-        if (!tris[e0].includes(e.left)) tris[e0].push(e.left);
-        if (e.right && !tris[e0].includes(e.right)) tris[e0].push(e.right);
-        tris[e1] = tris[e1] || [];
-        if (!tris[e1].includes(e.left)) tris[e1].push(e.left);
-        if (e.right && !tris[e1].includes(e.right)) tris[e1].push(e.right);
     }
 
+    // The Voronoi diagram itself isn't kept: it's the largest part by far,
+    // and everything needed from it is in vxs, adj and edges
     var mesh = {
         pts: pts,
-        vor: vor,
         vxs: vxs,
         adj: adj,
-        tris: tris,
         edges: edges,
         extent: extent
     }
@@ -107,6 +100,27 @@ function makeMesh(pts, extent) {
         return mapped;
     }
     return mesh;
+}
+
+// The points around each vertex (the triangle it's the centre of), for
+// drawing a field as coloured cells. Only the diagnostic views need these,
+// so they're built on first use.
+function meshTris(mesh) {
+    if (mesh.tris) return mesh.tris;
+    var tris = [];
+    function addSite(v, site) {
+        tris[v] = tris[v] || [];
+        if (site && !tris[v].includes(site)) tris[v].push(site);
+    }
+    for (var i = 0; i < mesh.edges.length; i++) {
+        var e = mesh.edges[i];
+        addSite(e[0], e[2]);
+        addSite(e[0], e[3]);
+        addSite(e[1], e[2]);
+        addSite(e[1], e[3]);
+    }
+    mesh.tris = tris;
+    return tris;
 }
 
 function generateGoodMesh(n, extent) {
@@ -303,7 +317,15 @@ function fillSinks(h, epsilon) {
     return newh;
 }
 
+// How much water flows through each vertex: its own share of rain plus
+// everything upstream. Rivers, territories and city placement all ask for
+// it, usually of the same heightmap, so the last result is kept (just one,
+// so undo snapshots don't each hold a copy). Heightmaps never change, so
+// it stays valid; callers must not change it.
+var lastFlux = {h: null, flux: null};
+
 function getFlux(h) {
+    if (lastFlux.h === h) return lastFlux.flux;
     var dh = downhill(h);
     var idxs = [];
     var flux = zero(h.mesh); 
@@ -320,6 +342,7 @@ function getFlux(h) {
             flux[dh[j]] += flux[j];
         }
     }
+    lastFlux = {h: h, flux: flux};
     return flux;
 }
 
@@ -800,7 +823,7 @@ function slopeStrokes(h) {
 }
 
 export {
-    generatePoints, improvePoints, generateGoodPoints, makeMesh, generateGoodMesh,
+    generatePoints, improvePoints, generateGoodPoints, makeMesh, generateGoodMesh, meshTris,
     isedge, isnearedge, neighbours, distance, quantile,
     zero, slope, cone, map, normalize, peaky, add, mountains, relax,
     downhill, fillSinks, getFlux, getSlope, erosionRate, erode, doErosion,

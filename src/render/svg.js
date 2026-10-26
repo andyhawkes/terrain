@@ -4,6 +4,7 @@
 // user units.
 import * as d3 from 'd3';
 import {derive} from '../core/derive.js';
+import {meshTris} from '../core/terrain.js';
 import {itemPos} from '../core/steps.js';
 import {getTheme, fontChoice, backgroundChoice} from '../themes/index.js';
 import {themeCSS, labelText, hersheyPath, hersheyBox, dashPaths} from './theme.js';
@@ -105,7 +106,7 @@ export function visualizeVoronoi(svg, field, lo, hi) {
     if (hi == undefined) hi = d3.max(field) + 1e-9;
     if (lo == undefined) lo = d3.min(field) - 1e-9;
     var mappedvals = field.map(function (x) {return x > hi ? 1 : x < lo ? 0 : (x - lo) / (hi - lo)});
-    join(svg, 'field', 'path', 'field', field.mesh.tris)
+    join(svg, 'field', 'path', 'field', meshTris(field.mesh))
         .attr('d', makeD3Path)
         .style('fill', function (d, i) {
             return d3.interpolateViridis(mappedvals[i]);

@@ -122,6 +122,9 @@ Each phase leaves the app working.
 ### Later
 - A 3D view of the terrain, probably with three.js, and sculpting tools that record brush strokes as steps.
 - A command-line "map of the day" for a home-made pen plotter, outputting stroke-only SVG and possibly HPGL or G-code.
+- Memory, measured on an A4 High map:
+  - Done: the grid no longer keeps d3's Voronoi diagram, and builds its cell outlines only for the diagnostic views (123 → 60 MB). Water flow is cached for the latest heightmap. Territories and label placement are cached separately, so moving a city recomputes nothing and renaming one only re-places labels.
+  - Next: typed arrays for the grid and heightmaps (about 60 → 10 MB for the grid), and a memory budget for undo snapshots in place of a fixed 30. Each terrain step keeps 7–9 MB.
 - Possibly moving to D3 v7 and `d3-delaunay`. This means reworking the mesh code, which relies on D3 v4's voronoi edge structure.
 
 ## Decisions so far
