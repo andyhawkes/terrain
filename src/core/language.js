@@ -234,7 +234,8 @@ export var LANGUAGES = [
         structure: 'CVC', cortho: 'Default', vortho: 'Ácutes', minsyll: 1, maxsyll: 3, joiner: ' '},
     // Names from English word lists (see wordnames.js), not made-up sounds
     {id: 'pirate', name: 'Pirate names', hint: 'Port Blackwater, Dead Man\'s Cove, the Bone Isles', words: true},
-    {id: 'military', name: 'Military codenames', hint: 'Objective Granite, Hill 312, Sector Kilo', words: true}
+    {id: 'military', name: 'Military codenames', hint: 'Objective Granite, Hill 312, Sector Kilo', words: true},
+    {id: 'shire', name: 'Shire names', hint: 'Bramblecombe, Little Thistleby, the Barley Downs', words: true}
 ];
 
 function byName(sets, name) {

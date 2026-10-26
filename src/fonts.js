@@ -11,4 +11,6 @@ import '@fontsource/stardos-stencil/700.css';
 import '@fontsource/barlow-condensed/500.css';
 import '@fontsource/black-ops-one/400.css';
 import '@fontsource/share-tech-mono/400.css';
+import '@fontsource/uncial-antiqua/400.css';
+import '@fontsource/almendra/400.css';
 import '../css/fonts.css';

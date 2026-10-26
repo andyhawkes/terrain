@@ -18,7 +18,9 @@ export default {
 
     // Backgrounds to choose from; the first is the default. image is drawn
     // behind the map, scaled up by imageScale and centred. halo can override
-    // the label halo for this background: {color, opacity, shadow}.
+    // the label halo for this background: {color, opacity, shadow}. paper
+    // sets currentColor for relief, point of interest and wreck symbols, so
+    // their fills can suit the background (see underhill.js).
     backgrounds: [
         {id: 'white', name: 'White', color: '#ffffff'},
         {id: 'cream', name: 'Cream', color: '#f7f2e4'}
@@ -49,6 +51,13 @@ export default {
     },
 
     borderDash: [6, 5],
+
+    // smoothCoast: true draws the coastline smoothed, rather than following
+    // every corner of the grid (see underhill.js)
+
+    // Lines on the sea following the coast, like hand-drawn maps: each at an
+    // offset from the shore, with a stroke width, in SVG units, e.g.
+    // coastLines: [{offset: 6, width: 1}, {offset: 13, width: 0.6}],
 
     // Short strokes on the sea along the coast, like old charts' water-lining
     // (colour colors.sea and width widths.sea, or the coast's and 1)
@@ -99,6 +108,10 @@ export default {
         ]]},
         // One spec per marker type: x, danger, flag, camp, star
         markers: markerSymbols('mark', null, 'markX')
+        // A theme can also draw relief as little pictures (see underhill.js):
+        // relief: {spacing: {mountain, hill, tree}, mountain, hill, tree},
+        // with spacing in SVG units and each kind a path spec like these.
+        // slopeShading: false, at the top level, then turns hatching off.
     },
 
     // How each part (cls) of a symbol is drawn, as SVG style properties.

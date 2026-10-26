@@ -130,6 +130,31 @@ Each phase leaves the app working.
 - [x] Naming styles from word lists and patterns (`src/core/wordnames.js`), offered as "Pirate names" and "Military codenames" in the same Place names list as the made-up languages, so they work under New map, Rename all, share links and `--language`. Pirate: towns like Port Blackwater, Dead Man's Cove or Jolly Ned's Haven, and regions like The Bone Isles. Military: Objective Granite, Hill 312, Checkpoint Kilo, FOB Mantis, and regions like Sector Lima or Zone Viper. Names on a map don't repeat. Choosing a theme doesn't change the names.
 - Later: high fantasy.
 
+### Phase 9: Storybook relief, and more themes
+- [x] Mountains, hills and trees drawn as little pictures (`reliefSymbols` in `terrain.js`, drawn by `drawRelief` in `svg.js`):
+  - Mountains go on the highest land (bigger on higher peaks), hills on the middle ground, and trees in clumps (from a smooth random field) on lower land.
+  - Symbols keep apart from each other, the coast and rivers, and are left out around cities.
+  - They're spaced in SVG units, so they look the same at any detail.
+  - They're drawn back to front so nearer ones overlap.
+  - A theme supplies the drawings (`symbols.relief`) and can turn slope hatching off (`slopeShading: false`). A "Hills and forests" layer toggle shows for themes that use it.
+- [x] **Underhill**: a storybook map in black and red ink on cream paper (or parchment), in the style of Tolkien's own maps:
+  - Lettering: Uncial Antiqua regions in red with Almendra towns (both OFL), or Almendra throughout.
+  - Bold, rugged mountains packed into ranges on the highest ground. They're generated (`src/themes/relief-drawings.js`, from a fixed seed): spires to broad massifs, slightly rough ridgelines, some with a second summit, a solid black east face with a ragged edge, and rock creases on the lit side. Hills are generated the same way, with a dark east crescent.
+  - Hills, woods, and dashed red borders.
+  - Drawings are filled to match the background (`paper` on a background): the cream on Paper, so nearer ones hide those behind, and nothing on Parchment, where only the ink shows.
+  - A heavy, smoothed coastline with two finer lines following it out at sea.
+  - Its own towers, ruins, standing stones, caves and wrecks.
+- [x] Coast lines at sea (`coastLines` in the theme format): lines following the shore at set distances, worked out from each sea point's distance to land and drawn as contours of it, so they always sit on the sea side. They hide with the coastline.
+- [x] A theme can ask for its coastline smoothed (`smoothCoast`), so it doesn't follow every corner of the grid. Only Underhill does; other themes draw coasts as before, and labels are placed around the unsmoothed coast for every theme.
+- [x] **Shire names**, a word-list naming style: Bramblecombe, Little Cloverley, Teaselshire, The Apple Leas. Tolkien's own place names are never used.
+- [ ] **Throne-ish**: aged vellum, Roman capitals, sepia ink, plus:
+  - Region tints: a muted heraldic colour per region.
+  - Theme city symbols: castles for capitals.
+  - Its own naming style ("Stormhold"-type compounds, never the show's names).
+- Nice to have: watercolour-like washes for region tints (soft, uneven edges), for Underhill and Throne-ish.
+- Later: typography roles. Fonts per role (regions, towns, capitals, your own text, title), a size control, and case and spacing options, with themes offering presets. A font is only bundled once its licence is confirmed (the OlausMagnus font found online had none listed).
+- Later: Fantasy and Pirate could use relief symbols too.
+
 ### Phase 8: D3 v7
 - [x] Moved to D3 v7, d3-array v3 and `d3-delaunay` (replacing D3 v4 and `d3-voronoi`). `npm audit` is clean: the `d3-color` warning is gone. The grid is built from the Delaunay triangulation: its vertices are the triangles' centres, kept on the map, and its edges join triangles that share a side. Tools use v7's event handling (`d3.pointer`, events passed to handlers). The grid is built differently, so `GENERATOR_VERSION` is now 3 and every seed gives a different map from before.
 

@@ -62,6 +62,38 @@ export function seaShading(h) {
     return entry.sea;
 }
 
+// The coastline smoothed once, so it doesn't follow every corner of the
+// grid, for themes that ask for it (see smoothCoast in simple.js). Only
+// drawing uses it: labels are placed around the coastline as it is.
+export function smoothCoasts(h) {
+    var entry = cacheFor(h);
+    if (!entry.smoothCoasts) entry.smoothCoasts = terrainLayers(h).coasts.map(T.relaxPath);
+    return entry.smoothCoasts;
+}
+
+// Lines following the coast out at sea, for themes that draw them (see
+// coastLines in simple.js); offsets are in map units
+export function coastOutlines(h, offsets) {
+    var entry = cacheFor(h);
+    var key = offsets.join(' ');
+    if (!entry.coastLines || entry.coastLines.key !== key) {
+        entry.coastLines = {key: key, lines: T.coastLines(h, offsets)};
+    }
+    return entry.coastLines.lines;
+}
+
+// Mountain, hill and tree symbols, for themes that draw relief that way
+// (see symbols.relief in simple.js). spacing is in SVG units, so it's part
+// of what's cached.
+export function relief(h, scale, spacing) {
+    var entry = cacheFor(h);
+    var key = scale + ' ' + JSON.stringify(spacing);
+    if (!entry.relief || entry.relief.key !== key) {
+        entry.relief = {key: key, symbols: withSeed('relief', function () {return T.reliefSymbols(h, scale, spacing)})};
+    }
+    return entry.relief.symbols;
+}
+
 // Everything drawn from a map state. The same state, or one that differs
 // only in style, gets exactly the same result.
 export function derive(state) {
