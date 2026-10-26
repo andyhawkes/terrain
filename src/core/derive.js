@@ -123,13 +123,18 @@ export function relief(h, scale, spacing) {
     return entry.relief.symbols;
 }
 
-// Everything drawn from a map state. The same state, or one that differs
-// only in style, gets exactly the same result.
-export function derive(state) {
+// Everything drawn from a map state. layout (optional, see placeLabels)
+// says how labels will be drawn, so they can be placed to fit: key names it
+// (e.g. the theme and lettering), for caching. The same state with the same
+// layout gets exactly the same result.
+export function derive(state, layout) {
     var h = state.h;
     var entry = cacheFor(h);
+    var layoutKey = layout ? layout.key + '|' + JSON.stringify(layout.obstacles || []) : '';
     var cached = entry.derived;
-    if (cached && cached.cities === state.cities && cached.params === state.params) return cached.d;
+    if (cached && cached.cities === state.cities && cached.params === state.params && cached.layoutKey === layoutKey) {
+        return cached.d;
+    }
     var cities = state.cities;
     var vxs = cities.map(function (c) {return c.vx});
     var nterrs = state.params.nterrs;
@@ -143,10 +148,10 @@ export function derive(state) {
     var borders = regions.borders;
     var cityNames = cities.map(function (c) {return c.name});
     var regionNames = cities.map(function (c) {return c.regionName});
-    var labelsKey = JSON.stringify([placesKey, cityNames, regionNames, state.params.fontsizes, state.params.scale]);
+    var labelsKey = JSON.stringify([placesKey, cityNames, regionNames, state.params.fontsizes, state.params.scale, layoutKey]);
     var placed = lastFor(entry, 'placement', labelsKey, function () {
         return placeLabels(h, terr, vxs, nterrs, cityNames, regionNames, state.params.fontsizes,
-            [layers.rivers, layers.coasts, borders], state.params.scale);
+            [layers.rivers, layers.coasts, borders], state.params.scale, layout);
     });
     // Copies, so placing labels for this state leaves the cached ones alone
     var labels = {
@@ -173,6 +178,6 @@ export function derive(state) {
         }
     });
     var d = Object.assign({terr: terr, borders: borders, labels: labels}, layers);
-    entry.derived = {cities: state.cities, params: state.params, d: d};
+    entry.derived = {cities: state.cities, params: state.params, layoutKey: layoutKey, d: d};
     return d;
 }

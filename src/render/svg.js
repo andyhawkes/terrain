@@ -8,7 +8,7 @@ import {meshTris} from '../core/terrain.js';
 import {itemPos} from '../core/steps.js';
 import {getTheme, fontChoice, backgroundChoice} from '../themes/index.js';
 import {themeCSS, labelText, hersheyPath, hersheyBox, dashPaths} from './theme.js';
-import {extrasChoice, squareGrid, hexGrid, scaleBar, defaultPosition, formatDistance, wrapLines} from './extras.js';
+import {extrasChoice, squareGrid, hexGrid, scaleBar, defaultPosition, formatDistance, wrapLines, COMPASS_RADIUS} from './extras.js';
 
 export var SCALE = 1000;
 var extent = {width: 1, height: 1};
@@ -517,11 +517,85 @@ function outsideBoxes(boxes) {
     };
 }
 
+// --- Fitting labels to how they're drawn ---
+
+var measuring = null;
+
+// Font families named in CSS, for checking they've loaded
+function fontsLoaded(families) {
+    if (typeof document === 'undefined' || !document.fonts) return true;
+    return families.every(function (family) {
+        return typeof family !== 'string' || document.fonts.check('20px ' + family);
+    });
+}
+
+// Measures labels as the theme will draw them: its fonts, letter case,
+// small capitals and letter spacing, or Hershey glyph widths. Returns null
+// where there's no canvas to measure with (e.g. in Node).
+function labelMeasurer(theme, font) {
+    if (typeof document === 'undefined') return null;
+    measuring = measuring || document.createElement('canvas').getContext('2d');
+    var l = theme.labels;
+    var spacing = l.regionSpacing && l.regionSpacing !== 'normal' ? parseFloat(l.regionSpacing) : 0;
+    return function (kind, text, size) {
+        var family = kind === 'region' ? font.region : font.label;
+        var shown = labelText(theme, font, kind, text);
+        if (family.hershey) {
+            var b = hersheyBox(family.hershey, shown, 0, 0, size, 'start');
+            return b.x1 - b.x0;
+        }
+        measuring.font = size + 'px ' + family;
+        measuring.fontVariantCaps = kind === 'region' && l.regionVariant === 'small-caps' ? 'small-caps' : 'normal';
+        var width = measuring.measureText(shown).width;
+        return width + (kind === 'region' ? spacing * size * shown.length : 0);
+    };
+}
+
+// Boxes (map units) around the extras that are showing, for labels to avoid
+function extrasBoxes(state, theme, font, measure) {
+    var extras = extrasChoice(theme, state.style, state.params);
+    var extent = state.params.extent;
+    var boxes = [];
+    var at = function (id) {return extras.positions[id] || defaultPosition(id, extent, SCALE, extras.compassSize)};
+    if (extras.compass) {
+        var c = at('compass');
+        var r = COMPASS_RADIUS * extras.compassSize / SCALE;
+        boxes.push([c[0] - r, c[1] - r, c[0] + r, c[1] + r]);
+    }
+    if (extras.scaleBar) {
+        var p = at('scaleBar');
+        var bar = scaleBar(extent, extras.perUnit);
+        boxes.push([p[0] - 20 / SCALE, p[1] - 12 / SCALE, p[0] + bar.mapLength + 40 / SCALE, p[1] + 24 / SCALE]);
+    }
+    if (extras.title) {
+        var q = at('title');
+        var width = measure ? measure('region', extras.title, TITLE_SIZE) : 0.6 * TITLE_SIZE * extras.title.length;
+        var maxWidth = SCALE * extent.width / 2 - 2 * TITLE_PAD;
+        var lines = Math.max(1, Math.ceil(width / maxWidth));
+        boxes.push([q[0], q[1], q[0] + (Math.min(width, maxWidth) + 2 * TITLE_PAD) / SCALE,
+            q[1] + (2 * TITLE_PAD + (lines - 1) * 1.2 * TITLE_SIZE + TITLE_SIZE) / SCALE]);
+    }
+    return boxes;
+}
+
+// How this map's labels will be drawn, so they can be placed to fit (see
+// placeLabels). Until the theme's fonts have loaded, labels are placed for
+// the fallback font; main.js redraws when fonts load, placing them again.
+function labelLayout(state, theme, font) {
+    var measure = labelMeasurer(theme, font);
+    var ready = fontsLoaded([font.label, font.region]);
+    return {
+        key: theme.id + '|' + font.id + '|' + (measure ? 'measured' : 'estimated') + '|' + ready,
+        measure: measure,
+        obstacles: extrasBoxes(state, theme, font, measure)
+    };
+}
+
 // The finished map
 export function drawMap(svg, state) {
-    var d = derive(state);
     var t = applyTheme(svg, state.style);
     var theme = t.theme;
+    var d = derive(state, labelLayout(state, theme, t.font));
     drawBackground(svg, t.background);
     drawTints(svg, state, d, theme);
     drawStrokes(svg, 'sea', function () {
