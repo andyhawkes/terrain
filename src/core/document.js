@@ -4,7 +4,16 @@
 import {steps, emptyState} from './steps.js';
 import {withSeed, newSeed} from './random.js';
 
+// Snapshots kept: those of the last KEEP_SNAPSHOTS steps, but holding at
+// most HEIGHTMAP_BUDGET heightmap vertices between them (steps that only
+// add or move things share their heightmap, so they cost little). A big
+// map keeps fewer terrain snapshots, e.g. 15 for A4 High, and undoing
+// past them replays from the nearest earlier one. The snapshot after the
+// current map's first step is always kept, so that's the furthest a
+// replay goes back.
 var KEEP_SNAPSHOTS = 30;
+var HEIGHTMAP_BUDGET = 2000000;
+var MIN_HEIGHTMAPS = 4;
 // The file format: how steps are stored
 export var FORMAT_VERSION = 1;
 // How steps turn into maps. Saved maps only hold steps and seeds, so a
@@ -71,8 +80,20 @@ export class MapDocument {
     }
 
     prune() {
-        for (var i = 1; i < this.cursor - KEEP_SNAPSHOTS; i++) {
-            delete this.snapshots[i];
+        var current = this.snapshots[this.cursor];
+        var vertices = current && current.h ? current.h.length : 0;
+        var limit = Math.max(MIN_HEIGHTMAPS, Math.floor(HEIGHTMAP_BUDGET / (vertices || 1)));
+        var heightmaps = new Set(current && current.h ? [current.h] : []);
+        var start = this.startIndex() + 1;
+        for (var i = this.cursor - 1; i >= 1; i--) {
+            var state = this.snapshots[i];
+            if (!state || i === start) continue;
+            var keep = i >= this.cursor - KEEP_SNAPSHOTS;
+            if (keep && state.h && !heightmaps.has(state.h)) {
+                if (heightmaps.size < limit) heightmaps.add(state.h);
+                else keep = false;
+            }
+            if (!keep) delete this.snapshots[i];
         }
     }
 
@@ -104,6 +125,8 @@ export class MapDocument {
         if (n === this.cursor) return;
         this.cursor = n;
         this.emit();
+        // A long jump back replays and keeps every step on the way
+        this.prune();
     }
 
     // Where the current map starts: the index of the last step before the

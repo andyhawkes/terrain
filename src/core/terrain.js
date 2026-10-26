@@ -61,8 +61,14 @@ function makeMesh(pts, extent) {
     var vor = voronoi(pts, extent);
     var vxs = [];
     var vxids = {};
-    var adj = [];
-    var edges = [];
+    var ends = [];
+    var degree = [];
+    // The points as the diagram has them (d3 rounds them slightly)
+    var sites = [];
+    function siteIndex(site) {
+        sites[site.index] = sites[site.index] || [site[0], site[1]];
+        return site.index;
+    }
     for (var i = 0; i < vor.edges.length; i++) {
         var e = vor.edges[i];
         if (e == undefined) continue;
@@ -78,24 +84,42 @@ function makeMesh(pts, extent) {
             vxids[e[1]] = e1;
             vxs.push(e[1]);
         }
-        adj[e0] = adj[e0] || [];
-        adj[e0].push(e1);
-        adj[e1] = adj[e1] || [];
-        adj[e1].push(e0);
-        edges.push([e0, e1, e.left, e.right]);
+        degree[e0] = (degree[e0] || 0) + 1;
+        degree[e1] = (degree[e1] || 0) + 1;
+        ends.push(e0, e1, siteIndex(e.left), e.right ? siteIndex(e.right) : -1);
     }
 
-    // The Voronoi diagram itself isn't kept: it's the largest part by far,
-    // and everything needed from it is in vxs, adj and edges
+    // Each vertex's neighbours, all in one array: those of vertex i are
+    // adj[adjStart[i]] up to adj[adjStart[i + 1]], in the order its edges
+    // were found
+    var adjStart = new Int32Array(vxs.length + 1);
+    for (var i = 0; i < vxs.length; i++) {
+        adjStart[i + 1] = adjStart[i] + degree[i];
+    }
+    var adj = new Int32Array(adjStart[vxs.length]);
+    var filled = adjStart.slice(0, vxs.length);
+    for (var k = 0; k < ends.length; k += 4) {
+        adj[filled[ends[k]]++] = ends[k + 1];
+        adj[filled[ends[k + 1]]++] = ends[k];
+    }
+
+    // The Voronoi diagram itself isn't kept: it's the largest part by far.
+    // Everything needed from it is in typed arrays (a few MB even for big
+    // maps, where arrays of small arrays took tens of MB):
+    //   vxs: vertex positions, [x, y] each
+    //   adjStart, adj: each vertex's neighbours (see above)
+    //   edges: four numbers per edge: its two vertices, then the indexes in
+    //     sites of the points either side (the second is -1 at the map's edge)
     var mesh = {
-        pts: pts,
+        sites: sites,
         vxs: vxs,
+        adjStart: adjStart,
         adj: adj,
-        edges: edges,
+        edges: Int32Array.from(ends),
         extent: extent
     }
     mesh.map = function (f) {
-        var mapped = vxs.map(f);
+        var mapped = Float64Array.from(vxs, f);
         mapped.mesh = mesh;
         return mapped;
     }
@@ -112,12 +136,14 @@ function meshTris(mesh) {
         tris[v] = tris[v] || [];
         if (site && !tris[v].includes(site)) tris[v].push(site);
     }
-    for (var i = 0; i < mesh.edges.length; i++) {
-        var e = mesh.edges[i];
-        addSite(e[0], e[2]);
-        addSite(e[0], e[3]);
-        addSite(e[1], e[2]);
-        addSite(e[1], e[3]);
+    var e = mesh.edges;
+    for (var k = 0; k < e.length; k += 4) {
+        var left = mesh.sites[e[k + 2]];
+        var right = e[k + 3] >= 0 ? mesh.sites[e[k + 3]] : null;
+        addSite(e[k], left);
+        addSite(e[k], right);
+        addSite(e[k + 1], left);
+        addSite(e[k + 1], right);
     }
     mesh.tris = tris;
     return tris;
@@ -129,7 +155,7 @@ function generateGoodMesh(n, extent) {
     return makeMesh(pts, extent);
 }
 function isedge(mesh, i) {
-    return (mesh.adj[i].length < 3);
+    return mesh.adjStart[i + 1] - mesh.adjStart[i] < 3;
 }
 
 function area(mesh) {
@@ -145,12 +171,7 @@ function isnearedge(mesh, i) {
 }
 
 function neighbours(mesh, i) {
-    var onbs = mesh.adj[i];
-    var nbs = [];
-    for (var i = 0; i < onbs.length; i++) {
-        nbs.push(onbs[i]);
-    }
-    return nbs;
+    return Array.from(mesh.adj.subarray(mesh.adjStart[i], mesh.adjStart[i + 1]));
 }
 
 function distance(mesh, i, j) {
@@ -168,11 +189,11 @@ function quantile(h, q) {
     return d3quantile(sortedh, q);
 }
 
+// A heightmap (or any value per vertex): a Float64Array with its mesh
+// attached. Heightmaps are never changed once made, so they can be shared
+// between map states.
 function zero(mesh) {
-    var z = [];
-    for (var i = 0; i < mesh.vxs.length; i++) {
-        z[i] = 0;
-    }
+    var z = new Float64Array(mesh.vxs.length);
     z.mesh = mesh;
     return z;
 }
@@ -261,7 +282,7 @@ function downhill(h) {
         }
         return best;
     }
-    var downs = [];
+    var downs = new Int32Array(h.length);
     for (var i = 0; i < h.length; i++) {
         downs[i] = downfrom(i);
     }
@@ -305,9 +326,8 @@ function fillSinks(h, epsilon) {
     }
     while (queue.length) {
         var c = queue.dequeue();
-        var nbs = h.mesh.adj[c];
-        for (var j = 0; j < nbs.length; j++) {
-            var n = nbs[j];
+        for (var j = h.mesh.adjStart[c]; j < h.mesh.adjStart[c + 1]; j++) {
+            var n = h.mesh.adj[j];
             if (done[n]) continue;
             done[n] = 1;
             newh[n] = Math.max(h[n], newh[c] + epsilon);
@@ -541,13 +561,15 @@ function pickPOI(h, poi) {
 function contour(h, level) {
     level = level || 0;
     var edges = [];
-    for (var i = 0; i < h.mesh.edges.length; i++) {
-        var e = h.mesh.edges[i];
-        if (e[3] == undefined) continue;
-        if (isnearedge(h.mesh, e[0]) || isnearedge(h.mesh, e[1])) continue;
-        if ((h[e[0]] > level && h[e[1]] <= level) ||
-            (h[e[1]] > level && h[e[0]] <= level)) {
-            edges.push([e[2], e[3]]);
+    var e = h.mesh.edges;
+    for (var k = 0; k < e.length; k += 4) {
+        var v0 = e[k];
+        var v1 = e[k + 1];
+        if (e[k + 3] < 0) continue;
+        if (isnearedge(h.mesh, v0) || isnearedge(h.mesh, v1)) continue;
+        if ((h[v0] > level && h[v1] <= level) ||
+            (h[v1] > level && h[v0] <= level)) {
+            edges.push([h.mesh.sites[e[k + 2]], h.mesh.sites[e[k + 3]]]);
         }
     }
     return mergeSegments(edges);
@@ -626,13 +648,15 @@ function getTerritories(h, cities, nterrs) {
 
 function getBorders(h, terr) {
     var edges = [];
-    for (var i = 0; i < terr.mesh.edges.length; i++) {
-        var e = terr.mesh.edges[i];
-        if (e[3] == undefined) continue;
-        if (isnearedge(terr.mesh, e[0]) || isnearedge(terr.mesh, e[1])) continue;
-        if (h[e[0]] < 0 || h[e[1]] < 0) continue;
-        if (terr[e[0]] != terr[e[1]]) {
-            edges.push([e[2], e[3]]);
+    var e = terr.mesh.edges;
+    for (var k = 0; k < e.length; k += 4) {
+        var v0 = e[k];
+        var v1 = e[k + 1];
+        if (e[k + 3] < 0) continue;
+        if (isnearedge(terr.mesh, v0) || isnearedge(terr.mesh, v1)) continue;
+        if (h[v0] < 0 || h[v1] < 0) continue;
+        if (terr[v0] != terr[v1]) {
+            edges.push([terr.mesh.sites[e[k + 2]], terr.mesh.sites[e[k + 3]]]);
         }
     }
     return mergeSegments(edges).map(relaxPath);

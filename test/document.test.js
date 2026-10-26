@@ -338,6 +338,23 @@ test('moving or renaming a city reuses the territories it already worked out', f
     assert.deepEqual(derive(doc.state).labels, before.labels);
 });
 
+test('a long terrain history keeps fewer snapshots, and replays the same map', function () {
+    var doc = new MapDocument();
+    doc.dispatch('newBlank', {npts: 65536}, 'budget');
+    for (var i = 0; i < 40; i++) doc.dispatch('blobs', {count: 2}, 'b' + i);
+    var kept = doc.snapshots.filter(Boolean).filter(function (s) {return s.h}).length;
+    // 2,000,000 vertices / about 131,000 per heightmap, plus the map's start
+    assert.ok(kept <= 17, kept + ' snapshots kept');
+    // Undoing far back replays from the start snapshot, giving the same map
+    var expected = Array.from(doc.stateAt(5).h);
+    var replay = new MapDocument();
+    replay.load(doc.toJSON());
+    replay.goTo(5);
+    assert.deepEqual(Array.from(replay.state.h), expected);
+    doc.goTo(5);
+    assert.deepEqual(Array.from(doc.state.h), expected);
+});
+
 test('jumping through the history', function () {
     var doc = new MapDocument();
     doc.dispatch('newBlank', {npts: 512});
