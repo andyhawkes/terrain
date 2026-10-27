@@ -253,6 +253,10 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
                 })
                 .append('span').text(style.name);
         });
+        optionsBar.append('button')
+            .attr('class', 'redraw-roads tool-options-gap')
+            .on('click', function () {doc.dispatch('joinTowns')})
+            .append('span').text('Redraw roads');
         updateRouteOptions();
     }
 
@@ -588,17 +592,15 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
         drawOverlay();
     }
 
-    // Built roads stay put when towns move or the land changes; this offers
-    // to build them again, at the end of the options bar
+    // Built roads stay put when towns move or the land changes; the route
+    // tool's Redraw roads button builds them again, and is only enabled
+    // when that would change them
     function roadsPrompt() {
-        optionsBar.select('.roads-prompt').remove();
-        if (!onMap || !doc.state.h || !roadsStale(doc.state)) return;
-        var prompt = optionsBar.append('span').attr('class', 'roads-prompt');
-        prompt.append('span').attr('class', 'tool-options-label').text('The map has changed since the roads were built');
-        prompt.append('button')
-            .attr('title', 'Build the roads between towns again. Roads you have drawn or reshaped stay as they are.')
-            .on('click', function () {doc.dispatch('joinTowns')})
-            .append('span').text('Redraw roads');
+        var stale = onMap && doc.state.h && roadsStale(doc.state);
+        optionsBar.select('.redraw-roads')
+            .property('disabled', !stale)
+            .attr('title', stale ? 'The map has changed since the roads were built. Build them again; roads you have drawn or reshaped stay as they are.'
+                : 'The roads fit the map as it is');
     }
 
     function forKey(key) {
