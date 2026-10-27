@@ -12,7 +12,7 @@ export default {
     description: 'A field map: stencilled names, a kilometre grid and map symbols.',
 
     fonts: [
-        {id: 'stencil', name: 'Stencil', label: '"Barlow Condensed", sans-serif', region: '"Stardos Stencil", sans-serif'},
+        {id: 'stencil', name: 'Stencil', label: '"Barlow Condensed", sans-serif', region: '"Big Shoulders Stencil Display", sans-serif'},
         {id: 'ops', name: 'Ops', label: '"Share Tech Mono", monospace', region: '"Black Ops One", sans-serif'}
     ],
 
