@@ -150,7 +150,8 @@ export function placeLabels(h, terr, cities, nterrs, cityNames, regionNames, fon
     }
 
     // The best vertex to centre a region name of width sx, height sy on,
-    // and whether that spot is clear of everything it should avoid
+    // and whether that spot is on its own land, clear of everything it
+    // should avoid
     function bestRegionSpot(sx, sy, lc, oc, city) {
         var best = 0;
         var bestscore = -Infinity;
@@ -167,7 +168,12 @@ export function placeLabels(h, terr, cities, nterrs, cityNames, regionNames, fon
             var y1 = v[1] + 0.3 * sy;
             score -= 3000 * Math.sqrt((v[0] - lc[0]) * (v[0] - lc[0]) + (v[1] - lc[1]) * (v[1] - lc[1]));
             score -= 1000 * Math.sqrt((v[0] - oc[0]) * (v[0] - oc[0]) + (v[1] - oc[1]) * (v[1] - oc[1]));
-            if (terr[j] != city) score -= 3000;
+            // Off its own land doesn't count as clear, so a name tries a
+            // smaller size before wandering into a neighbour
+            if (terr[j] != city) {
+                score -= 3000;
+                clear = false;
+            }
             for (var k = 0; k < cities.length; k++) {
                 var u = h.mesh.vxs[cities[k]];
                 if (Math.abs(v[0] - u[0]) < sx &&
