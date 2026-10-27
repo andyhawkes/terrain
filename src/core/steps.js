@@ -16,7 +16,7 @@ export var defaultParams = {
     npoi: 1,
     nterrs: 5,
     language: 'random',  // an id from LANGUAGES, for place names
-    roads: false,  // join the cities of a random map with roads
+    roads: true,  // join the cities of a random map with roads
     fontsizes: {
         region: 40,
         city: 25,
@@ -107,7 +107,8 @@ export function emptyState() {
         // curves through them. auto marks roads built by joinTowns, which
         // building again replaces; style is a ROUTE_STYLES id.
         roads: [],    // {id, points, auto?}
-        routes: [],   // {id, points, style, label}
+        routes: [],   // {id, points, style, label, labelOffset?}
+        roadsBasis: null,  // what joinTowns last built from (see roadsStale)
         nextId: 1
     };
 }
@@ -236,7 +237,25 @@ function joinTowns(state) {
     var roads = state.roads.filter(function (r) {return !r.auto}).concat(lines.map(function (points) {
         return {id: nextId++, points: points, auto: true};
     }));
-    return Object.assign({}, state, {roads: roads, nextId: nextId});
+    return Object.assign({}, state, {roads: roads, nextId: nextId, roadsBasis: roadsBasis(state)});
+}
+
+// The heightmap and where the towns are: if either changes, joinTowns
+// would build different roads
+function roadsBasis(state) {
+    return {h: state.h, towns: state.cities.filter(function (c) {return c.vx != null}).map(function (c) {
+        return c.vx + (c.pos ? '@' + c.pos.join(',') : '');
+    }).join(' ')};
+}
+
+// Whether the roads built by joinTowns no longer fit the map, because the
+// terrain or the towns have changed since. Roads stay as they are until
+// built again, so the editor can offer to.
+export function roadsStale(state) {
+    var basis = state.roadsBasis;
+    if (!basis || !state.roads.some(function (r) {return r.auto})) return false;
+    var now = roadsBasis(state);
+    return basis.h !== now.h || basis.towns !== now.towns;
 }
 
 // At least two points, as [x, y] numbers
@@ -559,12 +578,16 @@ export var steps = {
         }
     },
     // Moving a label never moves what it labels. City labels are stored as an
-    // offset from the city, so they follow it if the city moves later.
+    // offset from the city, so they follow it if the city moves later. A
+    // route's label is kept as args.offset from its usual place, above the
+    // middle of the route, so it follows the route's points.
     moveLabel: {
         label: 'Move label',
         apply: function (state, args) {
             return mapItem(state, args.id, function (city) {
-                if (args.kind === 'region') {
+                if (args.kind === 'route') {
+                    city.labelOffset = [+args.offset[0], +args.offset[1]];
+                } else if (args.kind === 'region') {
                     city.regionLabelPos = args.pos;
                 } else {
                     var at = itemPos(state, city);

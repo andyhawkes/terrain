@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {MapDocument} from '../src/core/document.js';
 import {derive} from '../src/core/derive.js';
 import {getRoads, simplify, smoothLine} from '../src/core/roads.js';
+import {roadsStale} from '../src/core/steps.js';
 
 var small = {npts: 1024, ncities: 6, nterrs: 3};
 
@@ -12,9 +13,9 @@ function generate(params, seed) {
     return doc;
 }
 
-test('roads are off by default and leave the rest of a random map alone', function () {
-    var plain = generate(small).state;
-    var roads = generate(Object.assign({roads: true}, small)).state;
+test('roads are on by default and leave the rest of a random map alone', function () {
+    var plain = generate(Object.assign({roads: false}, small)).state;
+    var roads = generate(small).state;
     assert.equal(plain.roads.length, 0);
     assert.ok(roads.roads.length > 0);
     assert.deepEqual(Array.from(roads.h), Array.from(plain.h));
@@ -56,7 +57,7 @@ test('roads start at cities, stay on land and join up', function () {
 });
 
 test('labels steer clear of roads only when there are roads', function () {
-    var plain = generate(small).state;
+    var plain = generate(Object.assign({roads: false}, small)).state;
     var withRoads = generate(Object.assign({roads: true}, small)).state;
     var noRoads = Object.assign({}, withRoads, {roads: []});
     assert.deepEqual(derive(noRoads).labels, derive(plain).labels);
@@ -90,6 +91,34 @@ test('routes and roads are steps that undo, save and reload', function () {
     assert.equal(doc.state.routes[0].style, 'arrows');
     doc.undo();
     assert.deepEqual(doc.state.routes[0].points[1], [0.1, 0.05]);
+});
+
+test('built roads stay when a town moves, and are then out of date', function () {
+    var doc = generate(small);
+    assert.equal(roadsStale(doc.state), false);
+    var roads = doc.state.roads;
+    var city = doc.state.cities[0];
+    doc.dispatch('editLabel', {id: city.id, kind: 'city', text: 'Elsewhere'});
+    assert.equal(roadsStale(doc.state), false, 'renaming changes nothing');
+    doc.dispatch('moveItem', {id: city.id, pos: [0.01, 0.02]});
+    assert.equal(doc.state.roads, roads);
+    assert.equal(roadsStale(doc.state), true);
+    doc.dispatch('joinTowns');
+    assert.equal(roadsStale(doc.state), false);
+    doc.dispatch('erode', {amount: 0.05});
+    assert.equal(roadsStale(doc.state), true, 'new terrain');
+    // Not when there are no built roads to redraw
+    assert.equal(roadsStale(generate(Object.assign({roads: false}, small)).state), false);
+});
+
+test('a route label moves by an offset that follows the route', function () {
+    var doc = generate(small);
+    doc.dispatch('addRoute', {points: [[0, 0], [0.2, 0]], style: 'dotted', label: 'Here'});
+    var id = doc.state.routes[0].id;
+    doc.dispatch('moveLabel', {id: id, kind: 'route', offset: [0.01, -0.02]});
+    assert.deepEqual(doc.state.routes[0].labelOffset, [0.01, -0.02]);
+    doc.undo();
+    assert.equal(doc.state.routes[0].labelOffset, undefined);
 });
 
 test('joining towns again keeps roads drawn or reshaped by hand', function () {

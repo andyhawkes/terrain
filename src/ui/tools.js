@@ -3,7 +3,7 @@
 // is always there, so the map doesn't change size when switching tools.
 import * as d3 from 'd3';
 import * as R from '../render/svg.js';
-import {MARKER_TYPES, SYMBOL_KINDS, ROUTE_STYLES} from '../core/steps.js';
+import {MARKER_TYPES, SYMBOL_KINDS, ROUTE_STYLES, roadsStale} from '../core/steps.js';
 import {smoothLine} from '../core/roads.js';
 import {getTheme} from '../themes/index.js';
 import {editText, close as closeEditor} from './textEditor.js';
@@ -29,7 +29,7 @@ export var TOOLS = [
 ];
 
 var DRAGGABLE = '.layer-city .city, .layer-city .capital-symbol, .layer-wreck .wreck, .layer-poi .poi, .layer-marker .placedMarker, ' +
-    '.city-label, .region-label, .note-label:not(.route-label), .layer-extras .ornament';
+    '.city-label, .region-label, .note-label, .layer-extras .ornament';
 
 var ORNAMENT_NAMES = {scaleBar: 'the scale bar', compass: 'the compass rose', title: 'the title'};
 
@@ -48,7 +48,7 @@ function nameOf(d) {
         var type = MARKER_TYPES.find(function (t) {return t.id === d.item.type});
         return (type ? type.name.toLowerCase() : 'a') + ' marker';
     }
-    if (d.kind === 'route' && d.item.label) return '“' + d.item.label + '”';
+    if ((d.kind === 'route' || d.kind === 'routeLabel') && d.item.label) return '“' + d.item.label + '”';
     return {city: 'a city', wreck: 'a wreck', poi: 'a point of interest', road: 'a road', route: 'a route'}[d.kind] || '';
 }
 
@@ -60,7 +60,7 @@ function editable(d) {
     if (d.kind === 'note') return {kind: 'note', text: d.item.text};
     if (d.kind === 'city') return {kind: 'city', text: d.item.name};
     if (d.kind === 'ornament' && d.id === 'title') return {kind: 'title', text: d.text};
-    if (d.kind === 'route') return {kind: 'route', text: d.item.label || ''};
+    if (d.kind === 'route' || d.kind === 'routeLabel') return {kind: 'route', text: d.item.label || ''};
     return null;
 }
 
@@ -150,6 +150,7 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
         });
         bind();
         showOptions();
+        roadsPrompt();
         drawOverlay();
         onChange(TOOLS.find(function (t) {return t.id === id}));
     }
@@ -354,7 +355,7 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
         var target = event.target;
         var d = d3.select(target).datum();
         if (active === 'route') {
-            if (!drawing && lineKind === 'route' && d && d.kind === 'route' && d.id != null) {
+            if (!drawing && lineKind === 'route' && d && (d.kind === 'route' || d.kind === 'routeLabel') && d.id != null) {
                 if (d.item.style !== routeStyle) {
                     doc.dispatch('setRoute', {id: d.id, style: routeStyle, what: nameOf(d)});
                 }
@@ -386,7 +387,8 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
             doc.dispatch('setStyle', off);
         } else if (active === 'delete' && d && d.id != null) {
             // Names of places are hidden; everything else is removed
-            if (isLabel(d)) doc.dispatch('editLabel', {id: d.id, kind: d.kind === 'regionLabel' ? 'region' : 'city', text: '', what: nameOf(d)});
+            if (d.kind === 'routeLabel') doc.dispatch('setRoute', {id: d.id, label: '', what: nameOf(d)});
+            else if (isLabel(d)) doc.dispatch('editLabel', {id: d.id, kind: d.kind === 'regionLabel' ? 'region' : 'city', text: '', what: nameOf(d)});
             else doc.dispatch('deleteItem', {id: d.id, what: nameOf(d)});
         } else if (active === 'label') {
             edit(d, target);
@@ -431,6 +433,9 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
                 var positions = Object.assign({}, doc.state.style.positions);
                 positions[d.id] = pos;
                 doc.dispatch('setStyle', {positions: positions, what: nameOf(d)});
+            } else if (d.kind === 'routeLabel') {
+                var offset = d.item.labelOffset || [0, 0];
+                doc.dispatch('moveLabel', {id: d.id, kind: 'route', offset: [offset[0] + dx, offset[1] + dy], what: nameOf(d)});
             } else if (isLabel(d)) doc.dispatch('moveLabel', {id: d.id, kind: d.kind === 'regionLabel' ? 'region' : 'city', pos: pos, what: nameOf(d)});
             else doc.dispatch('moveItem', {id: d.id, pos: pos, what: nameOf(d)});
         });
@@ -479,19 +484,27 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
                 .style('stroke-width', 14 * px + 'px');
         }
         if (active === 'move') {
+            // Small, so places and labels along the way can still be
+            // dragged, and none over a place, which would hide it. A point
+            // under a place shows once the place is moved off it.
+            var places = svg.selectAll('.layer-city .city, .layer-wreck .wreck, .layer-poi .poi').data()
+                .map(function (d) {return d.pos});
+            var clear = 8 * px / R.SCALE;
             var handles = [];
             lines.forEach(function (d) {
                 d.item.points.forEach(function (p, i) {
-                    handles.push({id: d.id, kind: d.kind, item: d.item, index: i, pos: p});
+                    var covered = places.some(function (q) {return q && Math.hypot(p[0] - q[0], p[1] - q[1]) < clear});
+                    if (!covered) handles.push({id: d.id, kind: d.kind, item: d.item, index: i, pos: p});
                 });
             });
             overlay.append('path').attr('class', 'moving-line');
-            overlay.selectAll('circle.handle').data(handles).enter().append('circle')
+            var side = 6 * px;
+            overlay.selectAll('rect.handle').data(handles).enter().append('rect')
                 .attr('class', 'handle')
-                .attr('cx', function (d) {return R.SCALE * d.pos[0]})
-                .attr('cy', function (d) {return R.SCALE * d.pos[1]})
-                .attr('r', 5 * px)
-                .style('stroke-width', 1.5 * px + 'px')
+                .attr('x', function (d) {return R.SCALE * d.pos[0] - side / 2})
+                .attr('y', function (d) {return R.SCALE * d.pos[1] - side / 2})
+                .attr('width', side).attr('height', side)
+                .style('stroke-width', px + 'px')
                 .call(pointDrag);
         }
         if (drawing) {
@@ -510,7 +523,8 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
     var pointDrag = d3.drag()
         .on('drag', function (event, d) {
             var pos = [event.x / R.SCALE, event.y / R.SCALE];
-            d3.select(this).attr('cx', event.x).attr('cy', event.y);
+            var side = +this.getAttribute('width');
+            d3.select(this).attr('x', event.x - side / 2).attr('y', event.y - side / 2);
             var points = d.item.points.slice();
             points[d.index] = pos;
             overlay.select('.moving-line').attr('d', curve(points)).style('stroke-width', 2 * pixel() + 'px');
@@ -570,7 +584,21 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
         onMap = showingMap !== false;
         bind();
         showOptions();
+        roadsPrompt();
         drawOverlay();
+    }
+
+    // Built roads stay put when towns move or the land changes; this offers
+    // to build them again, at the end of the options bar
+    function roadsPrompt() {
+        optionsBar.select('.roads-prompt').remove();
+        if (!onMap || !doc.state.h || !roadsStale(doc.state)) return;
+        var prompt = optionsBar.append('span').attr('class', 'roads-prompt');
+        prompt.append('span').attr('class', 'tool-options-label').text('The map has changed since the roads were built');
+        prompt.append('button')
+            .attr('title', 'Build the roads between towns again. Roads you have drawn or reshaped stay as they are.')
+            .on('click', function () {doc.dispatch('joinTowns')})
+            .append('span').text('Redraw roads');
     }
 
     function forKey(key) {

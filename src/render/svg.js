@@ -568,11 +568,13 @@ function drawRoads(svg, state, theme, background) {
 }
 
 // Where a route's label goes: above the middle of the route, as a note
-// would be placed (so plotter lettering clears the hatching the same way)
+// would be placed (so plotter lettering clears the hatching the same way),
+// unless it has been moved from there
 function routeLabels(state) {
     return (state.routes || []).filter(function (r) {return r.label}).map(function (route) {
         var mid = alongLine(smoothLine(route.points, 2 / SCALE), 0.5);
-        return {id: route.id, pos: [mid.at[0], mid.at[1] - 12 / SCALE], text: route.label};
+        var offset = route.labelOffset || [0, 0];
+        return {id: route.id, pos: [mid.at[0] + offset[0], mid.at[1] - 12 / SCALE + offset[1]], text: route.label};
     });
 }
 
@@ -644,7 +646,8 @@ function drawRoutes(svg, state, theme, type) {
         if (label) {
             var text = appendText(group, type.note, 'note-label route-label', label.text, SCALE * label.pos[0], SCALE * label.pos[1],
                 NOTE_SIZE * type.note.scale, 'middle');
-            text.style(type.note.hershey ? 'stroke' : 'fill', spec.color);
+            text.style(type.note.hershey ? 'stroke' : 'fill', spec.color)
+                .datum({id: route.id, kind: 'routeLabel', item: route, pos: label.pos});
         }
     });
 }

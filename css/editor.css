@@ -324,6 +324,14 @@ input[type=checkbox] {
     color: var(--accent);
 }
 
+.tool-options .roads-prompt {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    padding-left: 16px;
+}
+
 .tool-options-gap {
     margin-left: 12px;
 }

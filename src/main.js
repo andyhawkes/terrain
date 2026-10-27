@@ -282,8 +282,7 @@ function readSettings() {
         var n = parseInt(d3.select('#' + f.id).property('value'), 10);
         params[f.id] = n >= 0 ? n : defaultParams[f.id];
     });
-    // Only when on, so maps without roads have the same steps as before
-    if (roadsBox.property('checked')) params.roads = true;
+    params.roads = roadsBox.property('checked');
     return params;
 }
 
