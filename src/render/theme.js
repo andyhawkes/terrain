@@ -54,7 +54,8 @@ export function themeCSS(theme, font, background, scope) {
             (theme.extras && theme.extras.gridOpacity || 0.45) + '; }',
         'S .grid-label { fill: ' + (c.grid || c.ink) + '; stroke-width: 3px; }',
         'S path.grid-label { fill: none; stroke: ' + (c.grid || c.ink) + '; stroke-width: 1px; }',
-        typeof font.label === 'string' ? 'S text.grid-label, S text.extras-label { font-family: ' + font.label + '; }' : '',
+        typeof font.label === 'string' ? 'S text.grid-label, S text.extras-label, S text.note-label { font-family: ' +
+            font.label + '; }' : '',
         typeof font.region === 'string' ? 'S text.title-text, S text.compass-north { font-family: ' + font.region + '; }' : '',
         'S text.extras-label { fill: ' + c.label + '; }',
         'S text.title-text { fill: ' + c.region + '; stroke: none; }',
@@ -68,10 +69,9 @@ export function themeCSS(theme, font, background, scope) {
     return rules.join('\n').replace(/\bS\b/g, scope).replace(/\bMAP\b/g, scope);
 }
 
-// Region names may be shown in capitals, set by the theme or its font
-export function labelText(theme, font, kind, text) {
-    var regionCase = font.regionCase || theme.labels.regionCase;
-    return kind === 'region' && regionCase === 'upper' ? text.toUpperCase() : text;
+// Text as its role shows it: in capitals, or as written
+export function labelText(role, text) {
+    return role.case === 'upper' ? text.toUpperCase() : text;
 }
 
 // --- Hershey single-stroke lettering ---

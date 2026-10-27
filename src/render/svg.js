@@ -6,7 +6,7 @@ import * as d3 from 'd3';
 import {derive, seaShading, relief, coastOutlines, smoothCoasts, regionShapes, hachureStrokes} from '../core/derive.js';
 import {meshTris} from '../core/terrain.js';
 import {itemPos} from '../core/steps.js';
-import {getTheme, fontChoice, backgroundChoice} from '../themes/index.js';
+import {getTheme, fontChoice, backgroundChoice, typography} from '../themes/index.js';
 import {themeCSS, labelText, hersheyPath, hersheyBox, dashPaths} from './theme.js';
 import {extrasChoice, squareGrid, hexGrid, scaleBar, defaultPosition, formatDistance, wrapLines, COMPASS_RADIUS} from './extras.js';
 
@@ -169,7 +169,7 @@ export function applyTheme(svg, style) {
     var css = themeCSS(theme, font, background, '#' + svg.attr('id'));
     var el = svg.select('style.theme');
     if (el.text() !== css) el.text(css);
-    return {theme: theme, font: font, background: background};
+    return {theme: theme, font: font, background: background, type: typography(theme, style)};
 }
 
 function drawBackground(svg, background) {
@@ -472,53 +472,70 @@ function markerType(marker, specs) {
 
 var NOTE_SIZE = 24;
 
-// City and region names, plus the user's own text notes
-function labelSets(labels, font, notes) {
+// City and region names, plus the user's own text notes. role gives each
+// label's lettering (see typography in themes/index.js).
+function labelSets(labels, type, notes) {
     return [
-        {kind: 'city', dataKind: 'cityLabel', cls: 'city-label', labels: labels.cities, family: font.label,
+        {dataKind: 'cityLabel', cls: 'city-label', labels: labels.cities,
+            role: function (l) {return l.capital ? type.capital : type.town},
             size: function (l) {return l.size}, anchor: function (l) {return l.align}},
-        {kind: 'region', dataKind: 'regionLabel', cls: 'region-label', labels: labels.regions, family: font.region,
+        {dataKind: 'regionLabel', cls: 'region-label', labels: labels.regions,
+            role: function () {return type.region},
             size: function (l) {return SCALE*l.size}, anchor: function () {return 'middle'}},
-        {kind: 'note', dataKind: 'note', cls: 'note-label', family: font.label,
+        {dataKind: 'note', cls: 'note-label', role: function () {return type.note},
             labels: notes.map(function (n) {return {id: n.id, x: n.pos[0], y: n.pos[1], text: n.text, item: n}}),
-            size: function () {return NOTE_SIZE}, anchor: function () {return 'middle'}}
+            size: function () {return NOTE_SIZE * type.note.scale}, anchor: function () {return 'middle'}}
     ];
 }
 
-// Labels as text, or as single-stroke Hershey paths
-export function drawLabels(svg, labels, notes, theme, font) {
-    labelSets(labels, font, notes).forEach(function (set) {
+// What a role changes from the theme's stylesheet, set on its text. Left
+// off when nothing is changed, so those maps draw as they always have.
+var LETTERING = ['font-family', 'font-variant', 'letter-spacing', 'translate'];
+
+function lettering(selection, role) {
+    LETTERING.forEach(function (name) {
+        selection.style(name, function (d) {return (typeof role === 'function' ? role(d) : role).inline[name] || null});
+    });
+    return selection;
+}
+
+// Labels as text, or as single-stroke Hershey paths. A theme's fonts are
+// all one or the other, so a set is drawn one way.
+export function drawLabels(svg, labels, notes, type) {
+    labelSets(labels, type, notes).forEach(function (set) {
         var data = set.labels.map(function (l) {
-            return {id: l.id, kind: set.dataKind, pos: [l.x, l.y], label: l, item: l.item,
-                text: labelText(theme, font, set.kind, l.text)};
+            var role = set.role(l);
+            return {id: l.id, kind: set.dataKind, pos: [l.x, l.y], label: l, item: l.item, role: role,
+                text: labelText(role, l.text)};
         });
-        if (set.family.hershey) {
+        if (set.role({}).hershey) {
             join(svg, 'label', 'path', set.cls, data, byId)
                 .attr('d', function (d) {
-                    return hersheyPath(set.family.hershey, d.text, SCALE*d.pos[0], SCALE*d.pos[1],
+                    return hersheyPath(d.role.family.hershey, d.text, SCALE*d.pos[0], SCALE*d.pos[1],
                         set.size(d.label), set.anchor(d.label));
                 });
         } else {
-            join(svg, 'label', 'text', set.cls, data, byId)
+            var text = join(svg, 'label', 'text', set.cls, data, byId)
                 .attr('x', function (d) {return SCALE*d.pos[0]})
                 .attr('y', function (d) {return SCALE*d.pos[1]})
                 .style('font-size', function (d) {return set.size(d.label) + 'px'})
                 .style('text-anchor', function (d) {return set.anchor(d.label)})
                 .text(function (d) {return d.text});
+            lettering(text, function (d) {return d.role});
         }
     });
 }
 
 // Pen lettering has no halo, so hatching under it is left out instead.
 // Boxes are in map units, with a little padding.
-function hersheyLabelBoxes(labels, notes, theme, font) {
+function hersheyLabelBoxes(labels, notes, type) {
     var boxes = [];
-    labelSets(labels, font, notes).forEach(function (set) {
-        if (!set.family.hershey) return;
+    labelSets(labels, type, notes).forEach(function (set) {
         set.labels.forEach(function (l) {
-            if (!l.text) return;
+            var role = set.role(l);
+            if (!l.text || !role.hershey) return;
             var size = set.size(l);
-            var b = hersheyBox(set.family.hershey, labelText(theme, font, set.kind, l.text),
+            var b = hersheyBox(role.family.hershey, labelText(role, l.text),
                 SCALE*l.x, SCALE*l.y, size, set.anchor(l));
             var pad = 0.25 * size;
             boxes.push([(b.x0 - pad) / SCALE, (b.y0 - pad) / SCALE, (b.x1 + pad) / SCALE, (b.y1 + pad) / SCALE]);
@@ -549,30 +566,29 @@ function fontsLoaded(families) {
     });
 }
 
-// Measures labels as the theme will draw them: its fonts, letter case,
-// small capitals and letter spacing, or Hershey glyph widths. Returns null
-// where there's no canvas to measure with (e.g. in Node).
-function labelMeasurer(theme, font) {
+// Measures labels as their roles draw them (kind is a role id): font,
+// letter case, small capitals and letter spacing, or Hershey glyph widths.
+// Returns null where there's no canvas to measure with (e.g. in Node).
+function labelMeasurer(type) {
     if (typeof document === 'undefined') return null;
     measuring = measuring || document.createElement('canvas').getContext('2d');
-    var l = theme.labels;
-    var spacing = l.regionSpacing && l.regionSpacing !== 'normal' ? parseFloat(l.regionSpacing) : 0;
     return function (kind, text, size) {
-        var family = kind === 'region' ? font.region : font.label;
-        var shown = labelText(theme, font, kind, text);
-        if (family.hershey) {
-            var b = hersheyBox(family.hershey, shown, 0, 0, size, 'start');
+        var role = type[kind];
+        var shown = labelText(role, text);
+        if (role.hershey) {
+            var b = hersheyBox(role.family.hershey, shown, 0, 0, size, 'start');
             return b.x1 - b.x0;
         }
-        measuring.font = size + 'px ' + family;
-        measuring.fontVariantCaps = kind === 'region' && l.regionVariant === 'small-caps' ? 'small-caps' : 'normal';
+        measuring.font = size + 'px ' + role.family;
+        measuring.fontVariantCaps = role.case === 'small-caps' ? 'small-caps' : 'normal';
         var width = measuring.measureText(shown).width;
-        return width + (kind === 'region' ? spacing * size * shown.length : 0);
+        var spacing = role.spacing === 'normal' ? 0 : parseFloat(role.spacing);
+        return width + spacing * size * shown.length;
     };
 }
 
 // Boxes (map units) around the extras that are showing, for labels to avoid
-function extrasBoxes(state, theme, font, measure) {
+function extrasBoxes(state, theme, type, measure) {
     var extras = extrasChoice(theme, state.style, state.params);
     var extent = state.params.extent;
     var boxes = [];
@@ -585,15 +601,17 @@ function extrasBoxes(state, theme, font, measure) {
     if (extras.scaleBar) {
         var p = at('scaleBar');
         var bar = scaleBar(extent, extras.perUnit);
-        boxes.push([p[0] - 20 / SCALE, p[1] - 12 / SCALE, p[0] + bar.mapLength + 40 / SCALE, p[1] + 24 / SCALE]);
+        boxes.push([p[0] - 20 / SCALE, p[1] - 12 / SCALE, p[0] + bar.mapLength + 40 / SCALE,
+            p[1] + (10 + SCALE_TEXT * type.scale.scale) / SCALE]);
     }
     if (extras.title) {
         var q = at('title');
-        var width = measure ? measure('region', extras.title, TITLE_SIZE) : 0.6 * TITLE_SIZE * extras.title.length;
+        var size = TITLE_SIZE * type.title.scale;
+        var width = measure ? measure('title', extras.title, size) : 0.6 * size * extras.title.length;
         var maxWidth = SCALE * extent.width / 2 - 2 * TITLE_PAD;
         var lines = Math.max(1, Math.ceil(width / maxWidth));
         boxes.push([q[0], q[1], q[0] + (Math.min(width, maxWidth) + 2 * TITLE_PAD) / SCALE,
-            q[1] + (2 * TITLE_PAD + (lines - 1) * 1.2 * TITLE_SIZE + TITLE_SIZE) / SCALE]);
+            q[1] + (2 * TITLE_PAD + (lines - 1) * 1.2 * size + size) / SCALE]);
     }
     return boxes;
 }
@@ -601,13 +619,21 @@ function extrasBoxes(state, theme, font, measure) {
 // How this map's labels will be drawn, so they can be placed to fit (see
 // placeLabels). Until the theme's fonts have loaded, labels are placed for
 // the fallback font; main.js redraws when fonts load, placing them again.
-function labelLayout(state, theme, font) {
-    var measure = labelMeasurer(theme, font);
-    var ready = fontsLoaded([font.label, font.region]);
+function labelLayout(state, theme, font, type) {
+    var measure = labelMeasurer(type);
+    var placed = ['region', 'capital', 'town', 'title'];
+    var ready = fontsLoaded(placed.map(function (id) {return type[id].family}));
+    var signature = placed.map(function (id) {
+        var r = type[id];
+        return [r.font, r.case, r.spacing, r.size].join(' ');
+    });
+    var fs = state.params.fontsizes;
     return {
-        key: theme.id + '|' + font.id + '|' + (measure ? 'measured' : 'estimated') + '|' + ready,
+        key: theme.id + '|' + font.id + '|' + (measure ? 'measured' : 'estimated') + '|' + ready + '|' + signature.join('|'),
         measure: measure,
-        obstacles: extrasBoxes(state, theme, font, measure)
+        fontsizes: Object.assign({}, fs, {region: fs.region * type.region.scale,
+            city: fs.city * type.capital.scale, town: fs.town * type.town.scale}),
+        obstacles: extrasBoxes(state, theme, type, measure)
     };
 }
 
@@ -615,7 +641,7 @@ function labelLayout(state, theme, font) {
 export function drawMap(svg, state) {
     var t = applyTheme(svg, state.style);
     var theme = t.theme;
-    var d = derive(state, labelLayout(state, theme, t.font));
+    var d = derive(state, labelLayout(state, theme, t.font, t.type));
     drawBackground(svg, t.background);
     drawTints(svg, state, d, theme);
     drawStrokes(svg, 'sea', function () {
@@ -630,7 +656,7 @@ export function drawMap(svg, state) {
         return theme.strokeOnly ? dashPaths(d.borders, dash[0] / SCALE, dash[1] / SCALE) : d.borders;
     }, [d.borders, dash[0], dash[1]]);
     // Hershey lettering is drawn with hatching cleared from under it
-    var boxes = hersheyLabelBoxes(d.labels, state.notes, theme, t.font);
+    var boxes = hersheyLabelBoxes(d.labels, state.notes, t.type);
     // A theme can draw relief with symbols instead of hatching
     var hatching = theme.slopeShading !== false;
     drawSlopes(svg, function () {
@@ -639,25 +665,26 @@ export function drawMap(svg, state) {
     }, [d.slopes, boxes.length ? JSON.stringify(boxes) : '', hatching]);
     drawRelief(svg, state, theme);
     drawFeatures(svg, state, theme);
-    drawLabels(svg, d.labels, state.notes, theme, t.font);
-    drawExtras(svg, state, theme, t.font);
+    drawLabels(svg, d.labels, state.notes, t.type);
+    drawExtras(svg, state, theme, t.type);
     showLayers(svg, state.style.hidden);
 }
 
 // --- Extras: grid, scale bar, compass rose, title (see extras.js) ---
 
-// A line of text, as <text> or as Hershey strokes. size is in SVG units,
-// x and y in SVG units too.
-function appendText(g, family, cls, text, x, y, size, anchor) {
-    if (family.hershey) {
+// A line of text in a role's lettering, as <text> or as Hershey strokes.
+// size is in SVG units, x and y in SVG units too.
+function appendText(g, role, cls, text, x, y, size, anchor) {
+    text = labelText(role, text);
+    if (role.hershey) {
         return g.append('path').attr('class', cls)
-            .attr('d', hersheyPath(family.hershey, text, x, y, size, anchor));
+            .attr('d', hersheyPath(role.family.hershey, text, x, y, size, anchor));
     }
-    return g.append('text').attr('class', cls)
+    return lettering(g.append('text').attr('class', cls)
         .attr('x', x).attr('y', y)
         .style('font-size', size + 'px')
         .style('text-anchor', anchor)
-        .text(text);
+        .text(text), role);
 }
 
 function polylinePath(lines) {
@@ -668,9 +695,10 @@ function polylinePath(lines) {
     }).join('');
 }
 
-function drawGrid(svg, extras, extent, font) {
+function drawGrid(svg, extras, extent, type) {
+    var role = type.grid;
     if (unchanged(svg, 'grid', [extras.grid, extras.gridSize, extras.perUnit, extras.gridLabels,
-        extent, font])) return;
+        extent, JSON.stringify(role)])) return;
     var g = layer(svg, 'grid');
     g.selectAll('*').remove();
     if (extras.grid === 'none') return;
@@ -679,9 +707,9 @@ function drawGrid(svg, extras, extent, font) {
         var hex = hexGrid(extent, size);
         g.append('path').attr('class', 'grid').attr('d', polylinePath(hex.lines));
         if (extras.gridLabels) {
-            var labelSize = Math.min(10, SCALE * size * 0.18);
+            var labelSize = Math.min(10, SCALE * size * 0.18) * role.scale;
             hex.labels.forEach(function (l) {
-                appendText(g, font.label, 'grid-label hex-label', l.text, SCALE * l.x, SCALE * l.y + labelSize / 2,
+                appendText(g, role, 'grid-label hex-label', l.text, SCALE * l.x, SCALE * l.y + labelSize / 2,
                     labelSize, 'middle');
             });
         }
@@ -690,14 +718,14 @@ function drawGrid(svg, extras, extent, font) {
     var grid = squareGrid(extent, size);
     g.append('path').attr('class', 'grid').attr('d', polylinePath(grid.lines));
     if (extras.gridLabels) {
-        var edgeSize = 14;
+        var edgeSize = 14 * role.scale;
         var top = -SCALE * extent.height / 2;
         var left = -SCALE * extent.width / 2;
         grid.columns.forEach(function (c) {
-            appendText(g, font.label, 'grid-label', c.text, SCALE * c.x, top + edgeSize + 6, edgeSize, 'middle');
+            appendText(g, role, 'grid-label', c.text, SCALE * c.x, top + edgeSize + 6, edgeSize, 'middle');
         });
         grid.rows.forEach(function (r) {
-            appendText(g, font.label, 'grid-label', r.text, left + 8, SCALE * r.y + edgeSize / 2, edgeSize, 'start');
+            appendText(g, role, 'grid-label', r.text, left + 8, SCALE * r.y + edgeSize / 2, edgeSize, 'start');
         });
     }
 }
@@ -721,7 +749,7 @@ function compassPoints(long, short, width) {
 }
 
 var ORNAMENTS = {
-    scaleBar: function (g, extras, extent, font) {
+    scaleBar: function (g, extras, extent, type) {
         var bar = scaleBar(extent, extras.perUnit);
         var length = SCALE * bar.mapLength;
         var parts = bar.marks.length - 1;
@@ -732,28 +760,31 @@ var ORNAMENTS = {
         }
         bar.marks.forEach(function (m, i) {
             var text = formatDistance(m.value) + (i === parts ? ' ' + extras.units.name : '');
-            appendText(g, font.label, 'extras-label', text, SCALE * m.x, 17, 14, 'middle');
+            var size = SCALE_TEXT * type.scale.scale;
+            appendText(g, type.scale, 'extras-label', text, SCALE * m.x, 3 + size, size, 'middle');
         });
     },
     // Scaled to the chosen size, keeping its lines the same weight
-    compass: function (g, extras, extent, font) {
+    // The N is lettered like the title
+    compass: function (g, extras, extent, type) {
         g.append('path').attr('class', 'extras-line')
             .attr('d', 'M-30,0a30,30 0 1,0 60,0a30,30 0 1,0 -60,0M-24,0a24,24 0 1,0 48,0a24,24 0 1,0 -48,0');
         var points = compassPoints(46, 24, 7);
         g.append('path').attr('class', 'extras-paper').attr('d', points.light);
         g.append('path').attr('class', 'extras-fill').attr('d', points.dark);
-        appendText(g, font.region, 'extras-label compass-north', 'N', 0, -52, 16, 'middle');
+        appendText(g, type.title, 'extras-label compass-north', 'N', 0, -52, 16, 'middle');
         g.selectAll('path').attr('vector-effect', 'non-scaling-stroke');
     },
     // The box fits the title, up to half the map's width; longer titles wrap
-    title: function (g, extras, extent, font) {
+    title: function (g, extras, extent, type) {
         var maxWidth = SCALE * extent.width / 2;
-        layoutTitle(g, extras.title, font.region, maxWidth);
+        var role = type.title;
+        layoutTitle(g, extras.title, role, maxWidth);
         // Text is measured in whatever font is showing, so measure again
         // once the theme's own font has loaded
-        if (!font.region.hershey && typeof document !== 'undefined' && document.fonts) {
-            document.fonts.load(TITLE_SIZE + 'px ' + font.region, extras.title).then(function () {
-                if (g.node().isConnected) layoutTitle(g, extras.title, font.region, maxWidth);
+        if (!role.hershey && typeof document !== 'undefined' && document.fonts) {
+            document.fonts.load(TITLE_SIZE * role.scale + 'px ' + role.family, extras.title).then(function () {
+                if (g.node().isConnected) layoutTitle(g, extras.title, role, maxWidth);
             });
         }
     }
@@ -761,16 +792,19 @@ var ORNAMENTS = {
 
 var TITLE_SIZE = 30;
 var TITLE_PAD = 14;
+var SCALE_TEXT = 14;
 
 // Draws the title box with its top-left corner at (0, 0)
-function layoutTitle(g, title, family, maxWidth) {
+function layoutTitle(g, title, role, maxWidth) {
     g.selectAll('*').remove();
-    var size = TITLE_SIZE;
+    title = labelText(role, title);
+    var size = TITLE_SIZE * role.scale;
     var pad = TITLE_PAD;
-    var probe = family.hershey ? null : g.append('text').attr('class', 'title-text').style('font-size', size + 'px');
+    var probe = role.hershey ? null :
+        lettering(g.append('text').attr('class', 'title-text').style('font-size', size + 'px'), role);
     var wrapped = wrapLines(title, function (text) {
-        if (family.hershey) {
-            var b = hersheyBox(family.hershey, text, 0, 0, size, 'start');
+        if (role.hershey) {
+            var b = hersheyBox(role.family.hershey, text, 0, 0, size, 'start');
             return b.x1 - b.x0;
         }
         probe.text(text);
@@ -786,14 +820,14 @@ function layoutTitle(g, title, family, maxWidth) {
     g.append('rect').attr('class', 'extras-line')
         .attr('x', 4).attr('y', 4).attr('width', width - 8).attr('height', height - 8);
     wrapped.lines.forEach(function (line, i) {
-        appendText(g, family, 'title-text', line, width / 2, pad + 0.8 * size + i * lineHeight, size, 'middle');
+        appendText(g, role, 'title-text', line, width / 2, pad + 0.8 * size + i * lineHeight, size, 'middle');
     });
 }
 
-function drawExtras(svg, state, theme, font) {
+function drawExtras(svg, state, theme, type) {
     var extras = extrasChoice(theme, state.style, state.params);
     var extent = state.params.extent;
-    drawGrid(svg, extras, extent, font);
+    drawGrid(svg, extras, extent, type);
     var shown = Object.keys(ORNAMENTS).filter(function (id) {
         return id === 'title' ? !!extras.title : extras[id];
     });
@@ -809,6 +843,6 @@ function drawExtras(svg, state, theme, font) {
     groups.each(function (d) {
         var g = d3.select(this);
         g.selectAll('*').remove();
-        ORNAMENTS[d.id](g, extras, extent, font);
+        ORNAMENTS[d.id](g, extras, extent, type);
     });
 }

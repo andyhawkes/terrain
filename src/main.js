@@ -13,7 +13,7 @@ import {VIEWS, viewInfo, renderView} from './ui/views.js';
 import {createTools, TOOLS} from './ui/tools.js';
 import {createPanels} from './ui/panels.js';
 import {describeStep} from './ui/history.js';
-import {getTheme, fontChoice} from './themes/index.js';
+import {getTheme, typography} from './themes/index.js';
 
 var doc = new MapDocument();
 var view = 'map';
@@ -323,8 +323,8 @@ var exportMenu = d3.select('#exportMenu');
 // (Left to itself the exporter would embed every font on the page.)
 function exportFonts(style) {
     var theme = getTheme(style.theme);
-    var font = fontChoice(theme, style);
-    var families = [font.label, font.region, theme.symbols.poi.font]
+    var type = typography(theme, style);
+    var families = Object.keys(type).map(function (role) {return type[role].family}).concat([theme.symbols.poi.font])
         .filter(function (f) {return typeof f === 'string'})
         .join(',').split(',')
         .map(function (f) {return f.trim().replace(/^["']|["']$/g, '')});
