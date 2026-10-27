@@ -528,3 +528,35 @@ test('the current map can be saved on its own, with its undo history', function 
     assert.equal(fingerprint(copy.state), fingerprint(doc.state));
     assert.equal(copy.state.cities[1].name, 'Innsmouth');
 });
+
+test('region names keep clear of each other, obstacles and the edge, on their own land', function () {
+    // A wide font and a title box in the top left, to make room scarce
+    var obstacle = [-0.5, -0.5, -0.1, -0.35];
+    var layout = {
+        key: 'test',
+        measure: function (kind, text, size) {return (kind === 'region' ? 0.85 : 0.65) * size * text.length},
+        obstacles: [obstacle]
+    };
+    ['abc123', 'k1', 'k2', 'k3'].forEach(function (seed) {
+        var doc = new MapDocument();
+        doc.dispatch('generate', {params: {}}, seed);
+        var state = doc.state;
+        var d = derive(state, layout);
+        var extent = state.h.mesh.extent;
+        var boxes = d.labels.regions.map(function (l) {
+            return [l.x - l.width / 2, l.y - 1.05 * l.size, l.x + l.width / 2, l.y + 0.3 * l.size];
+        });
+        function hits(a, b) {return a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[3] > b[1]}
+        boxes.forEach(function (box, i) {
+            var label = d.labels.regions[i];
+            var j = state.h.mesh.vxs.findIndex(function (v) {return v[0] === label.x && v[1] === label.y});
+            assert.equal(d.terr[j], state.cities[i].vx, seed + ': ' + label.text + ' is on its own land');
+            assert.ok(box[0] >= -extent.width / 2 && box[2] <= extent.width / 2 &&
+                box[1] >= -extent.height / 2 && box[3] <= extent.height / 2, seed + ': ' + label.text + ' is on the map');
+            assert.ok(!hits(box, obstacle), seed + ': ' + label.text + ' misses the obstacle');
+            boxes.slice(i + 1).forEach(function (other) {
+                assert.ok(!hits(box, other), seed + ': region names overlap');
+            });
+        });
+    });
+});

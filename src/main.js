@@ -32,6 +32,14 @@ function render() {
     updateChrome();
 }
 
+// Labels are placed to fit the theme's fonts, so draw again once fonts
+// arrive (placement only reruns if the lettering has changed)
+if (document.fonts) {
+    document.fonts.addEventListener('loadingdone', function () {
+        if (doc.state.h) render();
+    });
+}
+
 // Any change to the map ends a replay
 doc.subscribe(function () {
     cancelReplay();
