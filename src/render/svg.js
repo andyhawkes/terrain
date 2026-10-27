@@ -42,7 +42,7 @@ var LAYERS = ['background', 'field', 'tint', 'sea', 'river', 'coastLines', 'coas
 // Layers the user can switch off in the Style panel
 export var TOGGLE_LAYERS = [
     ['coast', 'Coastline'], ['tint', 'Region colours'], ['sea', 'Sea shading'], ['river', 'Rivers'], ['border', 'Borders'], ['slope', 'Slope shading'],
-    ['relief', 'Hills and forests'],
+    ['relief', 'Hills'], ['forest', 'Forests'],
     ['city', 'Cities'], ['label', 'Labels'], ['wreck', 'Wrecks'], ['poi', 'Points of interest'],
     ['marker', 'Markers']
 ];
@@ -119,7 +119,25 @@ var HIDDEN_WITH = {coastLines: 'coast'};
 export function showLayers(svg, hidden) {
     LAYERS.forEach(function (name) {
         var off = hidden.indexOf(name) >= 0 || hidden.indexOf(HIDDEN_WITH[name]) >= 0;
+        // Forests share the relief layer, which only goes when both are off
+        if (name === 'relief') off = off && hidden.indexOf('forest') >= 0;
         layer(svg, name).attr('display', off ? 'none' : null);
+    });
+    showReliefKinds(svg, hidden.indexOf('relief') >= 0, hidden.indexOf('forest') >= 0);
+}
+
+// Hills (and hachures) and forests (trees and their wash) are drawn in one
+// layer, so nearer symbols overlap farther ones whatever their kind, but
+// each can be hidden on its own. Only touches the symbols when that changes.
+function showReliefKinds(svg, hillsOff, forestOff) {
+    var g = layer(svg, 'relief');
+    var key = hillsOff + ' ' + forestOff;
+    if (g.node().__kindsShown === key) return;
+    g.node().__kindsShown = key;
+    g.selectAll('use.relief, g.hachures, g.tree-wash').attr('display', function () {
+        if (hillsOff === forestOff) return null;
+        var forest = this.classList.contains('forest') || this.classList.contains('tree-wash');
+        return (forest ? forestOff : hillsOff) ? 'none' : null;
     });
 }
 
@@ -351,11 +369,13 @@ function drawRelief(svg, state, theme) {
             return Math.abs(p[0] - s.x) < near && Math.abs(p[1] - s.y) < near;
         });
     });
+    layer(svg, 'relief').node().__kindsShown = null;
     drawTreeWash(svg, spec.treeWash, symbols);
     drawHachures(svg, state.h, spec.hachures);
     var prefix = '#' + svg.attr('id') + '-relief-';
     // Drawn in order, back to front, so no key: nearer symbols overlap
     join(svg, 'relief', 'use', 'relief', symbols)
+        .classed('forest', function (d) {return d.kind === 'tree'})
         .attr('href', function (d) {return prefix + d.kind + reliefVariant(spec[d.kind], d)})
         .attr('transform', function (d) {
             return 'translate(' + coord(d.x) + ',' + coord(d.y) + ') scale(' + d.size.toFixed(2) + ')';

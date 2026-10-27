@@ -1,5 +1,6 @@
 // The editing tools in the left-hand strip. One tool is active at a time;
-// "pointer" means no editing. Some tools show options above the map.
+// "pointer" means no editing. Some tools show options above the map; the bar
+// is always there, so the map doesn't change size when switching tools.
 import * as d3 from 'd3';
 import * as R from '../render/svg.js';
 import {MARKER_TYPES, SYMBOL_KINDS} from '../core/steps.js';
@@ -16,7 +17,7 @@ export var TOOLS = [
     {id: 'note', icon: 'title', name: 'Add text', key: 't',
         hint: 'Click the map to write something there, like "Here be dragons".'},
     {id: 'symbol', icon: 'sailing', name: 'Add symbol', key: 's',
-        hint: 'Click the map to add the wreck or point of interest chosen above the map. Click an existing one to swap it for the chosen symbol.'},
+        hint: 'Click the map to add the symbol chosen above, or click a symbol to swap it.'},
     {id: 'marker', icon: 'location_on', name: 'Add marker', key: 'm',
         hint: 'Click the map to add a marker. Choose its kind and colour above the map.'},
     {id: 'delete', icon: 'delete', name: 'Delete', key: 'd',
@@ -142,10 +143,11 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
     // Options above the map for the marker and symbol tools, drawn with the
     // current theme's symbols. Rebuilt when the tool or theme changes.
     function showOptions() {
-        var hasOptions = active === 'marker' || active === 'symbol';
-        optionsBar.attr('hidden', hasOptions ? null : true);
-        if (!hasOptions) {
+        if (active !== 'marker' && active !== 'symbol') {
             shown = null;
+            var tool = TOOLS.find(function (t) {return t.id === active});
+            optionsBar.html('');
+            optionsBar.append('span').attr('class', 'tool-options-label').text(tool.name);
             return;
         }
         var theme = getTheme(doc.state.style.theme);

@@ -79,6 +79,35 @@ test('the first step cannot be undone', function () {
     assert.equal(doc.canUndo(), false);
 });
 
+test('clearing the history keeps only the current map', function () {
+    var doc = new MapDocument();
+    doc.dispatch('generate', {params: small}, 'first');
+    doc.dispatch('setStyle', {theme: 'underhill'});
+    assert.equal(doc.canClear(), false);
+    doc.dispatch('generate', {params: small}, 'second');
+    doc.dispatch('addMarker', {pos: [0, 0]});
+    doc.dispatch('deleteItem', {id: doc.state.markers[0].id});
+    doc.undo();
+    assert.equal(doc.canClear(), true);
+    var before = fingerprint(doc.state);
+
+    doc.clearHistory();
+    assert.deepEqual(doc.steps.map(function (s) {return s.type}), ['generate', 'addMarker']);
+    assert.equal(doc.cursor, 2);
+    assert.equal(doc.canUndo(), true);
+    assert.equal(doc.canRedo(), false);
+    assert.equal(doc.canClear(), false);
+    // The same map, with the style carried over from the first
+    assert.equal(fingerprint(doc.state), before);
+    assert.equal(doc.state.style.theme, 'underhill');
+    // and the same again when replayed from its steps
+    var replayed = MapDocument.fromJSON(JSON.parse(JSON.stringify(doc.toJSON())));
+    assert.equal(fingerprint(replayed.state), before);
+    assert.equal(replayed.state.style.theme, 'underhill');
+    doc.undo();
+    assert.equal(doc.state.markers.length, 0);
+});
+
 test('edits are stored on the map, not lost on redraw', function () {
     var doc = new MapDocument();
     doc.dispatch('generate', {params: small}, 'seed');

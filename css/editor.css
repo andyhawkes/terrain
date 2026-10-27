@@ -265,20 +265,23 @@ input[type=checkbox] {
     flex-direction: column;
 }
 
-/* Options for the active tool, e.g. which kind of marker to add */
+/* Options for the active tool, e.g. which kind of marker to add. Always
+   there and one row high, so the map keeps its size; the side panel's tabs
+   share its height so the two line up. */
+:root {
+    --bar-height: 48px;
+}
+
 .tool-options {
     flex: none;
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 16px;
-    flex-wrap: wrap;
+    height: var(--bar-height);
+    padding: 0 16px;
+    overflow-x: auto;
     background: var(--panel);
     border-bottom: 1px solid var(--border);
-}
-
-.tool-options[hidden] {
-    display: none;
 }
 
 .tool-options-label {
@@ -287,8 +290,10 @@ input[type=checkbox] {
 }
 
 .tool-options button {
+    flex: none;
+    height: 36px;
     white-space: nowrap;
-    padding: 4px 10px 4px 6px;
+    padding: 0 10px;
 }
 
 .tool-options button svg {
@@ -303,7 +308,9 @@ input[type=checkbox] {
 
 .tool-options button.symbol-variant,
 .tool-options button.marker-type {
-    padding: 4px;
+    min-width: 36px;
+    padding: 0 3px;
+    justify-content: center;
 }
 
 .tool-options button.symbol-variant svg {
@@ -422,7 +429,9 @@ input[type=checkbox] {
 }
 
 .panel-tabs {
+    flex: none;
     display: flex;
+    height: var(--bar-height);
     border-bottom: 1px solid var(--border);
 }
 
@@ -432,7 +441,7 @@ input[type=checkbox] {
     border: none;
     border-bottom: 2px solid transparent;
     border-radius: 0;
-    padding: 12px 8px 10px;
+    padding: 2px 8px 0;
     color: var(--muted);
     background: transparent;
 }
@@ -668,6 +677,10 @@ input[type=checkbox] {
 .status-message {
     flex: 1;
     min-width: 0;
+    /* One line, so the map keeps its height */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .view-picker {
@@ -688,8 +701,12 @@ input[type=checkbox] {
 
 /* --- History panel --- */
 
-.replay-button {
-    width: 100%;
+.history-actions {
+    display: grid;
+    gap: 8px;
+}
+
+.history-actions button {
     justify-content: center;
 }
 
