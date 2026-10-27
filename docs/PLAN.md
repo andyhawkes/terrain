@@ -73,6 +73,7 @@ Each phase leaves the app working.
 - [x] Right-hand panel:
   - **Build**: new terrain, shaping, sea level and erosion (with sliders), places.
   - **Style**: theme, lettering, background, layer toggles.
+  - The panel folds away with the button at the top right, leaving a strip as wide as the tool strip with icons for Build, Style and History; clicking one opens the panel at that tab. Folded or not is remembered per browser.
 - [x] Remove the tabs. Plain, neutral editor styling (`css/editor.css`), separate from how the map is drawn (`css/map.css`).
 - [x] Save and Open map files, which were planned for Phase 6. They fit the top bar and were simple once the step history existed.
 

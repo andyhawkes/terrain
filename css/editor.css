@@ -140,9 +140,23 @@ input[type=checkbox] {
 
 .topbar-info {
     margin-left: auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     color: var(--muted);
     font-size: 13px;
     white-space: nowrap;
+}
+
+.topbar-toggle {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    margin-right: -8px;
+    justify-content: center;
+    border-color: transparent;
+    background: transparent;
 }
 
 .topbar-info code {
@@ -450,6 +464,45 @@ input[type=checkbox] {
     color: var(--text);
     border-bottom-color: var(--accent);
     font-weight: 600;
+}
+
+/* Tab icons only show when the side panel is folded away */
+.panel-tabs .icon {
+    display: none;
+}
+
+.sidepanel.collapsed {
+    width: 52px;
+}
+
+.sidepanel.collapsed .panel-body,
+.sidepanel.collapsed .tab-name {
+    display: none;
+}
+
+.sidepanel.collapsed .panel-tabs {
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    height: auto;
+    padding: 10px 0;
+    border-bottom: none;
+}
+
+.sidepanel.collapsed .panel-tabs button,
+.sidepanel.collapsed .panel-tabs button[aria-selected=true] {
+    flex: none;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    color: var(--text);
+    font-weight: normal;
+}
+
+.sidepanel.collapsed .panel-tabs .icon {
+    display: inline-block;
 }
 
 .panel-body {

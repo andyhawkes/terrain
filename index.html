@@ -36,6 +36,9 @@
             <input type="file" id="openFile" accept=".json,application/json" hidden>
         </div>
         <div class="topbar-info" id="mapInfo"></div>
+        <button id="sidepanelToggle" class="topbar-toggle" aria-controls="sidepanel">
+            <span class="icon" aria-hidden="true">right_panel_close</span>
+        </button>
     </header>
 
     <div id="newMapPanel" class="popover" popover></div>
@@ -51,7 +54,7 @@
             <div class="statusbar" id="statusbar" role="status"></div>
         </section>
 
-        <aside class="sidepanel">
+        <aside class="sidepanel" id="sidepanel">
             <div class="panel-tabs" role="tablist" id="panelTabs"></div>
             <div class="panel-body" id="panelBody"></div>
         </aside>
