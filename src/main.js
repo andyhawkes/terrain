@@ -426,7 +426,7 @@ var panelCtx = {act: act, doc: doc, svg: svg, setView: setView, updaters: [], re
         if (replaying()) stopReplay();
         else startReplay();
     }};
-var panels = createPanels(d3.select('#panelTabs'), d3.select('#panelBody'), panelCtx);
+var panels = createPanels(d3.select('#panelTabs'), d3.select('#panelBody'), panelCtx, d3.select('#sidepanelToggle'));
 
 // --- Keyboard shortcuts ---
 

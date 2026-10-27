@@ -342,22 +342,58 @@ function stylePanel(body, ctx) {
 }
 
 var PANELS = [
-    {id: 'build', name: 'Build', build: buildPanel},
-    {id: 'style', name: 'Style', build: stylePanel},
-    {id: 'history', name: 'History', build: historyPanel}
+    {id: 'build', name: 'Build', icon: 'construction', build: buildPanel},
+    {id: 'style', name: 'Style', icon: 'brush', build: stylePanel},
+    {id: 'history', name: 'History', icon: 'history', build: historyPanel}
 ];
 
-export function createPanels(tabs, body, ctx) {
+var COLLAPSED_KEY = 'terrain.sidepanel.collapsed';
+
+// The tabs and their panels. The side panel can be folded away to a strip
+// of the tabs' icons (toggle is the button that does it); clicking one
+// opens the panel at that tab. Folded or not is remembered per browser.
+export function createPanels(tabs, body, ctx, toggle) {
     var panes = {};
     var buttons = {};
+    var sidepanel = tabs.select(function () {return this.parentNode});
     PANELS.forEach(function (p) {
         buttons[p.id] = tabs.append('button')
             .attr('role', 'tab')
-            .text(p.name)
-            .on('click', function () {show(p.id)});
+            .attr('aria-label', p.name)
+            .on('click', function () {
+                setCollapsed(false);
+                show(p.id);
+            });
+        buttons[p.id].append('span').attr('class', 'icon').attr('aria-hidden', true).text(p.icon);
+        buttons[p.id].append('span').attr('class', 'tab-name').text(p.name);
         panes[p.id] = body.append('div').attr('role', 'tabpanel');
         p.build(panes[p.id], ctx);
     });
+
+    function setCollapsed(collapsed) {
+        sidepanel.classed('collapsed', collapsed);
+        PANELS.forEach(function (p) {
+            buttons[p.id].attr('title', collapsed ? p.name : null);
+        });
+        var label = collapsed ? 'Show side panel' : 'Hide side panel';
+        toggle.attr('aria-expanded', !collapsed).attr('title', label).attr('aria-label', label)
+            .select('.icon').text(collapsed ? 'right_panel_open' : 'right_panel_close');
+        try {
+            if (collapsed) localStorage.setItem(COLLAPSED_KEY, '1');
+            else localStorage.removeItem(COLLAPSED_KEY);
+        } catch (e) {
+            // Not remembered, which is fine
+        }
+    }
+    toggle.on('click', function () {setCollapsed(!sidepanel.classed('collapsed'))});
+    var collapsed = false;
+    try {
+        collapsed = localStorage.getItem(COLLAPSED_KEY) === '1';
+    } catch (e) {
+        // Open by default
+    }
+    setCollapsed(collapsed);
+
     function show(id) {
         PANELS.forEach(function (p) {
             buttons[p.id].attr('aria-selected', p.id === id);

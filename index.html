@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Fantasy map generator</title>
+    <title>Map maker</title>
 
     <link rel="stylesheet" href="css/editor.css" />
     <link rel="stylesheet" href="css/map.css" />
@@ -15,17 +15,17 @@
     <!-- Shown instead of the editor on small screens (see editor.css) -->
     <div class="small-screen" role="alert">
         <span class="icon" aria-hidden="true">desktop_windows</span>
-        <h1>Fantasy map generator</h1>
+        <h1>Map maker</h1>
         <p>The map editor needs a bigger screen. Please open this page on a computer or tablet.</p>
     </div>
 
     <header class="topbar">
-        <h1>Fantasy map generator</h1>
+        <h1>Map maker</h1>
         <div class="topbar-actions">
             <button id="newMapButton" class="primary" popovertarget="newMapPanel">
-                <span class="icon" aria-hidden="true">add</span>New map
+                <span class="icon" aria-hidden="true">add</span>New
             </button>
-            <button id="openButton"><span class="icon" aria-hidden="true">folder_open</span>Open…</button>
+            <button id="openButton"><span class="icon" aria-hidden="true">folder_open</span>Open</button>
             <button id="saveButton"><span class="icon" aria-hidden="true">save</span>Save</button>
             <button id="exportButton" popovertarget="exportMenu">
                 <span class="icon" aria-hidden="true">download</span>Export
@@ -36,6 +36,9 @@
             <input type="file" id="openFile" accept=".json,application/json" hidden>
         </div>
         <div class="topbar-info" id="mapInfo"></div>
+        <button id="sidepanelToggle" class="topbar-toggle" aria-controls="sidepanel">
+            <span class="icon" aria-hidden="true">right_panel_close</span>
+        </button>
     </header>
 
     <div id="newMapPanel" class="popover" popover></div>
@@ -51,7 +54,7 @@
             <div class="statusbar" id="statusbar" role="status"></div>
         </section>
 
-        <aside class="sidepanel">
+        <aside class="sidepanel" id="sidepanel">
             <div class="panel-tabs" role="tablist" id="panelTabs"></div>
             <div class="panel-body" id="panelBody"></div>
         </aside>
