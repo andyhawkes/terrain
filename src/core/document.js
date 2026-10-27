@@ -140,6 +140,25 @@ export class MapDocument {
         return 0;
     }
 
+    // True if there's anything for clearHistory to forget
+    canClear() {
+        return this.startIndex() > 0 || this.cursor < this.steps.length;
+    }
+
+    // Forget earlier maps and undone steps, keeping the current map's own
+    // steps (it's built from them, so they can't go). Like a saved map, the
+    // style carried over from earlier maps goes into the start step. The
+    // snapshots are kept, so nothing is replayed.
+    clearHistory() {
+        if (!this.canClear()) return;
+        var start = this.startIndex();
+        var json = this.toJSON({currentMap: true});
+        this.snapshots = [emptyState()].concat(this.snapshots.slice(start + 1, this.cursor + 1));
+        this.steps = json.steps;
+        this.cursor = this.steps.length;
+        this.emit();
+    }
+
     subscribe(fn) {
         this.listeners.push(fn);
     }

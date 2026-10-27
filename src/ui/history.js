@@ -17,7 +17,7 @@ function symbolName(kind) {
     return k ? k.name.toLowerCase() : 'a symbol';
 }
 
-var LAYER_NAMES = {coast: 'coastline', tint: 'region colours', sea: 'sea shading', relief: 'hills and forests', river: 'rivers', border: 'borders', slope: 'slope shading', city: 'cities',
+var LAYER_NAMES = {coast: 'coastline', tint: 'region colours', sea: 'sea shading', relief: 'hills', forest: 'forests', river: 'rivers', border: 'borders', slope: 'slope shading', city: 'cities',
     label: 'labels', wreck: 'wrecks', poi: 'points of interest', marker: 'markers'};
 
 function describeStyle(args, previous) {
@@ -91,11 +91,21 @@ export function historyPanel(body, ctx) {
     var head = body.append('div').attr('class', 'panel-section');
     head.append('p').text('Every change to the map, in order. Click a step to go back to it. ' +
         'Changing the map from there replaces the steps after it.');
-    var replayButton = head.append('button')
+    var actions = head.append('div').attr('class', 'history-actions');
+    var replayButton = actions.append('button')
         .attr('class', 'replay-button')
         .on('click', function () {ctx.toggleReplay()});
     var replayIcon = replayButton.append('span').attr('class', 'icon').attr('aria-hidden', true);
     var replayText = replayButton.append('span');
+    // Earlier maps aren't autosaved anyway, so this only forgets them sooner
+    var clearButton = actions.append('button')
+        .attr('title', 'Forget earlier maps and undone steps. The current map\'s own steps stay, as they build it.')
+        .on('click', function () {
+            ctx.stopReplay();
+            doc.clearHistory();
+        });
+    clearButton.append('span').attr('class', 'icon').attr('aria-hidden', true).text('delete_sweep');
+    clearButton.append('span').text('Clear history');
 
     var list = body.append('ol').attr('class', 'history-list').attr('aria-label', 'Map history');
 
@@ -104,6 +114,7 @@ export function historyPanel(body, ctx) {
         replayIcon.text(replaying ? 'stop' : 'play_arrow');
         replayText.text(replaying ? 'Stop replay' : 'Replay this map');
         replayButton.property('disabled', !replaying && doc.cursor - doc.startIndex() < 2);
+        clearButton.property('disabled', replaying || !doc.canClear());
 
         // Work out descriptions, tracking hidden layers to say what changed
         var hidden = [];
