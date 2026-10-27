@@ -26,6 +26,11 @@ test('every theme has what the renderer needs', function () {
     THEMES.forEach(function (theme) {
         ['id', 'name', 'description', 'fonts', 'backgrounds', 'colors', 'widths', 'borderDash', 'labels', 'cities', 'symbols']
             .forEach(function (key) {assert.ok(theme[key], theme.id + ' is missing ' + key)});
+        // Each theme styles its own roads and routes
+        assert.ok(theme.roads && theme.roads.lines.length, theme.id + ' road style');
+        ['color', 'width', 'dotted', 'dashed', 'arrowSize', 'arrowSpacing'].forEach(function (key) {
+            assert.ok(theme.routes && theme.routes[key] != null, theme.id + ' route ' + key);
+        });
         ['poi', 'wreck'].forEach(function (kind) {
             var spec = theme.symbols[kind];
             assert.ok(spec.kind === 'text' ? spec.chars.length : spec.variants.length, theme.id + ' ' + kind);

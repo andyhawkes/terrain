@@ -3,7 +3,8 @@
 // is always there, so the map doesn't change size when switching tools.
 import * as d3 from 'd3';
 import * as R from '../render/svg.js';
-import {MARKER_TYPES, SYMBOL_KINDS} from '../core/steps.js';
+import {MARKER_TYPES, SYMBOL_KINDS, ROUTE_STYLES, roadsStale} from '../core/steps.js';
+import {smoothLine} from '../core/roads.js';
 import {getTheme} from '../themes/index.js';
 import {editText, close as closeEditor} from './textEditor.js';
 
@@ -11,7 +12,7 @@ export var TOOLS = [
     {id: 'pointer', icon: 'arrow_selector_tool', name: 'Pointer', key: 'v',
         hint: null},
     {id: 'move', icon: 'open_with', name: 'Move', key: 'g',
-        hint: 'Drag places, labels, symbols or your own text. A city\'s label moves with it; a label moves on its own.'},
+        hint: 'Drag places, labels, symbols, your own text, or the points of roads and routes. A city\'s label moves with it; a label moves on its own.'},
     {id: 'label', icon: 'edit', name: 'Edit text', key: 'e',
         hint: 'Click a name or your own text to change it. Clicking a city lets you name it even if its label is hidden.'},
     {id: 'note', icon: 'title', name: 'Add text', key: 't',
@@ -20,8 +21,11 @@ export var TOOLS = [
         hint: 'Click the map to add the symbol chosen above, or click a symbol to swap it.'},
     {id: 'marker', icon: 'location_on', name: 'Add marker', key: 'm',
         hint: 'Click the map to add a marker. Choose its kind and colour above the map.'},
+    {id: 'route', icon: 'route', name: 'Draw road or route', key: 'r',
+        hint: 'Click along the way, then double-click or press Enter to finish (Backspace undoes a point). ' +
+            'Click a route to give it the style chosen above. Move its points with the Move tool.'},
     {id: 'delete', icon: 'delete', name: 'Delete', key: 'd',
-        hint: 'Click a place, symbol, marker or text to remove it. Clicking a city or region name hides the name.'}
+        hint: 'Click a place, symbol, marker, text, road or route to remove it. Clicking a city or region name hides the name.'}
 ];
 
 var DRAGGABLE = '.layer-city .city, .layer-city .capital-symbol, .layer-wreck .wreck, .layer-poi .poi, .layer-marker .placedMarker, ' +
@@ -44,7 +48,8 @@ function nameOf(d) {
         var type = MARKER_TYPES.find(function (t) {return t.id === d.item.type});
         return (type ? type.name.toLowerCase() : 'a') + ' marker';
     }
-    return {city: 'a city', wreck: 'a wreck', poi: 'a point of interest'}[d.kind] || '';
+    if ((d.kind === 'route' || d.kind === 'routeLabel') && d.item.label) return '“' + d.item.label + '”';
+    return {city: 'a city', wreck: 'a wreck', poi: 'a point of interest', road: 'a road', route: 'a route'}[d.kind] || '';
 }
 
 // What clicking with the Edit text tool edits, if anything
@@ -55,6 +60,7 @@ function editable(d) {
     if (d.kind === 'note') return {kind: 'note', text: d.item.text};
     if (d.kind === 'city') return {kind: 'city', text: d.item.name};
     if (d.kind === 'ornament' && d.id === 'title') return {kind: 'title', text: d.text};
+    if (d.kind === 'route' || d.kind === 'routeLabel') return {kind: 'route', text: d.item.label || ''};
     return null;
 }
 
@@ -117,8 +123,14 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
     var markerColor = MARKER_COLORS[0].color;
     var symbolKind = 'wreck';
     var symbolVariant = {wreck: 0, poi: 0};
+    var lineKind = 'route';
+    var routeStyle = 'dotted';
+    var drawing = null;   // the road or route being drawn: {points}
+    var onMap = true;     // false while the map isn't showing as it is now
     var buttons = {};
     var shown = null;
+    // Handles for editing roads and routes, over the map but not part of it
+    var overlay = svg.append('g').attr('class', 'edit-overlay');
 
     TOOLS.forEach(function (tool) {
         buttons[tool.id] = strip.append('button')
@@ -130,6 +142,7 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
 
     function set(id) {
         closeEditor(true);
+        drawing = null;
         active = id;
         TOOLS.forEach(function (tool) {
             buttons[tool.id].classed('active', tool.id === id).attr('aria-pressed', tool.id === id);
@@ -137,12 +150,21 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
         });
         bind();
         showOptions();
+        roadsPrompt();
+        drawOverlay();
         onChange(TOOLS.find(function (t) {return t.id === id}));
     }
 
     // Options above the map for the marker and symbol tools, drawn with the
     // current theme's symbols. Rebuilt when the tool or theme changes.
     function showOptions() {
+        if (active === 'route') {
+            if (shown && shown.key === 'route') return updateRouteOptions();
+            shown = {key: 'route'};
+            optionsBar.html('');
+            routeOptions();
+            return;
+        }
         if (active !== 'marker' && active !== 'symbol') {
             shown = null;
             var tool = TOOLS.find(function (t) {return t.id === active});
@@ -204,6 +226,49 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
         optionsBar.selectAll('.symbol-variant')
             .classed('active', function (n) {return n === chosen})
             .attr('aria-pressed', function (n) {return n === chosen});
+    }
+
+    // Road or route, then the route's style
+    function routeOptions() {
+        optionsBar.append('span').attr('class', 'tool-options-label').text('Draw');
+        [{id: 'road', name: 'Road'}, {id: 'route', name: 'Route'}].forEach(function (kind) {
+            optionsBar.append('button')
+                .datum(kind)
+                .attr('class', 'line-kind')
+                .on('click', function () {
+                    lineKind = kind.id;
+                    updateRouteOptions();
+                    drawOverlay();
+                })
+                .append('span').text(kind.name);
+        });
+        optionsBar.append('span').attr('class', 'tool-options-label tool-options-gap route-style-label').text('Style');
+        ROUTE_STYLES.forEach(function (style) {
+            optionsBar.append('button')
+                .datum(style)
+                .attr('class', 'route-style')
+                .on('click', function () {
+                    routeStyle = style.id;
+                    updateRouteOptions();
+                })
+                .append('span').text(style.name);
+        });
+        optionsBar.append('button')
+            .attr('class', 'redraw-roads tool-options-gap')
+            .on('click', function () {doc.dispatch('joinTowns')})
+            .append('span').text('Redraw roads');
+        updateRouteOptions();
+    }
+
+    function updateRouteOptions() {
+        optionsBar.selectAll('.line-kind')
+            .classed('active', function (k) {return k.id === lineKind})
+            .attr('aria-pressed', function (k) {return k.id === lineKind});
+        // Roads have the theme's one style
+        optionsBar.selectAll('.route-style, .route-style-label').style('display', lineKind === 'route' ? null : 'none');
+        optionsBar.selectAll('.route-style')
+            .classed('active', function (s) {return s.id === routeStyle})
+            .attr('aria-pressed', function (s) {return s.id === routeStyle});
     }
 
     // Marker kinds and colours
@@ -283,6 +348,7 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
         }
         editText(stage.node(), anchor.getBoundingClientRect(), target.text, function (text) {
             if (target.kind === 'title') doc.dispatch('setStyle', {title: text.trim()});
+            else if (target.kind === 'route') doc.dispatch('setRoute', {id: d.id, label: text, what: nameOf(d)});
             else if (target.kind === 'note' && !text) doc.dispatch('deleteItem', {id: d.id, what: nameOf(d)});
             else doc.dispatch('editLabel', {id: d.id, kind: target.kind, text: text, what: nameOf(d)});
         }, {hide: anchor === node && d.kind !== 'city' ? node : null, label: 'Edit text'});
@@ -292,7 +358,19 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
     svg.on('click', function (event) {
         var target = event.target;
         var d = d3.select(target).datum();
-        if (active === 'symbol') {
+        if (active === 'route') {
+            if (!drawing && lineKind === 'route' && d && (d.kind === 'route' || d.kind === 'routeLabel') && d.id != null) {
+                if (d.item.style !== routeStyle) {
+                    doc.dispatch('setRoute', {id: d.id, style: routeStyle, what: nameOf(d)});
+                }
+                return;
+            }
+            // Clicking a place joins the line to it exactly
+            var at = d && d.kind === 'city' ? d.pos.slice() : mapPoint(event, this);
+            drawing = drawing || {points: []};
+            drawing.points.push(at);
+            drawOverlay();
+        } else if (active === 'symbol') {
             var variant = symbolVariant[symbolKind] % variantCount(getTheme(doc.state.style.theme).symbols[symbolKind]);
             if (isSymbol(d)) doc.dispatch('setSymbol', {id: d.id, kind: symbolKind, variant: variant, what: nameOf(d)});
             else doc.dispatch('addSymbol', {pos: mapPoint(event, this), kind: symbolKind, variant: variant});
@@ -313,7 +391,8 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
             doc.dispatch('setStyle', off);
         } else if (active === 'delete' && d && d.id != null) {
             // Names of places are hidden; everything else is removed
-            if (isLabel(d)) doc.dispatch('editLabel', {id: d.id, kind: d.kind === 'regionLabel' ? 'region' : 'city', text: '', what: nameOf(d)});
+            if (d.kind === 'routeLabel') doc.dispatch('setRoute', {id: d.id, label: '', what: nameOf(d)});
+            else if (isLabel(d)) doc.dispatch('editLabel', {id: d.id, kind: d.kind === 'regionLabel' ? 'region' : 'city', text: '', what: nameOf(d)});
             else doc.dispatch('deleteItem', {id: d.id, what: nameOf(d)});
         } else if (active === 'label') {
             edit(d, target);
@@ -322,6 +401,11 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
 
     // Double-click edits text without switching tools
     svg.on('dblclick', function (event) {
+        if (active === 'route') {
+            event.preventDefault();
+            finishLine();
+            return;
+        }
         if (active !== 'pointer' && active !== 'move') return;
         if (edit(d3.select(event.target).datum(), event.target)) event.preventDefault();
     });
@@ -353,6 +437,9 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
                 var positions = Object.assign({}, doc.state.style.positions);
                 positions[d.id] = pos;
                 doc.dispatch('setStyle', {positions: positions, what: nameOf(d)});
+            } else if (d.kind === 'routeLabel') {
+                var offset = d.item.labelOffset || [0, 0];
+                doc.dispatch('moveLabel', {id: d.id, kind: 'route', offset: [offset[0] + dx, offset[1] + dy], what: nameOf(d)});
             } else if (isLabel(d)) doc.dispatch('moveLabel', {id: d.id, kind: d.kind === 'regionLabel' ? 'region' : 'city', pos: pos, what: nameOf(d)});
             else doc.dispatch('moveItem', {id: d.id, pos: pos, what: nameOf(d)});
         });
@@ -364,10 +451,156 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
         else items.on('.drag', null);
     }
 
-    // Call after every redraw: the marker previews follow the theme
-    function refresh() {
+    // --- Roads and routes ---
+
+    // SVG units per screen pixel, so handles are the same size on any map
+    function pixel() {
+        var width = svg.node().getBoundingClientRect().width;
+        return width ? R.mapBox(doc.state.params)[2] / width : 1;
+    }
+
+    function lineData(state) {
+        return state.roads.map(function (r) {return {id: r.id, kind: 'road', item: r}})
+            .concat(state.routes.map(function (r) {return {id: r.id, kind: 'route', item: r}}));
+    }
+
+    function curve(points) {
+        return R.makeD3Path(smoothLine(points, 2 / R.SCALE));
+    }
+
+    // What the tool needs over the map: wide invisible lines to click roads
+    // and routes by, handles on their points for moving, and the line being
+    // drawn
+    function drawOverlay() {
+        overlay.selectAll('*').remove();
+        var state = doc.state;
+        if (!onMap || !state.h) return;
+        var px = pixel();
+        var lines = lineData(state);
+        // The route tool restyles routes when it's drawing routes
+        var restyling = active === 'route' && !drawing && lineKind === 'route';
+        if (active === 'delete' || restyling) {
+            overlay.selectAll('path.hit-line')
+                .data(restyling ? lines.filter(function (d) {return d.kind === 'route'}) : lines)
+                .enter().append('path')
+                .attr('class', 'hit-line')
+                .attr('d', function (d) {return curve(d.item.points)})
+                .style('stroke-width', 14 * px + 'px');
+        }
+        if (active === 'move') {
+            // Small, so places and labels along the way can still be
+            // dragged, and none over a place, which would hide it. A point
+            // under a place shows once the place is moved off it.
+            var places = svg.selectAll('.layer-city .city, .layer-wreck .wreck, .layer-poi .poi').data()
+                .map(function (d) {return d.pos});
+            var clear = 8 * px / R.SCALE;
+            var handles = [];
+            lines.forEach(function (d) {
+                d.item.points.forEach(function (p, i) {
+                    var covered = places.some(function (q) {return q && Math.hypot(p[0] - q[0], p[1] - q[1]) < clear});
+                    if (!covered) handles.push({id: d.id, kind: d.kind, item: d.item, index: i, pos: p});
+                });
+            });
+            overlay.append('path').attr('class', 'moving-line');
+            var side = 6 * px;
+            overlay.selectAll('rect.handle').data(handles).enter().append('rect')
+                .attr('class', 'handle')
+                .attr('x', function (d) {return R.SCALE * d.pos[0] - side / 2})
+                .attr('y', function (d) {return R.SCALE * d.pos[1] - side / 2})
+                .attr('width', side).attr('height', side)
+                .style('stroke-width', px + 'px')
+                .call(pointDrag);
+        }
+        if (drawing) {
+            overlay.append('path').attr('class', 'drawing-line').attr('d', curve(drawing.points))
+                .style('stroke-width', 2 * px + 'px');
+            overlay.selectAll('circle.drawing-point').data(drawing.points).enter().append('circle')
+                .attr('class', 'drawing-point')
+                .attr('cx', function (p) {return R.SCALE * p[0]})
+                .attr('cy', function (p) {return R.SCALE * p[1]})
+                .attr('r', 4 * px)
+                .style('stroke-width', 1.5 * px + 'px');
+        }
+    }
+
+    // Dragging a point shows the line's new shape, then moves the point
+    var pointDrag = d3.drag()
+        .on('drag', function (event, d) {
+            var pos = [event.x / R.SCALE, event.y / R.SCALE];
+            var side = +this.getAttribute('width');
+            d3.select(this).attr('x', event.x - side / 2).attr('y', event.y - side / 2);
+            var points = d.item.points.slice();
+            points[d.index] = pos;
+            overlay.select('.moving-line').attr('d', curve(points)).style('stroke-width', 2 * pixel() + 'px');
+        })
+        .on('end', function (event, d) {
+            var pos = [event.x / R.SCALE, event.y / R.SCALE];
+            if (pos[0] === d.pos[0] && pos[1] === d.pos[1]) return;
+            doc.dispatch('movePoint', {id: d.id, index: d.index, pos: pos, what: nameOf(d)});
+        });
+
+    // Ends the line being drawn, adding it if it has two points or more. A
+    // double-click's own clicks add the same point twice, so repeats go.
+    function finishLine() {
+        if (!drawing) return;
+        var near = 3 * pixel() / R.SCALE;
+        var points = drawing.points.filter(function (p, i, all) {
+            return !i || Math.hypot(p[0] - all[i - 1][0], p[1] - all[i - 1][1]) > near;
+        });
+        drawing = null;
+        drawOverlay();
+        if (points.length < 2) return;
+        if (lineKind === 'road') {
+            doc.dispatch('addRoad', {points: points});
+            return;
+        }
+        doc.dispatch('addRoute', {points: points, style: routeStyle});
+        // Then a label, if wanted, by the end of the route
+        var route = doc.state.routes[doc.state.routes.length - 1];
+        var end = points[points.length - 1];
+        var box = svg.node().getBoundingClientRect();
+        var view = R.mapBox(doc.state.params);
+        editText(stage.node(), {x: box.left + (R.SCALE * end[0] - view[0]) / view[2] * box.width,
+            y: box.top + (R.SCALE * end[1] - view[1]) / view[3] * box.height + 24}, '', function (text) {
+            if (text) doc.dispatch('setRoute', {id: route.id, label: text, what: 'a route'});
+        }, {placeholder: 'Label (optional), then Enter', label: 'Route label'});
+    }
+
+    // Keys for the line being drawn; true if the key was used
+    function key(event) {
+        if (active !== 'route' || !drawing) return false;
+        if (event.key === 'Enter') finishLine();
+        else if (event.key === 'Escape') {
+            drawing = null;
+            drawOverlay();
+        } else if (event.key === 'Backspace' || event.key === 'Delete') {
+            drawing.points.pop();
+            if (!drawing.points.length) drawing = null;
+            drawOverlay();
+        } else return false;
+        return true;
+    }
+
+    // Call after every redraw: the marker previews follow the theme. onMap
+    // says whether the map is showing as it is now (not another view, or a
+    // replay), which is when roads and routes can be edited.
+    function refresh(showingMap) {
+        onMap = showingMap !== false;
         bind();
         showOptions();
+        roadsPrompt();
+        drawOverlay();
+    }
+
+    // Built roads stay put when towns move or the land changes; the route
+    // tool's Redraw roads button builds them again, and is only enabled
+    // when that would change them
+    function roadsPrompt() {
+        var stale = onMap && doc.state.h && roadsStale(doc.state);
+        optionsBar.select('.redraw-roads')
+            .property('disabled', !stale)
+            .attr('title', stale ? 'The map has changed since the roads were built. Build them again; roads you have drawn or reshaped stay as they are.'
+                : 'The roads fit the map as it is');
     }
 
     function forKey(key) {
@@ -378,6 +611,7 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
     return {
         set: set,
         refresh: refresh,
+        key: key,
         forKey: forKey,
         get active() {return active}
     };

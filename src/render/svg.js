@@ -3,7 +3,8 @@
 // setMapSize sets before drawing; text, lines and symbols are sized in SVG
 // user units.
 import * as d3 from 'd3';
-import {derive, seaShading, relief, coastOutlines, smoothCoasts, regionShapes, hachureStrokes} from '../core/derive.js';
+import {derive, seaShading, relief, coastOutlines, smoothCoasts, regionShapes, hachureStrokes, roadCurves} from '../core/derive.js';
+import {smoothLine} from '../core/roads.js';
 import {meshTris} from '../core/terrain.js';
 import {itemPos} from '../core/steps.js';
 import {getTheme, fontChoice, backgroundChoice, typography} from '../themes/index.js';
@@ -36,15 +37,19 @@ export function setMapSize(svg, params) {
 }
 
 // Layers in drawing order; each is a <g> so redraws keep the stacking order
-var LAYERS = ['background', 'field', 'tint', 'sea', 'river', 'coastLines', 'coast', 'border', 'slope', 'relief', 'grid', 'city', 'wreck', 'poi', 'marker',
-    'label', 'extras'];
+var LAYERS = ['background', 'field', 'tint', 'sea', 'river', 'coastLines', 'coast', 'border', 'slope', 'road', 'relief', 'grid', 'city', 'wreck', 'poi', 'marker',
+    'route', 'label', 'extras'];
+
+// Layers only there while the map has something in them, so maps without
+// roads or routes draw exactly as they did before there were any
+var OPTIONAL_LAYERS = ['road', 'route'];
 
 // Layers the user can switch off in the Style panel
 export var TOGGLE_LAYERS = [
     ['coast', 'Coastline'], ['tint', 'Region colours'], ['sea', 'Sea shading'], ['river', 'Rivers'], ['border', 'Borders'], ['slope', 'Slope shading'],
-    ['relief', 'Hills'], ['forest', 'Forests'],
+    ['relief', 'Hills'], ['forest', 'Forests'], ['road', 'Roads'],
     ['city', 'Cities'], ['label', 'Labels'], ['wreck', 'Wrecks'], ['poi', 'Points of interest'],
-    ['marker', 'Markers']
+    ['marker', 'Markers'], ['route', 'Routes']
 ];
 
 export function addSVG(div, id) {
@@ -55,13 +60,26 @@ export function addSVG(div, id) {
     svg.append('style').attr('class', 'theme');
     svg.append('defs').attr('class', 'symbols');
     LAYERS.forEach(function (name) {
-        svg.append('g').attr('class', 'layer-' + name);
+        if (OPTIONAL_LAYERS.indexOf(name) < 0) svg.append('g').attr('class', 'layer-' + name);
     });
     return svg;
 }
 
 function layer(svg, name) {
     return svg.select('g.layer-' + name);
+}
+
+// An optional layer, added in its place in the stacking order if wanted
+// (and returned), or taken away if not (returning null)
+function optionalLayer(svg, name, wanted) {
+    var g = layer(svg, name);
+    if (!wanted) {
+        g.remove();
+        return null;
+    }
+    if (!g.empty()) return g;
+    var after = LAYERS.slice(LAYERS.indexOf(name) + 1).find(function (n) {return !layer(svg, n).empty()});
+    return svg.insert('g', after ? 'g.layer-' + after : null).attr('class', 'layer-' + name);
 }
 
 export function makeD3Path(path) {
@@ -100,6 +118,10 @@ function unchanged(svg, layerName, keys) {
 
 export function clear(svg, layerName) {
     var g = layer(svg, layerName);
+    if (OPTIONAL_LAYERS.indexOf(layerName) >= 0) {
+        g.remove();
+        return;
+    }
     g.selectAll('*').remove();
     g.node().__drawnFrom = null;
     g.node().__mesh = null;
@@ -354,7 +376,8 @@ var CITY_CLEARANCE = 16;
 
 function drawRelief(svg, state, theme) {
     var spec = theme.symbols.relief;
-    if (unchanged(svg, 'relief', [state.h, spec, state.cities, SCALE])) return;
+    var roads = state.roads || [];
+    if (unchanged(svg, 'relief', [state.h, spec, state.cities, roads, SCALE])) return;
     if (!spec) {
         clear(svg, 'relief');
         return;
@@ -364,10 +387,11 @@ function drawRelief(svg, state, theme) {
     kinds.forEach(function (kind) {ensureSymbols(svg, 'relief-' + kind, spec[kind], theme.parts)});
     var places = state.cities.map(function (c) {return itemPos(state, c)});
     var near = CITY_CLEARANCE / SCALE;
+    var onRoad = roads.length ? nearRoads(roadCurves(roads, SCALE), ROAD_CLEARANCE / SCALE) : null;
     var symbols = relief(state.h, SCALE, spec.spacing).filter(function (s) {
         return spec[s.kind] && !places.some(function (p) {
             return Math.abs(p[0] - s.x) < near && Math.abs(p[1] - s.y) < near;
-        });
+        }) && !(onRoad && onRoad(s.x, s.y));
     });
     layer(svg, 'relief').node().__kindsShown = null;
     drawTreeWash(svg, spec.treeWash, symbols);
@@ -380,6 +404,35 @@ function drawRelief(svg, state, theme) {
         .attr('transform', function (d) {
             return 'translate(' + coord(d.x) + ',' + coord(d.y) + ') scale(' + d.size.toFixed(2) + ')';
         });
+}
+
+// Symbols are left off roads too. A drawing stands on its spot, so it would
+// hide a road running just behind (above) it as well as one through it.
+var ROAD_CLEARANCE = 8;
+
+function nearRoads(lines, near) {
+    var cells = new Map();
+    function key(x, y) {
+        return Math.floor(x / near) + ',' + Math.floor(y / near);
+    }
+    lines.forEach(function (line) {
+        line.forEach(function (p) {
+            var k = key(p[0], p[1]);
+            if (!cells.has(k)) cells.set(k, []);
+            cells.get(k).push(p);
+        });
+    });
+    return function (x, y) {
+        for (var cx = Math.floor((x - near) / near); cx <= Math.floor((x + near) / near); cx++) {
+            for (var cy = Math.floor((y - 2 * near) / near); cy <= Math.floor((y + near / 2) / near); cy++) {
+                var pts = cells.get(cx + ',' + cy);
+                if (pts && pts.some(function (p) {
+                    return Math.abs(p[0] - x) < near && p[1] > y - 2 * near && p[1] < y + near / 2;
+                })) return true;
+            }
+        }
+        return false;
+    };
 }
 
 // Hachures on the high ground, for themes with hachures ({spacing, levels,
@@ -471,6 +524,133 @@ function markerType(marker, specs) {
 }
 
 var NOTE_SIZE = 24;
+
+// --- Roads and routes ---
+
+// For a theme that doesn't style them (see roads and routes in simple.js)
+var ROAD_STYLE = {lines: [{color: '#8a7a66', width: 2}]};
+var ROUTE_STYLE = {color: '#c62828', width: 2.5, dotted: [0, 8], dashed: [10, 6], arrowSize: 9, arrowSpacing: 90};
+
+// A road line's colour 'paper' is the background's
+function paperColor(background) {
+    return background.color || (background.halo && background.halo.color) || '#ffffff';
+}
+
+// Lines drawn with inline styles: the theme's stylesheet sets every path's
+// stroke, and only maps with roads or routes should change
+function strokeStyle(path, color, width, dash, theme) {
+    return path.style('stroke', color).style('stroke-width', width + 'px')
+        .style('stroke-dasharray', dash && !theme.strokeOnly ? dash.join(' ') : null)
+        .style('stroke-linejoin', 'round');
+}
+
+// Plotters ignore dash patterns, so dashes become lines of their own (a
+// dot, being a dash of no length, becomes a short one)
+function penDashes(lines, dash, theme) {
+    if (!dash || !theme.strokeOnly) return lines;
+    return dashPaths(lines, Math.max(dash[0], 1.5) / SCALE, dash[1] / SCALE);
+}
+
+// Each line of the road style is drawn over every road before the next, so
+// the middle of a cased road runs unbroken through junctions
+function drawRoads(svg, state, theme, background) {
+    var roads = state.roads || [];
+    var spec = theme.roads || ROAD_STYLE;
+    var g = optionalLayer(svg, 'road', roads.length > 0);
+    if (!g || unchanged(svg, 'road', [roads, spec, background, SCALE])) return;
+    g.selectAll('*').remove();
+    var lines = roadCurves(roads, SCALE);
+    spec.lines.forEach(function (line) {
+        var color = line.color === 'paper' ? paperColor(background) : line.color;
+        strokeStyle(g.append('path').attr('class', 'road').attr('d', polylinePath(penDashes(lines, line.dash, theme))),
+            color, line.width, line.dash, theme);
+    });
+}
+
+// Where a route's label goes: above the middle of the route, as a note
+// would be placed (so plotter lettering clears the hatching the same way),
+// unless it has been moved from there
+function routeLabels(state) {
+    return (state.routes || []).filter(function (r) {return r.label}).map(function (route) {
+        var mid = alongLine(smoothLine(route.points, 2 / SCALE), 0.5);
+        var offset = route.labelOffset || [0, 0];
+        return {id: route.id, pos: [mid.at[0] + offset[0], mid.at[1] - 12 / SCALE + offset[1]], text: route.label};
+    });
+}
+
+// The point a fraction of the way along a line, and the way it's heading
+function alongLine(line, fraction) {
+    var total = lineLength(line);
+    return pointAt(line, fraction * total);
+}
+
+function lineLength(line) {
+    var total = 0;
+    for (var i = 1; i < line.length; i++) total += Math.hypot(line[i][0] - line[i - 1][0], line[i][1] - line[i - 1][1]);
+    return total;
+}
+
+function pointAt(line, distance) {
+    for (var i = 1; i < line.length; i++) {
+        var a = line[i - 1];
+        var b = line[i];
+        var len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        if (distance <= len || i === line.length - 1) {
+            var t = len ? Math.min(1, distance / len) : 0;
+            return {at: [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])],
+                dir: len ? [(b[0] - a[0]) / len, (b[1] - a[1]) / len] : [1, 0]};
+        }
+        distance -= len;
+    }
+    return {at: line[0], dir: [1, 0]};
+}
+
+// Open arrowheads along a route, the last at its end
+function arrowheads(line, spec) {
+    var size = spec.arrowSize / SCALE;
+    var spacing = spec.arrowSpacing / SCALE;
+    var total = lineLength(line);
+    var at = [];
+    for (var d = spacing; d < total - spacing / 2; d += spacing) at.push(d);
+    at.push(total);
+    return at.map(function (d) {
+        var p = pointAt(line, d);
+        var back = [-p.dir[0] * size, -p.dir[1] * size];
+        var side = [-p.dir[1] * size * 0.55, p.dir[0] * size * 0.55];
+        return [[p.at[0] + back[0] + side[0], p.at[1] + back[1] + side[1]], p.at,
+            [p.at[0] + back[0] - side[0], p.at[1] + back[1] - side[1]]];
+    });
+}
+
+// Routes the user has drawn: dotted, dashed or with arrows, in the theme's
+// route colour, each with its label if it has one
+function drawRoutes(svg, state, theme, type) {
+    var routes = state.routes || [];
+    var spec = theme.routes || ROUTE_STYLE;
+    var g = optionalLayer(svg, 'route', routes.length > 0);
+    if (!g || unchanged(svg, 'route', [routes, spec, SCALE, theme.strokeOnly, JSON.stringify(type.note)])) return;
+    g.selectAll('*').remove();
+    var labels = routeLabels(state);
+    routes.forEach(function (route) {
+        var line = smoothLine(route.points, 2 / SCALE);
+        var dash = route.style === 'dotted' ? spec.dotted : route.style === 'dashed' ? spec.dashed : null;
+        // The route's data goes to its parts, for the editing tools
+        var group = g.append('g').attr('class', 'route').datum({id: route.id, kind: 'route', item: route});
+        strokeStyle(group.append('path').attr('class', 'route-line').attr('d', polylinePath(penDashes([line], dash, theme))),
+            spec.color, spec.width, dash, theme);
+        if (route.style === 'arrows') {
+            strokeStyle(group.append('path').attr('class', 'route-arrows').attr('d', polylinePath(arrowheads(line, spec))),
+                spec.color, spec.width, null, theme);
+        }
+        var label = labels.find(function (l) {return l.id === route.id});
+        if (label) {
+            var text = appendText(group, type.note, 'note-label route-label', label.text, SCALE * label.pos[0], SCALE * label.pos[1],
+                NOTE_SIZE * type.note.scale, 'middle');
+            text.style(type.note.hershey ? 'stroke' : 'fill', spec.color)
+                .datum({id: route.id, kind: 'routeLabel', item: route, pos: label.pos});
+        }
+    });
+}
 
 // City and region names, plus the user's own text notes. role gives each
 // label's lettering (see typography in themes/index.js).
@@ -655,8 +835,10 @@ export function drawMap(svg, state) {
     drawPaths(svg, 'border', function () {
         return theme.strokeOnly ? dashPaths(d.borders, dash[0] / SCALE, dash[1] / SCALE) : d.borders;
     }, [d.borders, dash[0], dash[1]]);
+    drawRoads(svg, state, theme, t.background);
     // Hershey lettering is drawn with hatching cleared from under it
-    var boxes = hersheyLabelBoxes(d.labels, state.notes, t.type);
+    var routeNotes = routeLabels(state);
+    var boxes = hersheyLabelBoxes(d.labels, routeNotes.length ? state.notes.concat(routeNotes) : state.notes, t.type);
     // A theme can draw relief with symbols instead of hatching
     var hatching = theme.slopeShading !== false;
     drawSlopes(svg, function () {
@@ -665,6 +847,7 @@ export function drawMap(svg, state) {
     }, [d.slopes, boxes.length ? JSON.stringify(boxes) : '', hatching]);
     drawRelief(svg, state, theme);
     drawFeatures(svg, state, theme);
+    drawRoutes(svg, state, theme, t.type);
     drawLabels(svg, d.labels, state.notes, t.type);
     drawExtras(svg, state, theme, t.type);
     showLayers(svg, state.style.hidden);

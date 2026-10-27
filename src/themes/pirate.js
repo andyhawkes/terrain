@@ -54,6 +54,10 @@ export default {
     // Dots, with round ends
     borderDash: [0.5, 7],
 
+    // Faint tracks inland; a ship's course in red ink
+    roads: {lines: [{color: '#6b5238', width: 1.4, dash: [5, 4]}]},
+    routes: {color: '#a3261e', width: 2.6, dotted: [0, 8], dashed: [12, 7], arrowSize: 12, arrowSpacing: 110},
+
     seaShading: true,
 
     // Defaults for the extras drawn over the map (see extras.js)

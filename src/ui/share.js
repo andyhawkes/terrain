@@ -56,6 +56,7 @@ export async function shareLink(doc) {
             if (params[key] != null && params[key] !== defaults[key]) query.set(PARAMS[key], params[key]);
         });
         if (params.language && params.language !== defaultParams.language) query.set('names', params.language);
+        if (params.roads === false) query.set('roads', 0);
         STYLE.forEach(function (key) {
             if (style[key] && style[key] !== defaultStyle[key]) query.set(key, style[key]);
         });
@@ -70,13 +71,17 @@ export async function readLink() {
     if (hash) return {json: JSON.parse(await decompress(fromBase64Url(hash[1])))};
     var query = new URLSearchParams(location.search);
     if (!query.has('seed')) return null;
-    checkGenerator({generator: parseInt(query.get('v'), 10) || 1});
+    var version = parseInt(query.get('v'), 10) || 1;
+    checkGenerator({generator: version});
     var params = {};
     Object.keys(PARAMS).forEach(function (key) {
         var n = parseInt(query.get(PARAMS[key]), 10);
         if (n >= 0) params[key] = n;
     });
     if (query.get('names')) params.language = query.get('names');
+    // Roads were off unless asked for before version 4
+    if (query.has('roads')) params.roads = query.get('roads') === '1';
+    else if (version < 4) params.roads = false;
     if (query.get('shape')) params.shape = query.get('shape');
     var style = Object.assign({}, defaultStyle);
     STYLE.forEach(function (key) {

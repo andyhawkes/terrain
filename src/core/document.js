@@ -25,7 +25,9 @@ export var FORMAT_VERSION = 1;
 //   2: generation stages draw from their own streams (see withStream), so
 //      a seed gives the same map at any detail level or shape
 //   3: the grid is built with d3-delaunay instead of d3-voronoi
-export var GENERATOR_VERSION = 3;
+//   4: random maps have roads unless params.roads is false (share links
+//      from version 3 and before open without them)
+export var GENERATOR_VERSION = 4;
 
 // Throws if saved map data needs a newer generator than this one
 export function checkGenerator(json) {

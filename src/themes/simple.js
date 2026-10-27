@@ -52,6 +52,18 @@ export default {
 
     borderDash: [6, 5],
 
+    // Roads: lines drawn one over another, widest first, each with a colour,
+    // a width in SVG units and an optional dash pattern. A dark line under a
+    // narrower one in color 'paper' (the background's colour) makes a cased
+    // road. Plotter themes get their dashes as separate strokes.
+    roads: {lines: [{color: '#8a7a66', width: 2}]},
+
+    // Routes the user draws (a journey, a quest, a ship's course): colour,
+    // width, and the dash patterns of dotted and dashed routes (a dash of no
+    // length with round ends is a dot). Routes with arrows are solid, with an
+    // open arrowhead (arrowSize long) every arrowSpacing and at the end.
+    routes: {color: '#c62828', width: 3, dotted: [0, 9], dashed: [10, 6], arrowSize: 10, arrowSpacing: 90},
+
     // regionTints: {colors: [...], opacity, watercolour} washes each
     // region's land in a colour (one per region, in turn), optionally with a
     // watercolour effect (see throneish.js)

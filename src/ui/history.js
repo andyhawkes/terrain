@@ -1,6 +1,6 @@
 // The History panel: every step that built the map, in order. Click one to
 // go back to it; Replay plays the current map's steps back from its start.
-import {MARKER_TYPES, SYMBOL_KINDS} from '../core/steps.js';
+import {MARKER_TYPES, SYMBOL_KINDS, ROUTE_STYLES} from '../core/steps.js';
 import {getTheme} from '../themes/index.js';
 
 function plural(n, one, many) {
@@ -12,13 +12,18 @@ function quoted(text) {
     return '“' + (text.length > 24 ? text.slice(0, 23) + '…' : text) + '”';
 }
 
+function routeStyleName(id) {
+    var style = ROUTE_STYLES.find(function (s) {return s.id === (id || 'dotted')});
+    return style ? style.name : null;
+}
+
 function symbolName(kind) {
     var k = SYMBOL_KINDS.find(function (s) {return s.id === kind});
     return k ? k.name.toLowerCase() : 'a symbol';
 }
 
 var LAYER_NAMES = {coast: 'coastline', tint: 'region colours', sea: 'sea shading', relief: 'hills', forest: 'forests', river: 'rivers', border: 'borders', slope: 'slope shading', city: 'cities',
-    label: 'labels', wreck: 'wrecks', poi: 'points of interest', marker: 'markers'};
+    label: 'labels', wreck: 'wrecks', poi: 'points of interest', marker: 'markers', road: 'roads', route: 'routes'};
 
 function describeStyle(args, previous) {
     if (args.theme) return 'Theme: ' + getTheme(args.theme).name;
@@ -68,6 +73,13 @@ export function describeStep(step, previousHidden) {
     case 'addPOI': return {text: 'Add ' + plural(a.count, 'a point of interest', 'points of interest')};
     case 'addWrecks': return {text: 'Add ' + plural(a.count, 'a wreck', 'wrecks')};
     case 'renamePlaces': return {text: 'Rename all places'};
+    case 'joinTowns': return {text: 'Join towns with roads'};
+    case 'addRoad': return {text: 'Add road'};
+    case 'addRoute': return {text: 'Add route', detail: a.label ? quoted(a.label) : routeStyleName(a.style)};
+    case 'setRoute':
+        if ('label' in a) return {text: a.label ? 'Label route' : 'Remove route label', detail: a.label ? quoted(a.label) : null};
+        return {text: 'Change route', detail: routeStyleName(a.style)};
+    case 'movePoint': return {text: 'Move point of' + (what || ' a line')};
     case 'setStyle': return {text: describeStyle(a, previousHidden)};
     case 'addMarker':
         var type = MARKER_TYPES.find(function (t) {return t.id === (a.type || 'x')});

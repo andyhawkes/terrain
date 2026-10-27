@@ -4,6 +4,7 @@ import * as T from './terrain.js';
 import {placeLabels} from './labels.js';
 import {withSeed} from './random.js';
 import {itemPos} from './steps.js';
+import {smoothLine} from './roads.js';
 
 // What's worked out from a heightmap is kept for the most recently used
 // heightmaps only: up to RECENT_VERTICES vertices' worth (7 for A4 High,
@@ -123,6 +124,17 @@ export function relief(h, scale, spacing) {
     return entry.relief.symbols;
 }
 
+// Roads as drawn: smooth curves through their points, about two SVG units
+// apart. Kept for the last list of roads, which only changes when they do.
+var lastRoads = {roads: null, lines: null};
+
+export function roadCurves(roads, scale) {
+    if (lastRoads.roads !== roads || lastRoads.scale !== scale) {
+        lastRoads = {roads: roads, scale: scale, lines: roads.map(function (r) {return smoothLine(r.points, 2 / scale)})};
+    }
+    return lastRoads.lines;
+}
+
 // Everything drawn from a map state. layout (optional, see placeLabels)
 // says how labels will be drawn, so they can be placed to fit: key names it
 // (e.g. the theme and lettering), for caching. The same state with the same
@@ -132,7 +144,9 @@ export function derive(state, layout) {
     var entry = cacheFor(h);
     var layoutKey = layout ? layout.key + '|' + JSON.stringify(layout.obstacles || []) : '';
     var cached = entry.derived;
-    if (cached && cached.cities === state.cities && cached.params === state.params && cached.layoutKey === layoutKey) {
+    var roads = state.roads || [];
+    if (cached && cached.cities === state.cities && cached.params === state.params && cached.roads === roads &&
+        cached.layoutKey === layoutKey) {
         return cached.d;
     }
     var cities = state.cities;
@@ -150,10 +164,21 @@ export function derive(state, layout) {
     var regionNames = cities.map(function (c) {return c.regionName});
     // The layout can scale the lettering (see typography in themes/index.js)
     var fontsizes = layout && layout.fontsizes || state.params.fontsizes;
-    var labelsKey = JSON.stringify([placesKey, cityNames, regionNames, fontsizes, state.params.scale, layoutKey]);
+    // Labels keep off roads too, when there are any
+    var avoids = [layers.rivers, layers.coasts, borders];
+    var roadPoints = roads.map(function (r) {return r.points});
+    // Thinned to about a grid cell apart, so a road counts for about as
+    // much as a river
+    if (roads.length) {
+        avoids.push(roadCurves(roads, state.params.scale).map(function (line) {
+            return line.filter(function (p, i) {return i % 4 === 0});
+        }));
+    }
+    var labelsKey = JSON.stringify([placesKey, cityNames, regionNames, fontsizes, state.params.scale, layoutKey]
+        .concat(roads.length ? [roadPoints] : []));
     var placed = lastFor(entry, 'placement', labelsKey, function () {
         return placeLabels(h, terr, vxs, nterrs, cityNames, regionNames, fontsizes,
-            [layers.rivers, layers.coasts, borders], state.params.scale, layout);
+            avoids, state.params.scale, layout);
     });
     // Copies, so placing labels for this state leaves the cached ones alone
     var labels = {
@@ -181,6 +206,6 @@ export function derive(state, layout) {
         }
     });
     var d = Object.assign({terr: terr, borders: borders, labels: labels}, layers);
-    entry.derived = {cities: state.cities, params: state.params, layoutKey: layoutKey, d: d};
+    entry.derived = {cities: state.cities, params: state.params, roads: roads, layoutKey: layoutKey, d: d};
     return d;
 }

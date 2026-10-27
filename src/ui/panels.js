@@ -115,6 +115,9 @@ function buildPanel(body, ctx) {
     countRow(s, 'Cities', 1, function (n) {act('addCities', {count: n})()});
     countRow(s, 'Points of interest', 1, function (n) {act('addPOI', {count: n})()});
     countRow(s, 'Wrecks', 1, function (n) {act('addWrecks', {count: n})()});
+    buttonGrid(s, [{text: 'Join towns with roads', wide: true,
+        title: 'Roads along the easiest ground between the cities. Building them again replaces these, but not roads you have drawn or reshaped.',
+        onClick: act('joinTowns')}]).style('margin-top', '8px');
 
     // Renaming uses the chosen language, which then names places added later.
     // The list shows the map's own language until another is picked.

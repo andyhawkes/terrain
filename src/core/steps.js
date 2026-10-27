@@ -4,6 +4,7 @@
 import * as T from './terrain.js';
 import {randomVector, runif, randrange, withStream} from './random.js';
 import {makeLanguage, makeName} from './language.js';
+import {getRoads, roadLines} from './roads.js';
 
 export var defaultParams = {
     shape: 'square',
@@ -15,6 +16,7 @@ export var defaultParams = {
     npoi: 1,
     nterrs: 5,
     language: 'random',  // an id from LANGUAGES, for place names
+    roads: true,  // join the cities of a random map with roads
     fontsizes: {
         region: 40,
         city: 25,
@@ -101,6 +103,12 @@ export function emptyState() {
         poi: [],      // {id, vx, variant, pos?}
         markers: [],  // {id, pos, type, color}; type is a marker type id (see MARKER_TYPES)
         notes: [],    // {id, pos, text}: free text placed on the map
+        // Lines kept as a few points ([x, y], map units) and drawn as smooth
+        // curves through them. auto marks roads built by joinTowns, which
+        // building again replaces; style is a ROUTE_STYLES id.
+        roads: [],    // {id, points, auto?}
+        routes: [],   // {id, points, style, label, labelOffset?}
+        roadsBasis: null,  // what joinTowns last built from (see roadsStale)
         nextId: 1
     };
 }
@@ -125,8 +133,16 @@ function symbolKind(id) {
     return SYMBOL_KINDS.find(function (k) {return k.id === id}) || SYMBOL_KINDS[0];
 }
 
+// How a route is drawn; each theme has its own look for each (see routes
+// in simple.js)
+export var ROUTE_STYLES = [
+    {id: 'dotted', name: 'Dotted'},
+    {id: 'dashed', name: 'Dashed'},
+    {id: 'arrows', name: 'With arrows'}
+];
+
 // Lists of map items that can be moved or deleted
-export var ITEM_LISTS = ['cities', 'wrecks', 'poi', 'markers', 'notes'];
+export var ITEM_LISTS = ['cities', 'wrecks', 'poi', 'markers', 'notes', 'roads', 'routes'];
 
 export function findItem(state, id) {
     for (var i = 0; i < ITEM_LISTS.length; i++) {
@@ -207,6 +223,46 @@ function addPlaced(state, list, pick, count) {
     return Object.assign({}, state, changes);
 }
 
+// Roads joining the cities, replacing those built this way before. Each
+// starts where its city is now, if it has been moved.
+function joinTowns(state) {
+    var cities = state.cities.filter(function (c) {return c.vx != null});
+    var paths = getRoads(state.h, cities.map(function (c) {return c.vx}));
+    var byVertex = new Map(cities.map(function (c) {return [c.vx, c]}));
+    var lines = roadLines(state.h, paths, paths.map(function (p) {
+        var city = byVertex.get(p[0]);
+        return city && city.pos;
+    }));
+    var nextId = state.nextId;
+    var roads = state.roads.filter(function (r) {return !r.auto}).concat(lines.map(function (points) {
+        return {id: nextId++, points: points, auto: true};
+    }));
+    return Object.assign({}, state, {roads: roads, nextId: nextId, roadsBasis: roadsBasis(state)});
+}
+
+// The heightmap and where the towns are: if either changes, joinTowns
+// would build different roads
+function roadsBasis(state) {
+    return {h: state.h, towns: state.cities.filter(function (c) {return c.vx != null}).map(function (c) {
+        return c.vx + (c.pos ? '@' + c.pos.join(',') : '');
+    }).join(' ')};
+}
+
+// Whether the roads built by joinTowns no longer fit the map, because the
+// terrain or the towns have changed since. Roads stay as they are until
+// built again, so the editor can offer to.
+export function roadsStale(state) {
+    var basis = state.roadsBasis;
+    if (!basis || !state.roads.some(function (r) {return r.auto})) return false;
+    var now = roadsBasis(state);
+    return basis.h !== now.h || basis.towns !== now.towns;
+}
+
+// At least two points, as [x, y] numbers
+function linePoints(points) {
+    return (points || []).map(function (p) {return [+p[0], +p[1]]});
+}
+
 function mapItem(state, id, f) {
     var found = findItem(state, id);
     if (!found) return state;
@@ -259,6 +315,9 @@ export var steps = {
             });
             s = withStream('wrecks', function () {return addPlaced(s, 'wrecks', T.pickWreck, params.nwrecks)});
             s = withStream('poi', function () {return addPlaced(s, 'poi', T.pickPOI, params.npoi)});
+            // Roads use no random numbers, but get their own stream anyway so
+            // any later change to them leaves the rest of the map alone
+            if (params.roads) s = withStream('roads', function () {return joinTowns(s)});
             return s;
         }
     },
@@ -352,6 +411,14 @@ export var steps = {
             return addPlaced(state, 'poi', T.pickPOI, count(args, 1));
         }
     },
+    // Roads joining the cities, for hand-built maps (random maps can have
+    // them from the start)
+    joinTowns: {
+        label: 'Join towns with roads',
+        apply: function (state) {
+            return joinTowns(state);
+        }
+    },
     // Names every place afresh, in args.language if given (which then
     // becomes the map's language for places added later)
     renamePlaces: {
@@ -432,6 +499,52 @@ export var steps = {
             return Object.assign({}, state, {notes: notes, nextId: state.nextId + 1});
         }
     },
+    // A road or route drawn by hand
+    addRoad: {
+        label: 'Add road',
+        apply: function (state, args) {
+            var points = linePoints(args.points);
+            if (points.length < 2) return state;
+            var roads = state.roads.concat([{id: state.nextId, points: points}]);
+            return Object.assign({}, state, {roads: roads, nextId: state.nextId + 1});
+        }
+    },
+    addRoute: {
+        label: 'Add route',
+        apply: function (state, args) {
+            var points = linePoints(args.points);
+            if (points.length < 2) return state;
+            var routes = state.routes.concat([{id: state.nextId, points: points, style: args.style || 'dotted',
+                label: args.label || ''}]);
+            return Object.assign({}, state, {routes: routes, nextId: state.nextId + 1});
+        }
+    },
+    // Changes a route's style or label (whichever is given)
+    setRoute: {
+        label: 'Change route',
+        apply: function (state, args) {
+            return mapItem(state, args.id, function (route, list) {
+                if (list !== 'routes') return route;
+                if (args.style) route.style = args.style;
+                if ('label' in args) route.label = args.label || '';
+                return route;
+            });
+        }
+    },
+    // Moves one point of a road or route. A road built by joinTowns becomes
+    // the user's own, so building roads again leaves it.
+    movePoint: {
+        label: 'Move point',
+        apply: function (state, args) {
+            return mapItem(state, args.id, function (line) {
+                if (!line.points || !line.points[args.index]) return line;
+                line.points = line.points.slice();
+                line.points[args.index] = [+args.pos[0], +args.pos[1]];
+                delete line.auto;
+                return line;
+            });
+        }
+    },
     // Moving an item only moves its marker: the terrain, territories and
     // other labels stay as they are. A city's label moves with it.
     moveItem: {
@@ -465,12 +578,16 @@ export var steps = {
         }
     },
     // Moving a label never moves what it labels. City labels are stored as an
-    // offset from the city, so they follow it if the city moves later.
+    // offset from the city, so they follow it if the city moves later. A
+    // route's label is kept as args.offset from its usual place, above the
+    // middle of the route, so it follows the route's points.
     moveLabel: {
         label: 'Move label',
         apply: function (state, args) {
             return mapItem(state, args.id, function (city) {
-                if (args.kind === 'region') {
+                if (args.kind === 'route') {
+                    city.labelOffset = [+args.offset[0], +args.offset[1]];
+                } else if (args.kind === 'region') {
                     city.regionLabelPos = args.pos;
                 } else {
                     var at = itemPos(state, city);

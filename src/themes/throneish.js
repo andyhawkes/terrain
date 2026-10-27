@@ -65,6 +65,10 @@ export default {
 
     borderDash: [8, 3],
 
+    // Roads and routes in sepia
+    roads: {lines: [{color: '#5a3b1e', width: 2.2}]},
+    routes: {color: '#6b4423', width: 2.4, dotted: [0, 7], dashed: [10, 5], arrowSize: 10, arrowSpacing: 90},
+
     // Each realm in its own muted heraldic colour, in watercolour
     regionTints: {
         colors: ['#8c2f2f', '#2f4a7a', '#b08a2e', '#3f6b3a', '#6b3f73', '#4f5a63', '#a0562a', '#2f6f6a'],

@@ -55,6 +55,10 @@ export default {
 
     borderDash: [4, 4],
 
+    // Dashed tracks, and journeys in dark red
+    roads: {lines: [{color: '#5c4630', width: 1.6, dash: [7, 4]}]},
+    routes: {color: '#8b0000', width: 2.4, dotted: [0, 7], dashed: [10, 6], arrowSize: 10, arrowSpacing: 90},
+
     labels: {
         regionCase: 'normal',
         regionSpacing: 'normal',
