@@ -15,7 +15,9 @@ export function themeCSS(theme, font, background, scope) {
         'px; stroke-linejoin: round; paint-order: stroke;';
     var rules = [
         'S { --ink: ' + c.ink + '; --symbol: ' + c.symbol + '; --marker: ' + c.marker + '; }',
-        'S path, S line, S circle { fill: none; stroke: ' + c.ink + '; stroke-linecap: round; }',
+        // Not inside symbols, which are styled by their parts: Safari applies
+        // this to the copies <use> draws, overriding their fills and colours
+        'S path:not(symbol *), S line, S circle { fill: none; stroke: ' + c.ink + '; stroke-linecap: round; }',
         'S .coast { stroke: ' + c.coast + '; stroke-width: ' + w.coast + 'px; }',
         'S .river { stroke: ' + c.river + '; stroke-width: ' + w.river + 'px; }',
         'S .border { stroke: ' + c.border + '; stroke-width: ' + w.border + 'px;' +

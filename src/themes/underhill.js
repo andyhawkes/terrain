@@ -1,7 +1,7 @@
 // A hand-drawn storybook map: black and red ink on cream paper, little
 // mountains, hills and trees, and names in an uncial hand.
 import {markerSymbols} from './markers.js';
-import {mountains, hills} from './relief-drawings.js';
+import {mountains, hills, trees} from './relief-drawings.js';
 
 var parchment = new URL('../../images/parchment.jpg', import.meta.url).href;
 
@@ -9,9 +9,16 @@ var INK = '#1a1a1a';
 var RED = '#a3221b';
 var PAPER = '#f3ead2';
 
-// Relief: mountains and hills are generated (see relief-drawings.js); trees
-// are drawn here. Drawings sit on y = 0 (their base). mask fills the shape
-// with paper so nearer ones hide those behind; ridge is the outline.
+// Trees are outlined in a lighter line than mountains, or the pines fill in
+function lightLines(drawing) {
+    return drawing.map(function (part) {
+        return part.cls === 'ridge' ? {d: part.d, cls: 'leaf'} : part;
+    });
+}
+
+// Relief: mountains, hills and trees are generated (see relief-drawings.js).
+// Drawings sit on y = 0 (their base). mask fills the shape with paper so
+// nearer ones hide those behind; ridge is the outline.
 
 export default {
     id: 'underhill',
@@ -89,20 +96,10 @@ export default {
             // Generated, so the ranges vary (see relief-drawings.js)
             mountain: {kind: 'path', variants: mountains(14, 7)},
             hill: {kind: 'path', variants: hills(8, 11)},
-            tree: {kind: 'path', variants: [
-                // Round-topped
-                [{d: 'M-4,-3 C-7,-4 -6,-10 -2,-10 C-1,-13 4,-12 4,-9 C7,-8 6,-3 3,-3 Z', cls: 'mask'},
-                    {d: 'M-4,-3 C-7,-4 -6,-10 -2,-10 C-1,-13 4,-12 4,-9 C7,-8 6,-3 3,-3 Z', cls: 'ridge'},
-                    {d: 'M0,-3 L0,1', cls: 'ridge'}],
-                // Pointed
-                [{d: 'M0,-12 L-3,-6 L-1.5,-6 L-4,-1 L4,-1 L1.5,-6 L3,-6 Z', cls: 'mask'},
-                    {d: 'M0,-12 L-3,-6 L-1.5,-6 L-4,-1 L4,-1 L1.5,-6 L3,-6 Z', cls: 'ridge'},
-                    {d: 'M0,-1 L0,1.5', cls: 'ridge'}],
-                // Small and round
-                [{d: 'M-3,-2 C-5,-4 -4,-9 0,-9 C4,-9 5,-4 3,-2 Z', cls: 'mask'},
-                    {d: 'M-3,-2 C-5,-4 -4,-9 0,-9 C4,-9 5,-4 3,-2 Z', cls: 'ridge'},
-                    {d: 'M0,-2 L0,1', cls: 'ridge'}]
-            ]}
+            // Hand-drawn trees, as in Throne-ish: pines in the cold north and
+            // on high ground, broadleaf trees elsewhere
+            tree: {kind: 'path', climate: {cold: [0, 1, 2, 3], warm: [4, 5, 6, 7, 8, 9]},
+                variants: trees(4, 41, 'pine').concat(trees(6, 43, 'broadleaf')).map(lightLines)}
         },
         poi: {kind: 'path', transform: 'scale(1.4)', variants: [
             // Tower
@@ -133,6 +130,8 @@ export default {
         ridge: {fill: 'none', stroke: INK, 'stroke-width': 1.3},
         shadow: {fill: INK, stroke: 'none'},
         crease: {fill: 'none', stroke: INK, 'stroke-width': 0.9},
+        leaf: {fill: 'none', stroke: INK, 'stroke-width': 0.9},
+        twig: {fill: 'none', stroke: INK, 'stroke-width': 0.6},
         mark: {fill: 'none', stroke: 'currentColor', 'stroke-width': 2.5}
     },
 

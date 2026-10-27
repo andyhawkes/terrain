@@ -301,7 +301,8 @@ input[type=checkbox] {
     stroke-linecap: round;
 }
 
-.tool-options button.symbol-variant {
+.tool-options button.symbol-variant,
+.tool-options button.marker-type {
     padding: 4px;
 }
 
@@ -812,13 +813,15 @@ input[type=checkbox] {
 /* --- Small screens ---
    The editor is built for desktop (see docs/PLAN.md), so phones get a
    notice instead: narrower than a tablet held upright, or too short, like a
-   phone held sideways. main.js uses the same query to hold off starting. */
+   phone held sideways. Short but wide is a tablet with its keyboard showing,
+   which mustn't hide the editor (or the text box being typed in). main.js
+   uses the same query to hold off starting. */
 
 .small-screen {
     display: none;
 }
 
-@media (max-width: 759px), (max-height: 499px) {
+@media (max-width: 759px), (max-height: 499px) and (max-width: 999px) {
     body > :not(.small-screen) {
         display: none !important;
     }

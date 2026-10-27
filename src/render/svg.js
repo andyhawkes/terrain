@@ -175,7 +175,7 @@ function drawBackground(svg, background) {
 
 // <symbol>s for a path-based symbol set, rebuilt when the set changes.
 // Each part gets its style from theme.parts directly: CSS can't reach
-// inside a <use>.
+// inside a <use> (in most browsers: see themeCSS).
 function ensureSymbols(svg, kind, spec, parts) {
     var node = svg.node();
     node.__symbols = node.__symbols || {};

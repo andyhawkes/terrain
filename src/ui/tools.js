@@ -212,13 +212,13 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
                 .datum(type)
                 .attr('class', 'marker-type')
                 .attr('title', type.name)
+                .attr('aria-label', type.name)
                 .classed('active', type.id === markerType)
                 .on('click', function () {
                     markerType = type.id;
                     updateOptions();
                 });
             markerPreview(b, theme.symbols.markers[type.id]);
-            b.append('span').text(type.name);
         });
 
         optionsBar.append('span').attr('class', 'tool-options-label tool-options-gap').text('Colour');
