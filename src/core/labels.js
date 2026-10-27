@@ -9,8 +9,8 @@ import {terrCenter} from './terrain.js';
 // fontsizes are in SVG units; scale is SVG units per map unit.
 // layout (optional) describes how the labels will be drawn:
 //   measure(kind, text, size): a label's width in SVG units, where kind is
-//     'city' or 'region' and size its font size; without it, widths are
-//     estimated from the number of letters
+//     'capital', 'town' or 'region' and size its font size; without it,
+//     widths are estimated from the number of letters
 //   obstacles: boxes ([x0, y0, x1, y1], map units) labels should stay off,
 //     such as the title box or compass rose
 var REGION_SIZES = [1, 0.85, 0.72];
@@ -74,7 +74,7 @@ export function placeLabels(h, terr, cities, nterrs, cityNames, regionNames, fon
         var y = h.mesh.vxs[cities[i]][1];
         var text = cityNames[i];
         var size = i < nterrs ? fontsizes.city : fontsizes.town;
-        var sx = measure('city', text, size) / scale;
+        var sx = measure(i < nterrs ? 'capital' : 'town', text, size) / scale;
         var sy = size/scale;
         var posslabels = [
         {

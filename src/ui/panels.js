@@ -1,6 +1,7 @@
 // The right-hand panel: Build (shape the current map), Style (how it's
 // drawn) and History (every step, with replay).
-import {THEMES, getTheme, fontChoice, backgroundChoice} from '../themes/index.js';
+import {THEMES, getTheme, fontChoice, backgroundChoice, ROLES, TYPE_SIZES, TYPE_CASES, TYPE_SPACINGS,
+    typefaces, typography} from '../themes/index.js';
 import {TOGGLE_LAYERS} from '../render/svg.js';
 import {UNITS, GRIDS, COMPASS_SIZES, extrasChoice} from '../render/extras.js';
 import {historyPanel} from './history.js';
@@ -149,7 +150,7 @@ function stylePanel(body, ctx) {
 
     s = section(body, 'Lettering');
     var row = s.append('div').attr('class', 'control-row');
-    row.append('label').attr('for', 'fontSelect').text('Font');
+    row.append('label').attr('for', 'fontSelect').text('Preset');
     var fontSelect = row.append('select').attr('id', 'fontSelect')
         .on('change', function () {setStyle({font: this.value})});
 
@@ -157,6 +158,51 @@ function stylePanel(body, ctx) {
     row.append('label').attr('for', 'backgroundSelect').text('Background');
     var backgroundSelect = row.append('select').attr('id', 'backgroundSelect')
         .on('change', function () {setStyle({background: this.value})});
+
+    // Each kind of text can be changed on its own, from the theme's fonts
+    var role = ROLES[0].id;
+    row = s.append('div').attr('class', 'control-row');
+    row.append('label').attr('for', 'roleSelect').text('Text');
+    var roleSelect = row.append('select').attr('id', 'roleSelect')
+        .on('change', function () {
+            role = this.value;
+            showLettering(ctx.doc.state);
+        });
+    ROLES.forEach(function (r) {roleSelect.append('option').attr('value', r.id).text(r.name)});
+    var resetButton = row.append('button').text('Reset')
+        .on('click', function () {
+            var type = Object.assign({}, ctx.doc.state.style.type);
+            delete type[role];
+            setStyle({type: type, what: 'Reset lettering'});
+        });
+    var typeSelects = {};
+    var typeRows = {};
+    [['font', 'Font'], ['size', 'Size'], ['case', 'Case'], ['spacing', 'Spacing']].forEach(function (f) {
+        var r = typeRows[f[0]] = s.append('div').attr('class', 'control-row');
+        r.append('label').attr('for', 'type-' + f[0]).text(f[1]);
+        typeSelects[f[0]] = r.append('select').attr('id', 'type-' + f[0])
+            .on('change', function () {
+                var type = Object.assign({}, ctx.doc.state.style.type);
+                type[role] = Object.assign({}, type[role]);
+                type[role][f[0]] = this.value;
+                setStyle({type: type, what: 'Change lettering'});
+            });
+    });
+
+    function showLettering(state) {
+        var theme = getTheme(state.style.theme);
+        var r = typography(theme, state.style)[role];
+        // Some themes space region names by their own amount
+        var spacings = TYPE_SPACINGS.some(function (x) {return x.id === r.spacing}) ? TYPE_SPACINGS :
+            TYPE_SPACINGS.concat([{id: r.spacing, name: 'Theme\u2019s own'}]);
+        options(typeSelects.font, typefaces(theme), r.font);
+        options(typeSelects.size, TYPE_SIZES, r.size);
+        // Single-stroke lettering has no small capitals or spacing
+        options(typeSelects.case, r.hershey ? TYPE_CASES.slice(0, 2) : TYPE_CASES, r.case);
+        options(typeSelects.spacing, spacings, r.spacing);
+        typeRows.spacing.style('display', r.hershey ? 'none' : null);
+        resetButton.property('disabled', !(state.style.type || {})[role]);
+    }
 
     s = section(body, 'Layers');
     var list = s.append('div').attr('class', 'check-list');
@@ -258,6 +304,7 @@ function stylePanel(body, ctx) {
         themeDescription.text(theme.description);
         options(fontSelect, theme.fonts, fontChoice(theme, style).id);
         options(backgroundSelect, theme.backgrounds, backgroundChoice(theme, style).id);
+        showLettering(state);
         TOGGLE_LAYERS.forEach(function (l) {
             boxes[l[0]].property('checked', style.hidden.indexOf(l[0]) < 0);
         });

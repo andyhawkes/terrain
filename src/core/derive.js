@@ -148,9 +148,11 @@ export function derive(state, layout) {
     var borders = regions.borders;
     var cityNames = cities.map(function (c) {return c.name});
     var regionNames = cities.map(function (c) {return c.regionName});
-    var labelsKey = JSON.stringify([placesKey, cityNames, regionNames, state.params.fontsizes, state.params.scale, layoutKey]);
+    // The layout can scale the lettering (see typography in themes/index.js)
+    var fontsizes = layout && layout.fontsizes || state.params.fontsizes;
+    var labelsKey = JSON.stringify([placesKey, cityNames, regionNames, fontsizes, state.params.scale, layoutKey]);
     var placed = lastFor(entry, 'placement', labelsKey, function () {
-        return placeLabels(h, terr, vxs, nterrs, cityNames, regionNames, state.params.fontsizes,
+        return placeLabels(h, terr, vxs, nterrs, cityNames, regionNames, fontsizes,
             [layers.rivers, layers.coasts, borders], state.params.scale, layout);
     });
     // Copies, so placing labels for this state leaves the cached ones alone
@@ -167,6 +169,7 @@ export function derive(state, layout) {
         var offset = city.labelOffset || [label.x - vx[0], label.y - vx[1]];
         var at = itemPos(state, city);
         label.id = city.id;
+        label.capital = i < nterrs;
         label.x = at[0] + offset[0];
         label.y = at[1] + offset[1];
     });

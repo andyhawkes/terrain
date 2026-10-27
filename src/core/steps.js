@@ -53,7 +53,9 @@ export function newParams(given) {
 
 // How the map is drawn: a theme id plus the user's choices within it.
 // font and background are ids from the theme (null means its default);
-// hidden lists layers that are switched off.
+// hidden lists layers that are switched off. type holds changes to the
+// lettering of each role, e.g. {town: {font, size, case, spacing}} (see
+// typography in themes/index.js); a role not listed follows the theme.
 // The rest are extras drawn over the map (see render/extras.js). null means
 // the theme's default (theme.extras), so they follow the theme until set.
 //   units: 'miles', 'km' or 'leagues'; perUnit: how many across one map
@@ -68,6 +70,7 @@ export var defaultStyle = {
     theme: 'simple',
     font: null,
     background: null,
+    type: {},
     hidden: [],
     units: null,
     perUnit: null,
@@ -147,6 +150,15 @@ function vxsOf(items) {
 // its title, and where its extras were moved to
 function carriedStyle(style) {
     return Object.assign({}, style, {title: '', positions: {}});
+}
+
+// Lettering changes reduced to their sizes
+function sizesOnly(type) {
+    var sizes = {};
+    Object.keys(type || {}).forEach(function (role) {
+        if (type[role].size) sizes[role] = {size: type[role].size};
+    });
+    return sizes;
 }
 
 // Copy-on-write for the naming language, which makeName mutates
@@ -356,8 +368,9 @@ export var steps = {
 
     // --- Style ---
     // Merges the given fields into the style; changing theme resets the
-    // font and background to that theme's defaults. args.what, if given,
-    // names what changed for the History panel and isn't kept.
+    // font and background to that theme's defaults. Changing theme or font
+    // resets the lettering too, except sizes, which suit any font. args.what,
+    // if given, names what changed for the History panel and isn't kept.
     setStyle: {
         label: 'Change style',
         apply: function (state, args) {
@@ -367,6 +380,10 @@ export var steps = {
             if (args.theme && args.theme !== state.style.theme) {
                 if (!('font' in args)) style.font = null;
                 if (!('background' in args)) style.background = null;
+            }
+            var newFont = 'font' in args && args.font !== state.style.font;
+            if ((style.theme !== state.style.theme || newFont) && !('type' in args)) {
+                style.type = sizesOnly(state.style.type);
             }
             return Object.assign({}, state, {style: style});
         }
