@@ -49,6 +49,11 @@ export default {
 
     borderDash: [8, 8],
 
+    // Plain strokes: roads in short dashes, unlike the borders' long ones.
+    // Dots and dashes are drawn as separate strokes.
+    roads: {lines: [{color: '#000000', width: 1.5, dash: [4, 4]}]},
+    routes: {color: '#000000', width: 1.5, dotted: [1.5, 6], dashed: [10, 6], arrowSize: 10, arrowSpacing: 90},
+
     labels: {
         regionCase: 'upper',
         regionSpacing: 'normal',

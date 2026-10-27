@@ -27,7 +27,8 @@ var strip = d3.select('#toolstrip');
 // Draws the current map, or during a replay the step being shown
 function render() {
     renderView(svg, view, replaying() ? doc.stateAt(panelCtx.replayAt + 1) : doc.state);
-    tools.refresh();
+    // Handles for editing roads and routes only go on the map as it is now
+    tools.refresh(view === 'map' && !replaying());
     panels.update(doc.state);
     updateChrome();
 }
@@ -250,6 +251,8 @@ settings.forEach(function (f) {
     grid.append('label').attr('for', f.id).text(f.label);
     grid.append('input').attr('id', f.id).attr('type', 'number').attr('min', 0).attr('max', 200);
 });
+grid.append('label').attr('for', 'roads').text('Roads between towns');
+var roadsBox = grid.append('input').attr('id', 'roads').attr('type', 'checkbox');
 
 // Each shape has its own detail levels and default numbers of places
 function showShape(shape) {
@@ -267,6 +270,7 @@ function resetSettings() {
     shapeSelect.property('value', defaultParams.shape);
     showShape(getShape(defaultParams.shape));
     languageSelect.property('value', defaultParams.language);
+    roadsBox.property('checked', defaultParams.roads);
     d3.select('#seed').property('value', '');
 }
 resetSettings();
@@ -278,6 +282,8 @@ function readSettings() {
         var n = parseInt(d3.select('#' + f.id).property('value'), 10);
         params[f.id] = n >= 0 ? n : defaultParams[f.id];
     });
+    // Only when on, so maps without roads have the same steps as before
+    if (roadsBox.property('checked')) params.roads = true;
     return params;
 }
 
@@ -356,8 +362,11 @@ function exportMap(save, name, options) {
     var box = R.mapBox(doc.state.params);
     var opts = Object.assign({fonts: exportFonts(doc.state.style), excludeUnusedCss: true,
         left: box[0], top: box[1], width: box[2], height: box[3]}, options);
+    // Editing handles stay out of the picture
+    tools.refresh(false);
     save(svg.node(), name, opts).finally(function () {
         if (previous !== 'map') setView(previous);
+        else tools.refresh(!replaying());
     });
 }
 
@@ -425,6 +434,11 @@ var panels = createPanels(d3.select('#panelTabs'), d3.select('#panelBody'), pane
 document.addEventListener('keydown', function (event) {
     var target = event.target;
     if (target.closest && target.closest('input, select, textarea, [popover]')) return;
+    // A tool part way through something (e.g. drawing a route) goes first
+    if (tools.key(event)) {
+        event.preventDefault();
+        return;
+    }
     var mod = event.metaKey || event.ctrlKey;
     var key = event.key.toLowerCase();
     if (mod && key === 'z') {

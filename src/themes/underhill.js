@@ -64,6 +64,10 @@ export default {
 
     borderDash: [5, 4],
 
+    // Double-lined roads in ink, and a journey in red dots
+    roads: {lines: [{color: INK, width: 3.6}, {color: 'paper', width: 1.6}]},
+    routes: {color: RED, width: 3.4, dotted: [0, 8], dashed: [9, 6], arrowSize: 10, arrowSpacing: 90},
+
     // Relief is drawn with the symbols below, not hatching
     slopeShading: false,
 

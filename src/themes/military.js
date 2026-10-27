@@ -52,6 +52,10 @@ export default {
     // Dash, dot
     borderDash: [10, 4, 2, 4],
 
+    // Cased roads, like a survey map; movements in red
+    roads: {lines: [{color: INK, width: 4.5}, {color: 'paper', width: 2.3}]},
+    routes: {color: '#c62828', width: 3, dotted: [0, 9], dashed: [14, 6], arrowSize: 13, arrowSpacing: 110},
+
     seaShading: true,
 
     // A kilometre grid and a scale bar to go with it

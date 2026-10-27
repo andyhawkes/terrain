@@ -872,3 +872,56 @@ input[type=checkbox] {
         color: var(--muted);
     }
 }
+
+/* --- Roads and routes --- */
+
+.tool-route #mapSVG {
+    cursor: crosshair;
+}
+
+/* Editing handles, drawn over the map by the tools (never exported) */
+#mapSVG .edit-overlay .hit-line {
+    fill: none;
+    stroke: transparent;
+    stroke-linecap: round;
+    pointer-events: stroke;
+    cursor: pointer;
+}
+
+.tool-delete #mapSVG .edit-overlay .hit-line:hover {
+    stroke: var(--danger);
+    stroke-opacity: 0.35;
+}
+
+.tool-route #mapSVG .edit-overlay .hit-line:hover {
+    stroke: var(--accent);
+    stroke-opacity: 0.35;
+}
+
+#mapSVG .edit-overlay .handle {
+    fill: #ffffff;
+    stroke: var(--move);
+    cursor: grab;
+}
+
+#mapSVG .edit-overlay .handle:hover {
+    fill: var(--move);
+}
+
+#mapSVG .edit-overlay .moving-line,
+#mapSVG .edit-overlay .drawing-line {
+    fill: none;
+    stroke: var(--accent);
+    stroke-dasharray: 6 4;
+    pointer-events: none;
+}
+
+#mapSVG .edit-overlay .moving-line {
+    stroke: var(--move);
+}
+
+#mapSVG .edit-overlay .drawing-point {
+    fill: #ffffff;
+    stroke: var(--accent);
+    pointer-events: none;
+}
