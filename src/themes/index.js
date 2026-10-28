@@ -10,8 +10,9 @@ import underhill from './underhill.js';
 import throneish from './throneish.js';
 import colouredrelief from './colouredrelief.js';
 import surveyor from './surveyor.js';
+import illuminated from './illuminated.js';
 
-export var THEMES = [simple, fantasy, pirate, military, underhill, throneish, colouredrelief, surveyor, plotter];
+export var THEMES = [simple, fantasy, pirate, military, underhill, throneish, colouredrelief, surveyor, illuminated, plotter];
 
 // Old theme ids, so earlier map files still open with the right look
 var RENAMED = {lovecraftian: 'fantasy'};

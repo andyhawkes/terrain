@@ -92,7 +92,7 @@ High fantasy as a richly coloured old atlas, closer to a medieval manuscript or 
 - Sea creatures and ships in the margins.
 - It would suit several peoples' names (item 6).
 
-Status: Not started
+Status: In progress. Everything above is drawn as a first pass (`frame`, `compassRose`, `cartouche` and `seaPictures` theme settings); the sea creatures and ships are off until they're redrawn, alongside the wreck symbols. The hills and forests may want a less cartoonish look. Several peoples' names wait on item 6.
 
 ### Coloured relief
 

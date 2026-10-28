@@ -3,7 +3,7 @@
 // setMapSize sets before drawing; text, lines and symbols are sized in SVG
 // user units.
 import * as d3 from 'd3';
-import {derive, territories, fills, contours, woodland, seaShading, relief, coastOutlines, smoothCoasts, regionShapes, hachureStrokes, roadCurves} from '../core/derive.js';
+import {derive, territories, fills, contours, woodland, seaShading, seaSpots, relief, coastOutlines, smoothCoasts, regionShapes, hachureStrokes, roadCurves} from '../core/derive.js';
 import {smoothLine} from '../core/roads.js';
 import {meshTris, EDGE} from '../core/terrain.js';
 import {itemPos} from '../core/steps.js';
@@ -38,13 +38,13 @@ export function setMapSize(svg, params) {
 }
 
 // Layers in drawing order; each is a <g> so redraws keep the stacking order
-var LAYERS = ['background', 'field', 'fill', 'tint', 'wood', 'contour', 'sea', 'river', 'coastLines', 'coast', 'border', 'slope', 'road', 'relief', 'grid', 'city', 'wreck', 'poi', 'marker',
-    'route', 'label', 'extras'];
+var LAYERS = ['background', 'field', 'fill', 'tint', 'wood', 'contour', 'sea', 'river', 'coastLines', 'coast', 'border', 'slope', 'road', 'relief',
+    'seaPicture', 'grid', 'city', 'wreck', 'poi', 'marker', 'route', 'label', 'frame', 'extras'];
 
 // Layers only there while the map has something in them, so maps without
-// roads or routes, and themes without fills, woodland or contours, draw
-// exactly as before
-var OPTIONAL_LAYERS = ['fill', 'wood', 'contour', 'road', 'route'];
+// roads or routes, and themes without fills, woodland, contours, sea
+// pictures or a frame, draw exactly as before
+var OPTIONAL_LAYERS = ['fill', 'wood', 'contour', 'road', 'route', 'seaPicture', 'frame'];
 
 // Layers the user can switch off in the Style panel
 export var TOGGLE_LAYERS = [
@@ -346,6 +346,77 @@ function insideMargin(svg, g, name) {
     return g.append('g').attr('clip-path', 'url(#' + id + ')');
 }
 
+// How far the margin, where coasts and rivers stop, reaches in from the
+// map's edges: [across, down] in map units
+function marginSize() {
+    return [(0.5 - EDGE) * extent.width, (0.5 - EDGE) * extent.height];
+}
+
+// Where the extras go by default: inside a theme's frame, if it has one
+function extrasInset(theme) {
+    return theme.frame ? marginSize() : null;
+}
+
+// A decorative frame, for themes with one (see frame in simple.js): bands
+// of colour around the map, the innermost on the edge of the margin, and a
+// drawing in each corner
+function drawFrame(svg, theme) {
+    var spec = theme.frame;
+    var g = optionalLayer(svg, 'frame', !!spec);
+    if (!g || unchanged(svg, 'frame', [spec, SCALE, extent])) return;
+    g.selectAll('*').remove();
+    var m = marginSize();
+    var w = SCALE * (extent.width - 2 * m[0]);
+    var ht = SCALE * (extent.height - 2 * m[1]);
+    // Washed bands go on first, so the ink rules stay crisp over them
+    var washed = spec.bands.filter(function (b) {return b.wash});
+    if (washed.length) ensureWatercolour(svg);
+    var wash = washed.length ? g.append('g').attr('filter', 'url(#' + svg.attr('id') + '-watercolour)') : null;
+    // Inline, as the theme's stylesheet sets every path's fill and stroke
+    washed.concat(spec.bands.filter(function (b) {return !b.wash})).forEach(function (band) {
+        var out = band.at + band.width / 2;
+        (band.wash ? wash : g).append('rect').attr('class', 'frame-band')
+            .attr('x', -w / 2 - out).attr('y', -ht / 2 - out).attr('width', w + 2 * out).attr('height', ht + 2 * out)
+            .style('fill', 'none').style('stroke', band.color).style('stroke-width', band.width + 'px')
+            .style('stroke-dasharray', band.dash ? band.dash.join(' ') : null);
+    });
+    if (spec.corner) {
+        ensureSymbols(svg, 'frame-corner', spec.corner, theme.parts);
+        var c = spec.width / 2;
+        [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(function (k) {
+            g.append('use').attr('class', 'frame-corner').attr('href', '#' + svg.attr('id') + '-frame-corner0')
+                .attr('x', k[0] * (w / 2 + c)).attr('y', k[1] * (ht / 2 + c));
+        });
+    }
+}
+
+// Boxes (map units) over a theme's frame, for labels to avoid
+function frameBoxes(theme) {
+    if (!theme.frame) return [];
+    var m = marginSize();
+    var w = extent.width / 2;
+    var h = extent.height / 2;
+    return [[-w, -h, w, -h + m[1]], [-w, h - m[1], w, h], [-w, -h, -w + m[0], h], [w - m[0], -h, w, h]];
+}
+
+// Sea monsters and ships out in open water, for themes with them (see
+// seaPictures in simple.js), each facing in towards the middle of the map
+function drawSeaPictures(svg, state, theme) {
+    var spec = theme.seaPictures;
+    var g = optionalLayer(svg, 'seaPicture', !!spec);
+    if (!g || unchanged(svg, 'seaPicture', [state.h, spec, SCALE])) return;
+    ensureSymbols(svg, 'seaPicture', spec, theme.parts);
+    var m = marginSize();
+    var spots = seaSpots(state.h, {count: spec.count, clearance: spec.clearance / SCALE,
+        inset: Math.max(m[0], m[1]) + spec.clearance / SCALE, spacing: spec.spacing / SCALE});
+    var prefix = '#' + svg.attr('id') + '-seaPicture';
+    join(svg, 'seaPicture', 'use', 'sea-picture', spots.map(function (p, i) {return {id: i, pos: p}}), byId)
+        .attr('href', function (d) {return prefix + (d.id % spec.variants.length)})
+        .attr('transform', function (d) {
+            return 'translate(' + coord(d.pos[0]) + ',' + coord(d.pos[1]) + ')' + (d.pos[0] > 0 ? ' scale(-1,1)' : '');
+        });
+}
+
 // Forests as filled areas, for themes with woodland ({color, outline,
 // width}): the cells under woodland, outlined like the fills, and
 // optionally a line around them
@@ -448,7 +519,9 @@ function contourLabelSpots(line, placed) {
 // layer as a whole is see-through, so where cells meet they don't show
 // darker; each cell is outlined in its own colour to close the hairline
 // gaps between them. With watercolour, a filter roughens the edges and
-// makes the colour uneven, like pigment.
+// makes the colour uneven, like pigment. With edge, each region is coloured
+// strongly along its borders and coast, fading to a light wash inside, as
+// old atlases were coloured by hand.
 function drawTints(svg, state, d, theme) {
     var spec = theme.regionTints;
     var capitals = state.cities.slice(0, state.params.nterrs).map(function (c) {return c.vx});
@@ -457,6 +530,9 @@ function drawTints(svg, state, d, theme) {
     g.selectAll('*').remove();
     if (!spec) return;
     if (spec.watercolour) ensureWatercolour(svg);
+    if (spec.edge) ensureEdgeColour(svg, spec.edge);
+    // Inside a frame, the colour stops at the plate's edge
+    if (theme.frame) g = insideMargin(svg, g, 'tint');
     var wash = g.append('g').attr('opacity', spec.opacity)
         .attr('filter', spec.watercolour ? 'url(#' + svg.attr('id') + '-watercolour)' : null);
     regionShapes(state.h, d.terr, capitals).forEach(function (cells, k) {
@@ -464,8 +540,26 @@ function drawTints(svg, state, d, theme) {
         wash.append('path').attr('class', 'region-tint')
             .attr('d', cellsPath(cells))
             // Inline, as the theme's stylesheet sets every path's fill and stroke
-            .style('fill', color).style('stroke', color).style('stroke-width', '0.8px').style('stroke-linejoin', 'round');
+            .style('fill', color).style('stroke', color).style('stroke-width', '0.8px').style('stroke-linejoin', 'round')
+            .attr('filter', spec.edge ? 'url(#' + svg.attr('id') + '-edge)' : null);
     });
+}
+
+// A shape's colour kept strong in a band along its outline (edge.width,
+// SVG units), softening inwards to edge.inside of its strength
+function ensureEdgeColour(svg, edge) {
+    var id = svg.attr('id') + '-edge';
+    var defs = svg.select('defs.symbols');
+    defs.select('#' + id).remove();
+    var f = defs.append('filter').attr('id', id).attr('x', '-2%').attr('y', '-2%').attr('width', '104%').attr('height', '104%');
+    f.append('feMorphology').attr('in', 'SourceAlpha').attr('operator', 'erode').attr('radius', edge.width).attr('result', 'eroded');
+    f.append('feGaussianBlur').attr('in', 'eroded').attr('stdDeviation', edge.width / 2).attr('result', 'inner');
+    f.append('feComposite').attr('in', 'SourceGraphic').attr('in2', 'inner').attr('operator', 'out').attr('result', 'band');
+    f.append('feComponentTransfer').attr('in', 'SourceGraphic').attr('result', 'wash')
+        .append('feFuncA').attr('type', 'linear').attr('slope', edge.inside);
+    var merge = f.append('feMerge');
+    merge.append('feMergeNode').attr('in', 'wash');
+    merge.append('feMergeNode').attr('in', 'band');
 }
 
 // Rough edges and uneven colour, like a watercolour wash
@@ -913,7 +1007,8 @@ function extrasBoxes(state, theme, type, measure) {
     var extras = extrasChoice(theme, state.style, state.params);
     var extent = state.params.extent;
     var boxes = [];
-    var at = function (id) {return extras.positions[id] || defaultPosition(id, extent, SCALE, extras.compassSize)};
+    var inset = extrasInset(theme);
+    var at = function (id) {return extras.positions[id] || defaultPosition(id, extent, SCALE, extras.compassSize, inset)};
     if (extras.compass) {
         var c = at('compass');
         var r = COMPASS_RADIUS * extras.compassSize / SCALE;
@@ -931,15 +1026,17 @@ function extrasBoxes(state, theme, type, measure) {
         var width = measure ? measure('title', extras.title, size) : 0.6 * size * extras.title.length;
         var maxWidth = SCALE * extent.width / 2 - 2 * TITLE_PAD;
         var lines = Math.max(1, Math.ceil(width / maxWidth));
-        boxes.push([q[0], q[1], q[0] + (Math.min(width, maxWidth) + 2 * TITLE_PAD) / SCALE,
-            q[1] + (2 * TITLE_PAD + (lines - 1) * 1.2 * size + size) / SCALE]);
+        // A cartouche's scrolls reach out at the sides and below
+        var out = theme.cartouche ? CARTOUCHE_REACH / SCALE : 0;
+        boxes.push([q[0] - out, q[1], q[0] + (Math.min(width, maxWidth) + 2 * TITLE_PAD) / SCALE + out,
+            q[1] + (2 * TITLE_PAD + (lines - 1) * 1.2 * size + size) / SCALE + out]);
     }
     var legend = extras.legend && legendFor(state, theme, extras, type, measure);
     if (legend) {
         var l = at('legend');
         boxes.push([l[0] + legend.layout.x / SCALE, l[1] + legend.layout.y / SCALE, l[0], l[1]]);
     }
-    return boxes;
+    return boxes.concat(frameBoxes(theme));
 }
 
 // How this map's labels will be drawn, so they can be placed to fit (see
@@ -995,9 +1092,11 @@ export function drawMap(svg, state) {
         return boxes.length ? d.slopes.filter(outsideBoxes(boxes)) : d.slopes;
     }, [d.slopes, boxes.length ? JSON.stringify(boxes) : '', hatching]);
     drawRelief(svg, state, theme);
+    drawSeaPictures(svg, state, theme);
     drawFeatures(svg, state, theme);
     drawRoutes(svg, state, theme, t.type);
     drawLabels(svg, d.labels, state.notes, t.type);
+    drawFrame(svg, theme);
     drawExtras(svg, state, theme, t.type, t.background);
     showLayers(svg, state.style.hidden);
 }
@@ -1114,7 +1213,8 @@ var ORNAMENTS = {
     },
     // Scaled to the chosen size, keeping its lines the same weight
     // The N is lettered like the title
-    compass: function (g, extras, extent, type) {
+    compass: function (g, extras, extent, type, theme) {
+        if (theme.compassRose) return ornateCompass(g, theme.compassRose);
         g.append('path').attr('class', 'extras-line')
             .attr('d', 'M-30,0a30,30 0 1,0 60,0a30,30 0 1,0 -60,0M-24,0a24,24 0 1,0 48,0a24,24 0 1,0 -48,0');
         var points = compassPoints(46, 24, 7);
@@ -1124,15 +1224,16 @@ var ORNAMENTS = {
         g.selectAll('path').attr('vector-effect', 'non-scaling-stroke');
     },
     // The box fits the title, up to half the map's width; longer titles wrap
-    title: function (g, extras, extent, type) {
+    title: function (g, extras, extent, type, theme) {
         var maxWidth = SCALE * extent.width / 2;
         var role = type.title;
-        layoutTitle(g, extras.title, role, maxWidth);
+        var cartouche = theme.cartouche;
+        layoutTitle(g, extras.title, role, maxWidth, cartouche);
         // Text is measured in whatever font is showing, so measure again
         // once the theme's own font has loaded
         if (!role.hershey && typeof document !== 'undefined' && document.fonts) {
             document.fonts.load(TITLE_SIZE * role.scale + 'px ' + role.family, extras.title).then(function () {
-                if (g.node().isConnected) layoutTitle(g, extras.title, role, maxWidth);
+                if (g.node().isConnected) layoutTitle(g, extras.title, role, maxWidth, cartouche);
             });
         }
     }
@@ -1142,11 +1243,13 @@ var ORNAMENTS = {
 ORNAMENTS.legend = null;
 
 var TITLE_SIZE = 30;
+var CARTOUCHE_REACH = 26;
 var TITLE_PAD = 14;
 var SCALE_TEXT = 14;
 
-// Draws the title box with its top-left corner at (0, 0)
-function layoutTitle(g, title, role, maxWidth) {
+// Draws the title box with its top-left corner at (0, 0), or a cartouche
+// for themes with one
+function layoutTitle(g, title, role, maxWidth, cartouche) {
     g.selectAll('*').remove();
     title = labelText(role, title);
     var size = TITLE_SIZE * role.scale;
@@ -1166,13 +1269,204 @@ function layoutTitle(g, title, role, maxWidth) {
     var lineHeight = 1.2 * size;
     var width = Math.max.apply(null, wrapped.widths.concat([size])) + 2 * pad;
     var height = 2 * pad + (wrapped.lines.length - 1) * lineHeight + size;
-    g.append('rect').attr('class', 'extras-paper')
-        .attr('x', 0).attr('y', 0).attr('width', width).attr('height', height);
-    g.append('rect').attr('class', 'extras-line')
-        .attr('x', 4).attr('y', 4).attr('width', width - 8).attr('height', height - 8);
+    if (cartouche) {
+        drawCartouche(g, width, height, cartouche);
+    } else {
+        g.append('rect').attr('class', 'extras-paper')
+            .attr('x', 0).attr('y', 0).attr('width', width).attr('height', height);
+        g.append('rect').attr('class', 'extras-line')
+            .attr('x', 4).attr('y', 4).attr('width', width - 8).attr('height', height - 8);
+    }
     wrapped.lines.forEach(function (line, i) {
         appendText(g, role, 'title-text', line, width / 2, pad + 0.8 * size + i * lineHeight, size, 'middle');
     });
+}
+
+// --- Ornate extras, for themes that ask for them ---
+
+// A path through points given as [x, y] pairs, closed
+function closed(points) {
+    return 'M' + points.map(function (p) {return p.map(function (v) {return Math.round(v * 100) / 100}).join(',')}).join('L') + 'Z';
+}
+
+// A filled shape in its own colours: inline, as the theme's stylesheet
+// sets every path's fill and stroke
+function shape(g, d, fill, stroke, width) {
+    return g.append('path').attr('class', 'ornate').attr('d', d)
+        .style('fill', fill || 'none').style('stroke', stroke || 'none')
+        .style('stroke-width', stroke ? (width || 1) + 'px' : null).style('stroke-linejoin', 'round');
+}
+
+// Where an ornament's shapes go. With wash ({wash: opacity}), colour is
+// laid on as a watercolour wash under crisp ink lines, as an engraving was
+// coloured by hand; otherwise each shape is drawn as it is.
+function paints(g, c) {
+    if (!c.wash) return {g: g, c: c};
+    var svg = d3.select(g.node().ownerSVGElement);
+    ensureFineWash(svg);
+    return {c: c, color: g.append('g').attr('opacity', c.wash).attr('filter', 'url(#' + svg.attr('id') + '-finewash)'),
+        ink: g.append('g')};
+}
+
+// A shape drawn with paints: its colours washed, its ink lines crisp
+function paint(p, d, fill, stroke, width) {
+    if (p.g) return shape(p.g, d, fill, stroke, width);
+    var ink = stroke === p.c.ink;
+    if ((fill && fill !== 'none') || (stroke && !ink)) shape(p.color, d, fill, ink ? null : stroke, width);
+    return ink ? shape(p.ink, d, 'none', stroke, width) : null;
+}
+
+// A gentler watercolour than ensureWatercolour's, for small drawings: the
+// colour wanders a little past the lines and lies unevenly
+function ensureFineWash(svg) {
+    var id = svg.attr('id') + '-finewash';
+    var defs = svg.select('defs.symbols');
+    if (!defs.select('#' + id).empty()) return;
+    var f = defs.append('filter').attr('id', id).attr('x', '-10%').attr('y', '-10%').attr('width', '120%').attr('height', '120%');
+    f.append('feTurbulence').attr('type', 'fractalNoise').attr('baseFrequency', 0.12).attr('numOctaves', 2)
+        .attr('seed', 5).attr('result', 'edges');
+    f.append('feDisplacementMap').attr('in', 'SourceGraphic').attr('in2', 'edges').attr('scale', 2.5)
+        .attr('xChannelSelector', 'R').attr('yChannelSelector', 'G').attr('result', 'rough');
+    f.append('feGaussianBlur').attr('in', 'rough').attr('stdDeviation', 0.35).attr('result', 'soft');
+    f.append('feTurbulence').attr('type', 'fractalNoise').attr('baseFrequency', 0.05).attr('numOctaves', 2)
+        .attr('seed', 9).attr('result', 'pigment');
+    f.append('feColorMatrix').attr('in', 'pigment').attr('type', 'matrix')
+        .attr('values', '0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.8 0.55').attr('result', 'blotches');
+    f.append('feComposite').attr('in', 'soft').attr('in2', 'blotches').attr('operator', 'in');
+}
+
+// One point of a compass rose, halved down its length: the left half and
+// the right, at angle a (radians clockwise from north)
+function rosePoint(a, length, width) {
+    var tip = [Math.sin(a) * length, -Math.cos(a) * length];
+    var l = [Math.sin(a - Math.PI / 2) * width, -Math.cos(a - Math.PI / 2) * width];
+    var r = [Math.sin(a + Math.PI / 2) * width, -Math.cos(a + Math.PI / 2) * width];
+    return {left: closed([[0, 0], tip, l]), right: closed([[0, 0], tip, r])};
+}
+
+// A fleur-de-lis standing on (0, 0), about 18 high, for north
+var FLEUR = 'M0,-18C3,-13 4,-8 1.6,-3L-1.6,-3C-4,-8 -3,-13 0,-18Z' +
+    'M1.4,-3.2C2.6,-9 9.5,-11.5 9.6,-6.2C9.7,-3.6 7.2,-2.8 6,-4.4C7.1,-5.4 6.2,-7.2 4.6,-6.1C3.4,-5.2 2.9,-4 2.9,-3.2Z' +
+    'M-1.4,-3.2C-2.6,-9 -9.5,-11.5 -9.6,-6.2C-9.7,-3.6 -7.2,-2.8 -6,-4.4C-7.1,-5.4 -6.2,-7.2 -4.6,-6.1C-3.4,-5.2 -2.9,-4 -2.9,-3.2Z' +
+    'M-4.5,-3.2L4.5,-3.2L4.5,-0.8L-4.5,-0.8Z M-1.6,-0.8L1.6,-0.8L0,3Z';
+
+// An ornate compass rose ({gold, red, blue, paper, ink}): thirty-two
+// points in four sizes inside a gold ring of degree marks, a fleur-de-lis
+// for north and a cross for east. It reaches as far as the plain rose, and
+// unlike it, its lines grow with it, as a painted rose's would.
+function ornateCompass(g, c) {
+    var ring = function (r) {return 'M' + -r + ',0a' + r + ',' + r + ' 0 1,0 ' + 2 * r + ',0a' + r + ',' + r + ' 0 1,0 ' + -2 * r + ',0'};
+    var p = paints(g, c);
+    paint(p, ring(44), c.paper, c.ink, 1);
+    paint(p, ring(40), 'none', c.gold, 6);
+    paint(p, ring(37), 'none', c.ink, 0.8);
+    var ticks = [];
+    for (var i = 0; i < 32; i++) {
+        var a = i * Math.PI / 16;
+        var r0 = i % 4 ? 41.5 : 37;
+        ticks.push('M' + (Math.sin(a) * r0).toFixed(2) + ',' + (-Math.cos(a) * r0).toFixed(2) +
+            'L' + (Math.sin(a) * 44).toFixed(2) + ',' + (-Math.cos(a) * 44).toFixed(2));
+    }
+    paint(p, ticks.join(''), 'none', c.ink, 0.8);
+    // Smallest first, so the larger points lie over them. Each size but
+    // the largest fills the gaps between the larger ones. Washed, each size
+    // is painted over the last, hiding its lines.
+    var sizes = [
+        {every: 32, length: 30, width: 3, colors: [c.gold, c.paper]},
+        {every: 16, length: 38, width: 5, colors: [c.ink, c.paper]},
+        {every: 8, length: 46, width: 7, colors: [c.blue, c.paper]},
+        {every: 4, length: 56, width: 9, colors: [c.red, c.gold]}
+    ];
+    sizes.forEach(function (size) {
+        var q = paints(g, c);
+        for (var k = 0; k < size.every; k++) {
+            if (size.every > 4 && k % 2 === 0) continue;
+            var pt = rosePoint(k * 2 * Math.PI / size.every, size.length, size.width);
+            paint(q, pt.left, size.colors[0], c.ink, 0.7);
+            paint(q, pt.right, size.colors[1], c.ink, 0.7);
+        }
+    });
+    p = paints(g, c);
+    paint(p, ring(5), c.gold, c.ink, 0.8);
+    paint(p, ring(1.8), c.red, null);
+    var fleur = g.append('g').attr('transform', 'translate(0,-55) scale(0.85)');
+    paint(paints(fleur, c), FLEUR, c.gold, c.ink, 0.8);
+    paint(p, 'M57,-1.2L65,-1.2L65,-4.5L67.4,-4.5L67.4,-1.2L70.5,-1.2L70.5,1.2L67.4,1.2L67.4,4.5L65,4.5L65,1.2L57,1.2Z',
+        c.red, c.ink, 0.6);
+}
+
+// A title cartouche ({paper, gold, ink, scroll, cloth}) around a box width
+// by height with its top-left corner at (0, 0): a panel with hollowed
+// corners, framed in gold, with scrolls curling out at the sides (in
+// scroll), a cloth swag hanging below (in cloth) and a scallop shell on
+// top; without scroll and cloth, gold scrolls and a drop below
+function drawCartouche(g, width, height, c) {
+    var w = width;
+    var h = height;
+    var panel = function (k, r) {
+        return 'M' + (k + r) + ',' + k + 'L' + (w - k - r) + ',' + k + 'A' + r + ',' + r + ' 0 0,0 ' + (w - k) + ',' + (k + r) +
+            'L' + (w - k) + ',' + (h - k - r) + 'A' + r + ',' + r + ' 0 0,0 ' + (w - k - r) + ',' + (h - k) +
+            'L' + (k + r) + ',' + (h - k) + 'A' + r + ',' + r + ' 0 0,0 ' + k + ',' + (h - k - r) +
+            'L' + k + ',' + (k + r) + 'A' + r + ',' + r + ' 0 0,0 ' + (k + r) + ',' + k + 'Z';
+    };
+    var m = h / 2;
+    // A scroll at the left side, mirrored for the right
+    var scroll = function (x, dir) {
+        var X = function (v) {return x + dir * v};
+        return 'M' + X(0) + ',' + (m - 14) + 'C' + X(-16) + ',' + (m - 18) + ' ' + X(-26) + ',' + (m - 4) + ' ' + X(-20) + ',' + (m + 6) +
+            'C' + X(-15) + ',' + (m + 13) + ' ' + X(-5) + ',' + (m + 9) + ' ' + X(-8) + ',' + (m + 2) +
+            'C' + X(-10) + ',' + (m - 3) + ' ' + X(-16) + ',' + (m + 1) + ' ' + X(-13) + ',' + (m + 4) +
+            'C' + X(-18) + ',' + (m + 1) + ' ' + X(-15) + ',' + (m - 8) + ' ' + X(-7) + ',' + (m - 6) +
+            'C' + X(-2) + ',' + (m - 5) + ' ' + X(0) + ',' + (m - 1) + ' ' + X(0) + ',' + (m + 2) + 'Z' +
+            'M' + X(0) + ',' + (m + 14) + 'C' + X(-10) + ',' + (m + 16) + ' ' + X(-14) + ',' + (m + 22) + ' ' + X(-8) + ',' + (m + 26) +
+            'C' + X(-4) + ',' + (m + 22) + ' ' + X(-2) + ',' + (m + 19) + ' ' + X(0) + ',' + (m + 19) + 'Z';
+    };
+    var p = paints(g, c);
+    var cx = w / 2;
+    if (c.cloth) {
+        // A swag of cloth caught up at the panel's lower corners, its folds
+        // drawn in
+        var hang = 25;
+        var half = Math.min(w / 2 - 12, 70);
+        var x0 = cx - half;
+        var x1 = cx + half;
+        paint(p, 'M' + x0 + ',' + (h - 6) + 'Q' + cx + ',' + (h + 2.2 * hang) + ' ' + x1 + ',' + (h - 6) +
+            'Q' + cx + ',' + (h + 0.9 * hang) + ' ' + x0 + ',' + (h - 6) + 'Z', c.cloth, c.ink, 0.8);
+        paint(p, 'M' + (cx - half * 0.6) + ',' + (h + 0.55 * hang) + 'Q' + cx + ',' + (h + 1.5 * hang) + ' ' + (cx + half * 0.6) + ',' + (h + 0.55 * hang) +
+            'M' + (cx - half * 0.35) + ',' + (h + 0.85 * hang) + 'Q' + cx + ',' + (h + 1.35 * hang) + ' ' + (cx + half * 0.35) + ',' + (h + 0.85 * hang),
+            'none', c.ink, 0.5);
+        // Tassels where it's caught up
+        paint(p, 'M' + x0 + ',' + (h - 4) + 'l-2.5,12l5,0Z M' + x1 + ',' + (h - 4) + 'l-2.5,12l5,0Z', c.gold, c.ink, 0.6);
+    }
+    paint(p, scroll(0, 1) + scroll(w, -1), c.scroll || c.gold, c.ink, 0.9);
+    if (!c.cloth) paint(p, 'M' + (cx - 18) + ',' + h + 'C' + (cx - 10) + ',' + (h + 4) + ' ' + (cx - 6) + ',' + (h + 14) + ' ' + cx + ',' + (h + 18) +
+        'C' + (cx + 6) + ',' + (h + 14) + ' ' + (cx + 10) + ',' + (h + 4) + ' ' + (cx + 18) + ',' + h + 'Z', c.gold, c.ink, 0.9);
+    // The panel covers the scrolls' inner ends, and whatever is under it
+    shape(g, panel(0, 10), c.paper, null);
+    p = paints(g, c);
+    paint(p, panel(0, 10), c.paper, c.ink, 1);
+    paint(p, panel(3, 8), 'none', c.gold, 3);
+    paint(p, panel(6.5, 6), 'none', c.ink, 0.7);
+    if (c.cloth) {
+        // A scallop shell on the panel's top edge, with ribs fanning out
+        var r = 17;
+        var shell = 'M' + (cx - r) + ',' + 2;
+        for (var k = 1; k <= 7; k++) {
+            var a = Math.PI * (1 - k / 7);
+            var b = Math.PI * (1 - (k - 0.5) / 7);
+            shell += 'Q' + (cx + Math.cos(b) * r * 1.12).toFixed(2) + ',' + (2 - Math.sin(b) * r * 1.12).toFixed(2) + ' ' +
+                (cx + Math.cos(a) * r).toFixed(2) + ',' + (2 - Math.sin(a) * r).toFixed(2);
+        }
+        shell += 'L' + (cx + 4) + ',' + 6 + 'L' + (cx - 4) + ',' + 6 + 'Z';
+        var ribs = '';
+        for (var i = 1; i < 7; i++) {
+            var t = Math.PI * (1 - i / 7);
+            ribs += 'M' + cx + ',' + 4 + 'L' + (cx + Math.cos(t) * r * 0.92).toFixed(2) + ',' + (2 - Math.sin(t) * r * 0.92).toFixed(2);
+        }
+        var q = paints(g, c);
+        paint(q, shell, c.cloth, c.ink, 0.8);
+        paint(q, ribs, 'none', c.ink, 0.5);
+    }
 }
 
 function drawExtras(svg, state, theme, type, background) {
@@ -1186,7 +1480,7 @@ function drawExtras(svg, state, theme, type, background) {
     });
     var data = shown.map(function (id) {
         return {id: id, kind: 'ornament', text: id === 'title' ? extras.title : null,
-            pos: extras.positions[id] || defaultPosition(id, extent, SCALE, extras.compassSize),
+            pos: extras.positions[id] || defaultPosition(id, extent, SCALE, extras.compassSize, extrasInset(theme)),
             scale: id === 'compass' ? extras.compassSize : 1};
     });
     var groups = join(svg, 'extras', 'g', 'ornament', data, function (d) {return d.id})
@@ -1200,7 +1494,7 @@ function drawExtras(svg, state, theme, type, background) {
             return;
         }
         g.selectAll('*').remove();
-        ORNAMENTS[d.id](g, extras, extent, type);
+        ORNAMENTS[d.id](g, extras, extent, type, theme);
     });
 }
 

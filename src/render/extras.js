@@ -172,10 +172,11 @@ export var COMPASS_RADIUS = 70;
 
 // Default places for the movable extras, inside the map's edges. scale is
 // SVG units per map unit; a bigger compass rose sits further in, so it
-// stays on the map.
-export function defaultPosition(id, extent, scale, compassSize) {
-    var w = extent.width / 2;
-    var h = extent.height / 2;
+// stays on the map. inset ([across, down] in map units) moves them all in
+// further, inside a theme's frame.
+export function defaultPosition(id, extent, scale, compassSize, inset) {
+    var w = extent.width / 2 - (inset ? inset[0] : 0);
+    var h = extent.height / 2 - (inset ? inset[1] : 0);
     var reach = COMPASS_RADIUS * (compassSize || 1) / (scale || 1000);
     return {
         scaleBar: [-w + 0.07, h - 0.06],
