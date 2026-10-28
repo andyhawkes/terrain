@@ -17,6 +17,8 @@ Region names sometimes run into each other. On the Throne-ish test map, "REDGARD
 - If a name can't fit anywhere, try a smaller size or splitting it over two lines before letting it overlap.
 - **This changes label placement in every theme.** That's the point of the fix, but labels on existing maps will move. Compare before and after on several seeds and shapes, and check that town labels aren't made worse.
 
+Status: Complete
+
 ## 2. Typography
 
 Choose fonts per role, not just one pairing per theme.
@@ -30,6 +32,8 @@ Choose fonts per role, not just one pairing per theme.
   - Should any font be usable in any theme, or only the theme's own set?
   - Should you be able to load your own font files? That would mean storing them with the map, and the licence is then yours to check.
 
+Status: Complete
+
 ## 3. Wreck and point-of-interest drawings, and iconography
 
 Make the symbols as good as the relief drawings.
@@ -40,6 +44,8 @@ Make the symbols as good as the relief drawings.
 - **Generated maps** could pick sensible kinds for the terrain, such as lighthouses on coasts and mines in hills.
 - **Artwork found elsewhere** is only used with a clear licence. The bold icon sets looked too cartoonish next to the fine linework, so drawings are made to match the map instead.
 
+Status: Not started (needs active human input, aesthetic taste, and judgement)
+
 ## 4. Roads and routes
 
 - **Roads:** an option for random maps to join towns with roads that follow easy ground, using the same cost-of-travel idea as territories. Hand-built maps can draw them too.
@@ -47,11 +53,15 @@ Make the symbols as good as the relief drawings.
 - **Drawing:** themes style roads and routes: dashed or double lines, red journey dots for Underhill, sepia for Throne-ish, plain strokes for Plotter.
 - **Editing:** roads and routes are steps like everything else. They can be moved by their points, deleted and saved.
 
+Status: Complete
+
 ## 5. Legend
 
 - **A key that lists what's on the map:** cities and capitals, the kinds of point of interest and wrecks used, markers by type, roads and routes, borders, and region colours where a theme uses them.
 - **Built from the map itself,** so it only lists what's actually there, in the theme's own drawings and lettering.
 - **Like the other extras:** switched on under Style → Extras, movable, and deletable. Entries can be renamed, for example "Dragon lair" for a danger marker.
+
+Status: Complete
 
 ## 6. Several peoples on one map
 
@@ -71,6 +81,8 @@ The order among these is still open. Several need the same new drawing features,
 - **Contour lines:** lines at fixed height intervals, optionally labelled. The coastline is already a contour at sea level.
 - **Woodland areas:** forests drawn as filled shapes as well as, or instead of, tree symbols.
 
+Status: Not started
+
 ### Illuminated atlas
 
 High fantasy as a richly coloured old atlas, closer to a medieval manuscript or a 16th-century atlas than to an ink sketch:
@@ -80,6 +92,8 @@ High fantasy as a richly coloured old atlas, closer to a medieval manuscript or 
 - Sea creatures and ships in the margins.
 - It would suit several peoples' names (item 6).
 
+Status: Not started
+
 ### Coloured relief
 
 A physical atlas or video-game world map:
@@ -87,6 +101,8 @@ A physical atlas or video-game world map:
 - Land coloured by height: green lowlands, ochre hills, grey rock, white peaks.
 - Blue seas, deeper offshore.
 - Clean modern lettering, rivers in blue, and light hill shading.
+
+Status: Not started
 
 ### Ordnance Survey style
 
@@ -99,7 +115,9 @@ A modern British survey map:
 - Survey-style symbols: church, triangulation pillar, castle, viewpoint, campsite and so on.
 - Roads in survey colours, once roads exist (item 4).
 - **Lettering:** a clean humanist sans. The real survey fonts aren't openly licensed, so an OFL one with a similar feel.
-- **Name:** "Ordnance Survey" is a trademark, so the theme should be called something like "Survey".
+- **Name:** "Ordnance Survey" is a trademark, so the theme should be called something like "Surveyor".
+
+Status: Not started
 
 ## Deferred
 
