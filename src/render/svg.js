@@ -3,13 +3,13 @@
 // setMapSize sets before drawing; text, lines and symbols are sized in SVG
 // user units.
 import * as d3 from 'd3';
-import {derive, territories, fills, seaShading, relief, coastOutlines, smoothCoasts, regionShapes, hachureStrokes, roadCurves} from '../core/derive.js';
+import {derive, territories, fills, contours, woodland, seaShading, relief, coastOutlines, smoothCoasts, regionShapes, hachureStrokes, roadCurves} from '../core/derive.js';
 import {smoothLine} from '../core/roads.js';
-import {meshTris} from '../core/terrain.js';
+import {meshTris, EDGE} from '../core/terrain.js';
 import {itemPos} from '../core/steps.js';
 import {getTheme, fontChoice, backgroundChoice, typography} from '../themes/index.js';
 import {themeCSS, labelText, hersheyPath, hersheyBox, dashPaths} from './theme.js';
-import {extrasChoice, squareGrid, hexGrid, scaleBar, defaultPosition, formatDistance, wrapLines, COMPASS_RADIUS,
+import {extrasChoice, squareGrid, numberedGrid, hexGrid, scaleBar, defaultPosition, formatDistance, wrapLines, COMPASS_RADIUS,
     legendEntries, legendLayout, LEGEND, LEGEND_HEADING} from './extras.js';
 
 export var SCALE = 1000;
@@ -38,17 +38,18 @@ export function setMapSize(svg, params) {
 }
 
 // Layers in drawing order; each is a <g> so redraws keep the stacking order
-var LAYERS = ['background', 'field', 'fill', 'tint', 'sea', 'river', 'coastLines', 'coast', 'border', 'slope', 'road', 'relief', 'grid', 'city', 'wreck', 'poi', 'marker',
+var LAYERS = ['background', 'field', 'fill', 'tint', 'wood', 'contour', 'sea', 'river', 'coastLines', 'coast', 'border', 'slope', 'road', 'relief', 'grid', 'city', 'wreck', 'poi', 'marker',
     'route', 'label', 'extras'];
 
 // Layers only there while the map has something in them, so maps without
-// roads or routes, and themes without fills, draw exactly as before
-var OPTIONAL_LAYERS = ['fill', 'road', 'route'];
+// roads or routes, and themes without fills, woodland or contours, draw
+// exactly as before
+var OPTIONAL_LAYERS = ['fill', 'wood', 'contour', 'road', 'route'];
 
 // Layers the user can switch off in the Style panel
 export var TOGGLE_LAYERS = [
     ['coast', 'Coastline'], ['fill', 'Land and sea colours'], ['tint', 'Region colours'], ['sea', 'Sea shading'], ['river', 'Rivers'], ['border', 'Borders'], ['slope', 'Slope shading'],
-    ['relief', 'Hills'], ['forest', 'Forests'], ['road', 'Roads'],
+    ['contour', 'Contours'], ['relief', 'Hills'], ['forest', 'Forests'], ['road', 'Roads'],
     ['city', 'Cities'], ['label', 'Labels'], ['wreck', 'Wrecks'], ['poi', 'Points of interest'],
     ['marker', 'Markers'], ['route', 'Routes']
 ];
@@ -136,8 +137,9 @@ export function clearAll(svg, keep) {
     showLayers(svg, []);
 }
 
-// The lines out at sea along the coast go with the coastline
-var HIDDEN_WITH = {coastLines: 'coast'};
+// The lines out at sea along the coast go with the coastline, and woodland
+// areas with the forests
+var HIDDEN_WITH = {coastLines: 'coast', wood: 'forest'};
 
 export function showLayers(svg, hidden) {
     LAYERS.forEach(function (name) {
@@ -308,14 +310,15 @@ function cellsPath(cells) {
     }).join('');
 }
 
-// Land and sea filled in colour by height, for themes that fill them. The
-// sea's farthest colour covers the whole map first, so there's no paper
-// showing past the grid's edge.
+// Land and sea filled in colour by height, for themes that fill them,
+// inside the map's margin. The sea's farthest colour covers that first, so
+// there's no paper showing between the grid's edge and the margin.
 function drawFills(svg, state, theme) {
     var spec = theme.fills;
     var g = optionalLayer(svg, 'fill', !!spec);
     if (!g || unchanged(svg, 'fill', [state.h, spec, SCALE])) return;
     g.selectAll('*').remove();
+    g = insideMargin(svg, g, 'fill');
     if (spec.sea && spec.sea.length) {
         var w = SCALE * extent.width;
         var ht = SCALE * extent.height;
@@ -330,6 +333,115 @@ function drawFills(svg, state, theme) {
             .style('fill', group.color).style('stroke', group.color).style('stroke-width', '0.8px')
             .style('stroke-linejoin', 'round');
     });
+}
+
+// A group inside layer g clipped to the map's margin, where coasts and
+// rivers stop, so fills leave the same empty border
+function insideMargin(svg, g, name) {
+    var id = svg.attr('id') + '-' + name + '-margin';
+    var w = 2 * EDGE * SCALE * extent.width;
+    var ht = 2 * EDGE * SCALE * extent.height;
+    g.append('clipPath').attr('id', id)
+        .append('rect').attr('x', -w / 2).attr('y', -ht / 2).attr('width', w).attr('height', ht);
+    return g.append('g').attr('clip-path', 'url(#' + id + ')');
+}
+
+// Forests as filled areas, for themes with woodland ({color, outline,
+// width}): the cells under woodland, outlined like the fills, and
+// optionally a line around them
+function drawWoodland(svg, state, theme) {
+    var spec = theme.woodland;
+    var g = optionalLayer(svg, 'wood', !!spec);
+    if (!g || unchanged(svg, 'wood', [state.h, spec, SCALE])) return;
+    g.selectAll('*').remove();
+    var wood = woodland(state.h);
+    g.append('path').attr('class', 'woodland').attr('d', cellsPath(wood.tris))
+        .style('fill', spec.color).style('stroke', spec.color).style('stroke-width', '0.8px')
+        .style('stroke-linejoin', 'round');
+    if (spec.outline) {
+        g.append('path').attr('class', 'woodland-edge').attr('d', polylinePath(wood.outline))
+            .style('fill', 'none').style('stroke', spec.outline).style('stroke-width', (spec.width || 1) + 'px');
+    }
+}
+
+// Contour lines, for themes with contours (see simple.js): in
+// colors.contour, widths.contour, and index contours in widths.contourIndex.
+// With labels, index contours are numbered every so often along them,
+// reading along the line, in the label font.
+var CONTOUR_LABEL_SPACING = 400;
+var CONTOUR_LABEL_SIZE = 9;
+
+function drawContours(svg, state, theme, font) {
+    var spec = theme.contours;
+    var g = optionalLayer(svg, 'contour', !!spec);
+    var labelFont = spec && spec.labels && typeof font.label === 'string' ? font.label : null;
+    if (!g || unchanged(svg, 'contour', [state.h, spec, labelFont, SCALE])) return;
+    g.selectAll('*').remove();
+    var color = theme.colors.contour || theme.colors.ink;
+    var width = theme.widths.contour || 1;
+    var levels = contours(state.h, spec);
+    [false, true].forEach(function (index) {
+        var lines = [];
+        levels.forEach(function (l) {
+            if (l.index === index) lines = lines.concat(l.lines);
+        });
+        if (!lines.length) return;
+        g.append('path').attr('class', index ? 'contour contour-index' : 'contour')
+            .attr('d', polylinePath(lines))
+            .style('fill', 'none').style('stroke', color)
+            .style('stroke-width', (index ? theme.widths.contourIndex || 2 * width : width) + 'px')
+            .style('stroke-linejoin', 'round');
+    });
+    if (!labelFont) return;
+    var placed = [];
+    levels.forEach(function (l) {
+        if (!l.index) return;
+        l.lines.forEach(function (line) {
+            contourLabelSpots(line, placed).forEach(function (spot) {
+                g.append('text').attr('class', 'contour-label')
+                    .attr('transform', 'translate(' + spot.x.toFixed(1) + ',' + spot.y.toFixed(1) + ') rotate(' +
+                        spot.angle.toFixed(1) + ')')
+                    .attr('dy', '0.35em')
+                    .style('font-family', labelFont).style('font-size', CONTOUR_LABEL_SIZE + 'px')
+                    .style('text-anchor', 'middle').style('fill', color).style('stroke-width', '3px')
+                    .text(l.height);
+            });
+        });
+    });
+}
+
+// Where to number a contour (in SVG units): every so often along it, each
+// turned to read along the line without being upside down, and kept apart
+// from labels already placed
+function contourLabelSpots(line, placed) {
+    var pts = line.map(function (p) {return [coord(p[0]), coord(p[1])]});
+    var dist = [0];
+    for (var i = 1; i < pts.length; i++) {
+        dist.push(dist[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    }
+    var length = dist[dist.length - 1];
+    var spots = [];
+    if (length < CONTOUR_LABEL_SPACING / 3) return spots;
+    var w = EDGE * SCALE * extent.width - 10;
+    var ht = EDGE * SCALE * extent.height - 10;
+    var j = 0;
+    for (var at = Math.min(length / 2, CONTOUR_LABEL_SPACING / 2); at < length; at += CONTOUR_LABEL_SPACING) {
+        while (dist[j + 1] < at) j++;
+        // The direction over a short stretch, as the line is jagged
+        var a = pts[Math.max(0, j - 2)];
+        var b = pts[Math.min(pts.length - 1, j + 3)];
+        var t = (at - dist[j]) / (dist[j + 1] - dist[j] || 1);
+        var x = pts[j][0] + t * (pts[j + 1][0] - pts[j][0]);
+        var y = pts[j][1] + t * (pts[j + 1][1] - pts[j][1]);
+        if (Math.abs(x) > w || Math.abs(y) > ht) continue;
+        if (placed.some(function (p) {return Math.hypot(p[0] - x, p[1] - y) < 60})) continue;
+        var angle = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI;
+        if (angle > 90) angle -= 180;
+        if (angle < -90) angle += 180;
+        placed.push([x, y]);
+        spots.push({x: x, y: y, angle: angle});
+    }
+    return spots;
 }
 
 // Each region's land washed in a colour, for themes that tint regions. The
@@ -859,6 +971,8 @@ export function drawMap(svg, state) {
     drawBackground(svg, t.background);
     drawFills(svg, state, theme);
     drawTints(svg, state, d, theme);
+    drawWoodland(svg, state, theme);
+    drawContours(svg, state, theme, t.font);
     drawStrokes(svg, 'sea', function () {
         return theme.seaShading ? seaShading(state.h) : [];
     }, [state.h, !!theme.seaShading]);
@@ -931,6 +1045,22 @@ function drawGrid(svg, extras, extent, type) {
                     labelSize, 'middle');
             });
         }
+        return;
+    }
+    if (extras.grid === 'numbered') {
+        var survey = numberedGrid(extent, size, extras.perUnit);
+        g.append('path').attr('class', 'grid').attr('d', polylinePath(survey.lines));
+        if (!extras.gridLabels) return;
+        // Each number on its line, just inside the edge
+        var numberSize = 12 * role.scale;
+        survey.eastings.forEach(function (c) {
+            appendText(g, role, 'grid-label', c.text, SCALE * c.x, -SCALE * extent.height / 2 + numberSize + 4,
+                numberSize, 'middle');
+        });
+        survey.northings.forEach(function (r) {
+            appendText(g, role, 'grid-label', r.text, -SCALE * extent.width / 2 + 6, SCALE * r.y + numberSize / 3,
+                numberSize, 'start');
+        });
         return;
     }
     var grid = squareGrid(extent, size);

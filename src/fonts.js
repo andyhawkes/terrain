@@ -16,4 +16,7 @@ import '@fontsource/uncial-antiqua/400.css';
 import '@fontsource/almendra/400.css';
 import '@fontsource/marcellus-sc/400.css';
 import '@fontsource/cormorant-garamond/600.css';
+import '@fontsource/fira-sans/400.css';
+import '@fontsource/fira-sans/400-italic.css';
+import '@fontsource/fira-sans/600.css';
 import '../css/fonts.css';

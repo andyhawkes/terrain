@@ -38,7 +38,8 @@ function describeStyle(args, previous) {
         return 'Change layers';
     }
     if (args.positions) return 'Move ' + (args.what || 'extras');
-    if (args.grid) return args.grid === 'none' ? 'Remove grid' : args.grid === 'hex' ? 'Hex grid' : 'Square grid';
+    if (args.grid) return args.grid === 'none' ? 'Remove grid' : args.grid === 'hex' ? 'Hex grid' :
+        args.grid === 'numbered' ? 'Numbered grid' : 'Square grid';
     if (args.gridSize) return 'Grid size';
     if ('gridLabels' in args) return (args.gridLabels ? 'Show' : 'Hide') + ' grid labels';
     if (args.units) return 'Units: ' + args.units;

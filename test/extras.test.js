@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {niceNumber, columnName, squareGrid, hexGrid, scaleBar, extrasChoice, wrapLines} from '../src/render/extras.js';
+import {niceNumber, columnName, squareGrid, numberedGrid, hexGrid, scaleBar, extrasChoice, wrapLines} from '../src/render/extras.js';
 import {defaultStyle} from '../src/core/steps.js';
 import {getTheme} from '../src/themes/index.js';
 
@@ -21,6 +21,16 @@ test('a square grid has lettered columns and numbered rows', function () {
     // Inner lines only: the map's edge is its frame
     assert.equal(grid.lines.length, 14);
     assert.deepEqual([columnName(25), columnName(26), columnName(27)], ['Z', 'AA', 'AB']);
+});
+
+test('a numbered grid counts its lines from the bottom left', function () {
+    // 40 km across, a line every 5 km
+    var grid = numberedGrid(square, 0.125, 40);
+    assert.equal(grid.lines.length, 14);
+    assert.deepEqual(grid.eastings.map(function (e) {return e.text}), ['05', '10', '15', '20', '25', '30', '35']);
+    // Northings rise up the map, so the top line has the biggest
+    assert.deepEqual(grid.northings.map(function (n) {return n.text}), ['35', '30', '25', '20', '15', '10', '05']);
+    assert.equal(numberedGrid(square, 0.25, 10).eastings[0].text, '2.5');
 });
 
 test('a hex grid draws each side once and numbers whole hexes', function () {

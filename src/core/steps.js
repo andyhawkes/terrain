@@ -62,8 +62,8 @@ export function newParams(given) {
 // the theme's default (theme.extras), so they follow the theme until set.
 //   units: 'miles', 'km' or 'leagues'; perUnit: how many across one map
 //     unit (a square map is one map unit across)
-//   grid: 'none', 'square' or 'hex'; gridSize: in units, null to pick one
-//     to suit the map; gridLabels: lettered edges, or numbered hexes
+//   grid: 'none', 'square', 'numbered' or 'hex'; gridSize: in units, null to pick one
+//     to suit the map; gridLabels: lettered edges, numbered lines or hexes
 //   scaleBar, compass: true or false; compassSize: how big the compass rose
 //     is, as a multiple of its normal size; title: text for a title box, or ''
 //   legend: true or false; legendNames: the map's own names for legend

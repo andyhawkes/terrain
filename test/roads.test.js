@@ -4,6 +4,7 @@ import {MapDocument} from '../src/core/document.js';
 import {derive} from '../src/core/derive.js';
 import {getRoads, simplify, smoothLine} from '../src/core/roads.js';
 import {roadsStale} from '../src/core/steps.js';
+import {isnearedge} from '../src/core/terrain.js';
 
 var small = {npts: 1024, ncities: 6, nterrs: 3};
 
@@ -29,14 +30,14 @@ test('the same seed builds the same roads', function () {
     assert.deepEqual(generate(params).state.roads, generate(params).state.roads);
 });
 
-test('roads start at cities, stay on land and join up', function () {
+test('roads start at cities, stay on land, out of the margin, and join up', function () {
     var state = generate({npts: 4096, ncities: 10, nterrs: 3, roads: true}, 'roads2').state;
     var h = state.h;
     var vxs = state.cities.map(function (c) {return c.vx});
     var paths = getRoads(h, vxs);
     paths.forEach(function (path) {
         assert.ok(vxs.indexOf(path[0]) >= 0, 'starts at a city');
-        path.forEach(function (vx) {assert.ok(h[vx] > 0, 'on land')});
+        path.forEach(function (vx) {assert.ok(h[vx] > 0 && !isnearedge(h.mesh, vx), 'on land, inside the margin')});
         for (var i = 1; i < path.length; i++) {
             var nbs = Array.from(h.mesh.adj.subarray(h.mesh.adjStart[path[i - 1]], h.mesh.adjStart[path[i - 1] + 1]));
             assert.ok(nbs.indexOf(path[i]) >= 0, 'steps between neighbours');
