@@ -2,6 +2,8 @@
 
 This fork started from Martin O'Leary's [terrain generator](https://mewo2.com/notes/terrain/). The original was a step-by-step explanation of how the algorithm works. The aim now is a tool for making maps, while still letting you explore the algorithm.
 
+This file records what's been done and why. What's next, in order, is in [ROADMAP.md](ROADMAP.md).
+
 ## Goals
 
 - **Make maps people can use.** That includes tabletop RPG game masters, parents making treasure maps for their kids, and anyone who just enjoys playing with it. It's a fun experiment first.
@@ -129,7 +131,7 @@ Each phase leaves the app working.
   - All of these are part of the style, so they can be undone and are saved. A theme can set defaults (`extras` in the theme format), which apply until the map sets its own; Pirate defaults to leagues and a compass rose. A new map keeps the previous one's extras, except its title and where things were moved to. Maps with extras share as full `#map=` links.
 - [x] **Military**: a field map. Pale field-green paper (or white), Big Shoulders Stencil regions in olive (Stardos Stencil until it turned out to lack accented letters such as š and ž) with Barlow Condensed towns, or an "Ops" choice of Black Ops One and Share Tech Mono (all OFL). Blue water and water-lining, brown hill shading, dash-dot borders, black town dots. Defaults to a 5 km square grid on a 50 km map, a scale bar and a small compass rose. Wrecks: the chart symbol for a wreck, a hull above water, a sea mine. Points of interest: bunker, radio mast, observation post, supply depot. The X is a target crosshair and danger a hazard sign.
 - [x] Naming styles from word lists and patterns (`src/core/wordnames.js`), offered as "Pirate names" and "Military codenames" in the same Place names list as the made-up languages, so they work under New map, Rename all, share links and `--language`. Pirate: towns like Port Blackwater, Dead Man's Cove or Jolly Ned's Haven, and regions like The Bone Isles. Military: Objective Granite, Hill 312, Checkpoint Kilo, FOB Mantis, and regions like Sector Lima or Zone Viper. Names on a map don't repeat. Choosing a theme doesn't change the names.
-- Later: high fantasy.
+- Later: more themes (Illuminated atlas, Coloured relief, a survey map) are in ROADMAP.md.
 
 ### Phase 9: Storybook relief, and more themes
 - [x] Mountains, hills and trees drawn as little pictures (`reliefSymbols` in `terrain.js`, drawn by `drawRelief` in `svg.js`):
