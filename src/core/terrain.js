@@ -1010,6 +1010,37 @@ function seaDistance(h) {
     return dist;
 }
 
+// Open water for pictures in the sea (monsters, ships), as in old atlases:
+// up to count spots, each at least clearance from the shore, inset from the
+// map's edges and spacing from each other (all in map units). Spots out in
+// the margins, away from the middle of the map, are taken first.
+function seaSpots(h, options) {
+    var dist = seaDistance(h);
+    var vxs = h.mesh.vxs;
+    var w = h.mesh.extent.width / 2;
+    var ht = h.mesh.extent.height / 2;
+    var inset = options.inset;
+    var candidates = [];
+    for (var i = 0; i < h.length; i++) {
+        var p = vxs[i];
+        if (h[i] > 0 || dist[i] < options.clearance) continue;
+        if (Math.abs(p[0]) > w - inset || Math.abs(p[1]) > ht - inset) continue;
+        // Open water counts up to twice the clearance; beyond that, the
+        // closer to an edge the better
+        var open = Math.min(dist[i], 2 * options.clearance) / options.clearance;
+        var outer = Math.max(Math.abs(p[0]) / w, Math.abs(p[1]) / ht);
+        candidates.push({i: i, score: open + 2 * outer});
+    }
+    candidates.sort(function (a, b) {return b.score - a.score || a.i - b.i});
+    var spots = [];
+    for (var k = 0; k < candidates.length && spots.length < options.count; k++) {
+        var q = vxs[candidates[k].i];
+        if (spots.some(function (s) {return Math.hypot(s[0] - q[0], s[1] - q[1]) < options.spacing})) continue;
+        spots.push([q[0], q[1]]);
+    }
+    return spots;
+}
+
 // Lines on the sea following the coast at the given distances (map units),
 // like the outlines around coasts on hand-drawn maps
 function coastLines(h, offsets) {
@@ -1312,5 +1343,5 @@ export {
     cityScore, wreckScore, POIScore, pickCity, pickWreck, pickPOI,
     contour, getRivers, getTerritories, getBorders, mergeSegments, relaxPath,
     terrCenter, slopeStrokes, seaStrokes, reliefSymbols, coastLines, hachures, heightFills,
-    contourSegments, linkSegments, contourLevels, woodlandCells
+    contourSegments, linkSegments, contourLevels, woodlandCells, seaSpots
 };

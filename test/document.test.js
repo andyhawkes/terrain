@@ -655,3 +655,24 @@ test('woodland grows on land, where relief draws its trees', async function () {
         assert.ok(h[i] > 0 && tris.has(cells[i]), 'tree at ' + i + ' is in the woods');
     });
 });
+
+test('sea pictures go out on open water, spaced apart and clear of the edges', async function () {
+    var {seaSpots} = await import('../src/core/derive.js');
+    var doc = new MapDocument();
+    doc.dispatch('generate', {params: small}, 'abc123');
+    var h = doc.state.h;
+    var options = {count: 4, clearance: 0.04, inset: 0.09, spacing: 0.2};
+    var spots = seaSpots(h, options);
+    assert.equal(seaSpots(h, options), spots);
+    assert.ok(spots.length > 0 && spots.length <= 4);
+    var land = h.mesh.vxs.filter(function (v, i) {return h[i] > 0});
+    spots.forEach(function (p, k) {
+        assert.ok(Math.abs(p[0]) <= 0.5 - 0.09 && Math.abs(p[1]) <= 0.5 - 0.09, 'inside the edges');
+        assert.ok(land.every(function (v) {return Math.hypot(v[0] - p[0], v[1] - p[1]) >= 0.04}), 'clear of land');
+        spots.slice(0, k).forEach(function (q) {assert.ok(Math.hypot(q[0] - p[0], q[1] - p[1]) >= 0.2)});
+    });
+    // The same map gives the same spots
+    var again = new MapDocument();
+    again.dispatch('generate', {params: small}, 'abc123');
+    assert.deepEqual(seaSpots(again.state.h, options), spots);
+});

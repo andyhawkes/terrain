@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {niceNumber, columnName, squareGrid, numberedGrid, hexGrid, scaleBar, extrasChoice, wrapLines} from '../src/render/extras.js';
+import {niceNumber, columnName, squareGrid, numberedGrid, hexGrid, scaleBar, extrasChoice, wrapLines, defaultPosition} from '../src/render/extras.js';
 import {defaultStyle} from '../src/core/steps.js';
 import {getTheme} from '../src/themes/index.js';
 
@@ -136,4 +136,14 @@ test('the legend lists only what the map has, under its own names', async functi
     assert.equal(type.title.font, 'Source Sans 3');
     assert.equal(type.legendTitle.scale, 1.25);
     assert.equal(type.legend.family, type.scale.family);
+});
+
+test('extras move in clear of a frame', function () {
+    ['scaleBar', 'compass', 'title', 'legend'].forEach(function (id) {
+        var plain = defaultPosition(id, square, 1000, 1);
+        assert.deepEqual(defaultPosition(id, square, 1000, 1, null), plain);
+        var framed = defaultPosition(id, square, 1000, 1, [0.05, 0.04]);
+        assert.ok(Math.abs(framed[0] - (plain[0] - Math.sign(plain[0]) * 0.05)) < 1e-9, id);
+        assert.ok(Math.abs(framed[1] - (plain[1] - Math.sign(plain[1]) * 0.04)) < 1e-9, id);
+    });
 });

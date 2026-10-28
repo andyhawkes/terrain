@@ -135,6 +135,17 @@ export function woodland(h) {
     return entry.woodland;
 }
 
+// Spots out at sea for pictures, for themes that draw them (see
+// seaPictures in simple.js)
+export function seaSpots(h, options) {
+    var entry = cacheFor(h);
+    var key = JSON.stringify(options);
+    if (!entry.seaSpots || entry.seaSpots.key !== key) {
+        entry.seaSpots = {key: key, spots: T.seaSpots(h, options)};
+    }
+    return entry.seaSpots.spots;
+}
+
 // Lines following the coast out at sea, for themes that draw them (see
 // coastLines in simple.js); offsets are in map units
 export function coastOutlines(h, offsets) {

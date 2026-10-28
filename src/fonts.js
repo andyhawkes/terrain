@@ -19,4 +19,5 @@ import '@fontsource/cormorant-garamond/600.css';
 import '@fontsource/fira-sans/400.css';
 import '@fontsource/fira-sans/400-italic.css';
 import '@fontsource/fira-sans/600.css';
+import '@fontsource/grenze-gotisch/500.css';
 import '../css/fonts.css';

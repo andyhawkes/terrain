@@ -65,9 +65,12 @@ export default {
     // open arrowhead (arrowSize long) every arrowSpacing and at the end.
     routes: {color: '#c62828', width: 3, dotted: [0, 9], dashed: [10, 6], arrowSize: 10, arrowSpacing: 90},
 
-    // regionTints: {colors: [...], opacity, watercolour} washes each
+    // regionTints: {colors: [...], opacity, watercolour, edge} washes each
     // region's land in a colour (one per region, in turn), optionally with a
-    // watercolour effect (see throneish.js)
+    // watercolour effect (see throneish.js). edge: {width, inside} keeps the
+    // colour strong in a band width wide (SVG units) along each region's
+    // borders and coast, with inside of its strength within, as old atlases
+    // were coloured (see illuminated.js)
 
     // fills: {sea: [...], land: [...], bands, shading} fills the sea and
     // the land in colour by height, each a list of colours from the coast
@@ -87,6 +90,28 @@ export default {
     // times to smooth them, and labels numbers the heavier ones with their
     // height. Colour colors.contour, widths widths.contour and
     // widths.contourIndex (see surveyor.js)
+
+    // frame: {width, bands, corner} draws a decorative frame around the
+    // map, its inside on the edge of the margin where coasts stop: bands
+    // of colour, each {at, width, color, dash, wash} with at its distance
+    // out from the margin (wash: true paints it in watercolour, under the
+    // other bands), and a corner drawing (a path spec, as below) in each
+    // corner. width is how far it reaches out. The extras move in to sit
+    // inside it, labels keep off it, and regionTints stop at it (see
+    // illuminated.js)
+
+    // compassRose: {gold, red, blue, paper, ink} draws an ornate compass
+    // rose in those colours instead of the plain one; cartouche: {gold,
+    // paper, ink, scroll, cloth} draws the title in a cartouche with scrolls
+    // rather than a box, with a cloth swag and a shell if cloth is set. Either can take wash (an opacity), to colour it by hand: washes
+    // under crisp lines in the ink colour (see illuminated.js)
+
+    // seaPictures: {count, clearance, spacing, transform, variants} puts up
+    // to count drawings (path specs, as below, facing right, standing on
+    // the water at 0) out on open water, clearance from the shore and
+    // spacing apart (SVG units), towards the map's edges. Those on the
+    // right-hand side face left. No theme uses it for now: Illuminated's
+    // drawings were too childish, and wait on a pass over the artwork
 
     // smoothCoast: true draws the coastline smoothed, rather than following
     // every corner of the grid (see underhill.js)
