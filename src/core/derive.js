@@ -46,7 +46,7 @@ export function terrainLayers(h) {
     var entry = cacheFor(h);
     if (!entry.layers) {
         entry.layers = {
-            rivers: T.getRivers(h, 0.01),
+            rivers: T.getRivers(h, T.RIVER_LIMIT),
             coasts: T.contour(h, 0),
             // The hatching is random, but should be the same on every redraw
             slopes: withSeed('slopes', function () {return T.slopeStrokes(h)})

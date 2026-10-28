@@ -655,18 +655,30 @@ function contourLevels(h, spec) {
     return levels;
 }
 
-function getRivers(h, limit) {
-    var dh = downhill(h);
-    var flux = getFlux(h);
-    var links = [];
+// How much water a vertex needs to carry to have a river: limit scaled by
+// how much of the map is land
+function riverFlux(h, limit) {
     var above = 0;
     for (var i = 0; i < h.length; i++) {
         if (h[i] > 0) above++;
     }
-    limit *= above / h.length;
+    return limit * above / h.length;
+}
+
+function isRiver(h, dh, flux, limit, i) {
+    return !isnearedge(h.mesh, i) && flux[i] > limit && h[i] > 0 && dh[i] >= 0;
+}
+
+// The limit the map draws its rivers with
+var RIVER_LIMIT = 0.01;
+
+function getRivers(h, limit) {
+    var dh = downhill(h);
+    var flux = getFlux(h);
+    var links = [];
+    limit = riverFlux(h, limit);
     for (var i = 0; i < dh.length; i++) {
-        if (isnearedge(h.mesh, i)) continue;
-        if (flux[i] > limit && h[i] > 0 && dh[i] >= 0) {
+        if (isRiver(h, dh, flux, limit, i)) {
             var up = h.mesh.vxs[i];
             var down = h.mesh.vxs[dh[i]];
             if (h[dh[i]] > 0) {
@@ -677,6 +689,32 @@ function getRivers(h, limit) {
         }
     }
     return mergeSegments(links).map(relaxPath);
+}
+
+// Where a place at vertex i stands, for naming it: 'coast' beside the sea,
+// 'river' on or beside a river drawn with getRivers(h, limit), else 'inland'
+function placeSetting(h, i, limit) {
+    var near = [i].concat(neighbours(h.mesh, i));
+    if (near.some(function (j) {return h[j] <= 0})) return 'coast';
+    var dh = downhill(h);
+    var flux = getFlux(h);
+    limit = riverFlux(h, limit);
+    if (near.some(function (j) {return isRiver(h, dh, flux, limit, j)})) return 'river';
+    return 'inland';
+}
+
+// The vertex nearest to point p
+function nearestVertex(mesh, p) {
+    var best = 0;
+    var bestD = Infinity;
+    for (var i = 0; i < mesh.vxs.length; i++) {
+        var d = (mesh.vxs[i][0] - p[0]) * (mesh.vxs[i][0] - p[0]) + (mesh.vxs[i][1] - p[1]) * (mesh.vxs[i][1] - p[1]);
+        if (d < bestD) {
+            best = i;
+            bestD = d;
+        }
+    }
+    return best;
 }
 
 // cities: vertex indices; the first nterrs are capitals
@@ -1341,7 +1379,7 @@ export {
     downhill, fillSinks, getFlux, getSlope, erosionRate, erode, doErosion,
     setSeaLevel, cleanCoast, trislope, dropEdge, generateCoast, coastHeightmap,
     cityScore, wreckScore, POIScore, pickCity, pickWreck, pickPOI,
-    contour, getRivers, getTerritories, getBorders, mergeSegments, relaxPath,
+    RIVER_LIMIT, contour, getRivers, placeSetting, nearestVertex, getTerritories, getBorders, mergeSegments, relaxPath,
     terrCenter, slopeStrokes, seaStrokes, reliefSymbols, coastLines, hachures, heightFills,
     contourSegments, linkSegments, contourLevels, woodlandCells, seaSpots
 };
