@@ -9,6 +9,21 @@ import {LANGUAGES} from '../core/language.js';
 
 var nextId = 0;
 
+// Fills a language select: Random first, then the made-up languages and the
+// word-list styles in groups (a language's words flag says which it is)
+export function languageOptions(select) {
+    function option(parent, l) {
+        parent.append('option').attr('value', l.id).attr('title', l.hint || null).text(l.name);
+    }
+    option(select, LANGUAGES.find(function (l) {return l.id === 'random'}));
+    [{label: 'Language-like', words: false}, {label: 'Name lists', words: true}].forEach(function (g) {
+        var group = select.append('optgroup').attr('label', g.label);
+        LANGUAGES.forEach(function (l) {
+            if (l.id !== 'random' && !!l.words === g.words) option(group, l);
+        });
+    });
+}
+
 function section(body, title, intro) {
     var s = body.append('div').attr('class', 'panel-section');
     s.append('h3').text(title);
@@ -124,9 +139,7 @@ function buildPanel(body, ctx) {
     var row = s.append('div').attr('class', 'control-row').style('margin-top', '8px');
     row.append('label').attr('for', 'renameLanguage').text('Names');
     var languageSelect = row.append('select').attr('id', 'renameLanguage').style('flex', 1);
-    LANGUAGES.forEach(function (l) {
-        languageSelect.append('option').attr('value', l.id).attr('title', l.hint || null).text(l.name);
-    });
+    languageOptions(languageSelect);
     row.append('button').text('Rename all').attr('title', 'Give every city and region a new name in this language')
         .on('click', function () {act('renamePlaces', {language: languageSelect.property('value')})()});
     ctx.updaters.push(function () {

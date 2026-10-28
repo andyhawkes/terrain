@@ -5,13 +5,12 @@ import * as d3 from 'd3';
 import {saveSvg, saveSvgAsPng} from 'save-svg-as-png';
 import {MapDocument, checkGenerator} from './core/document.js';
 import {defaultParams, SHAPES, getShape} from './core/steps.js';
-import {LANGUAGES} from './core/language.js';
 import {newSeed, resolveSeed} from './core/random.js';
 import {shareLink, readLink, clearLink} from './ui/share.js';
 import * as R from './render/svg.js';
 import {VIEWS, viewInfo, renderView} from './ui/views.js';
 import {createTools, TOOLS} from './ui/tools.js';
-import {createPanels} from './ui/panels.js';
+import {createPanels, languageOptions} from './ui/panels.js';
 import {describeStep} from './ui/history.js';
 import {getTheme, typography} from './themes/index.js';
 
@@ -237,9 +236,7 @@ var detailSelect = grid.append('select').attr('id', 'npts');
 
 grid.append('label').attr('for', 'language').text('Place names');
 var languageSelect = grid.append('select').attr('id', 'language');
-LANGUAGES.forEach(function (l) {
-    languageSelect.append('option').attr('value', l.id).attr('title', l.hint || null).text(l.name);
-});
+languageOptions(languageSelect);
 
 var random = newMap.append('section');
 random.append('h2').text('Random map');
