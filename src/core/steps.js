@@ -206,10 +206,11 @@ function addCities(state, count) {
     var cities = state.cities.slice();
     var nextId = state.nextId;
     for (var i = 0; i < count; i++) {
+        var vx = T.pickCity(state.h, vxsOf(cities));
         cities.push({
             id: nextId++,
-            vx: T.pickCity(state.h, vxsOf(cities)),
-            name: makeName(lang, 'city'),
+            vx: vx,
+            name: makeName(lang, 'city', T.placeSetting(state.h, vx, T.RIVER_LIMIT)),
             regionName: makeName(lang, 'region')
         });
     }
@@ -431,7 +432,10 @@ export var steps = {
             var params = args.language ? Object.assign({}, state.params, {language: args.language}) : state.params;
             var lang = makeLanguage(params.language);
             var cities = state.cities.map(function (c) {
-                return Object.assign({}, c, {name: makeName(lang, 'city'), regionName: makeName(lang, 'region')});
+                // Where the city is now, if it has been moved
+                var vx = c.pos ? T.nearestVertex(state.h.mesh, c.pos) : c.vx;
+                var setting = T.placeSetting(state.h, vx, T.RIVER_LIMIT);
+                return Object.assign({}, c, {name: makeName(lang, 'city', setting), regionName: makeName(lang, 'region')});
             });
             return Object.assign({}, state, {cities: cities, lang: lang, params: params});
         }

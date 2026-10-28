@@ -28,7 +28,9 @@ export var FORMAT_VERSION = 1;
 //   4: random maps have roads unless params.roads is false (share links
 //      from version 3 and before open without them)
 //   5: roads keep out of the map's margin, as coasts and rivers do
-export var GENERATOR_VERSION = 5;
+//   6: word-list town names suit where the town is, so an inland town
+//      isn't called "Port Saltbrook" (pirate and realm names change)
+export var GENERATOR_VERSION = 6;
 
 // Throws if saved map data needs a newer generator than this one
 export function checkGenerator(json) {

@@ -114,8 +114,9 @@ function getWord(lang, key) {
         return w;
     }
 }
-export function makeName(lang, key) {
-    if (lang.wordStyle) return makeWordName(lang, key);
+// setting is where the place is, for word-list names (see makeWordName)
+export function makeName(lang, key, setting) {
+    if (lang.wordStyle) return makeWordName(lang, key, setting);
     key = key || '';
     lang.genitive = lang.genitive || getMorpheme(lang, 'of');
     lang.definite = lang.definite || getMorpheme(lang, 'the');

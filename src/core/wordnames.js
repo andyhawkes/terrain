@@ -1,7 +1,8 @@
 // Place names made from English word lists and patterns, rather than the
 // made-up languages in language.js: pirate names and military codenames.
 // Each style has patterns for towns ('city') and for regions; a pattern is
-// a function that picks words with the seeded random functions.
+// a function that picks words with the seeded random functions. Patterns
+// marked with coast() or water() only name towns in those settings.
 import {choose, randrange} from './random.js';
 
 var PIRATE = {
@@ -11,8 +12,10 @@ var PIRATE = {
     things: ['Skull', 'Cutlass', 'Anchor', 'Gallows', 'Parrot', 'Kraken', 'Doubloon', 'Powder', 'Keel',
         'Gull', 'Barnacle', 'Bilge', 'Lantern', 'Plank', 'Shark', 'Serpent', 'Crow', 'Cannon', 'Compass',
         'Mermaid', 'Lobster', 'Turtle', 'Pelican', 'Tortoise'],
-    towns: ['Cove', 'Harbour', 'Bay', 'Landing', 'Haven', 'Wharf', 'Point', 'Key', 'Rock', 'Hollow',
-        'Inlet', 'Creek', 'Sands', 'Quay', 'Shoals', 'Lagoon'],
+    // Places on the sea, on a river, and anywhere
+    shores: ['Cove', 'Bay', 'Point', 'Key', 'Inlet', 'Sands', 'Shoals', 'Lagoon'],
+    harbours: ['Harbour', 'Landing', 'Haven', 'Wharf', 'Creek', 'Quay'],
+    towns: ['Rock', 'Hollow', 'Hideout', 'Lookout', 'Gulch', 'Den', 'Crossing', 'Rest'],
     owners: ['Dead Man\'s', 'Mad Jack\'s', 'Old Peg\'s', 'Captain Crow\'s', 'the Widow\'s', 'the Admiral\'s',
         'One-Eye\'s', 'Long Tom\'s', 'Black Sal\'s', 'the Bosun\'s', 'Lady Grey\'s', 'Jolly Ned\'s'],
     // For "Port Blackwater" and the like
@@ -72,8 +75,10 @@ var REALM = {
     firsts: ['Storm', 'Iron', 'Winter', 'High', 'Red', 'Raven', 'Eagle', 'Grey', 'Black', 'Wolf', 'Dragon',
         'Sun', 'Frost', 'Thorn', 'Bitter', 'Salt', 'Stone', 'Silver', 'Gold', 'Night', 'Ash', 'Bone',
         'Bright', 'Dusk', 'Ember', 'Crow', 'Hawk', 'Blood', 'Shadow', 'Wind', 'Cold', 'Gull', 'Oak', 'Rose'],
-    seconds: ['hold', 'fell', 'watch', 'keep', 'garden', 'gate', 'rock', 'haven', 'spire', 'reach', 'mere',
-        'ford', 'crag', 'march', 'wall', 'bridge', 'holt', 'burgh', 'mark', 'tor', 'hall', 'moor', 'hollow'],
+    seconds: ['hold', 'fell', 'watch', 'keep', 'garden', 'gate', 'rock', 'spire', 'reach',
+        'crag', 'march', 'wall', 'holt', 'burgh', 'mark', 'tor', 'hall', 'moor', 'hollow'],
+    // For towns on the sea or a river
+    waterSeconds: ['haven', 'mere', 'ford', 'bridge', 'mouth'],
     keeps: ['Keep', 'Hall', 'Tower', 'Castle', 'Fort', 'Watch'],
     adjectives: ['Broken', 'Frozen', 'Sunken', 'Burning', 'Silent', 'Golden', 'Iron', 'Red', 'Black', 'Grey',
         'Shattered', 'Crimson', 'Hollow', 'Bitter', 'Western', 'Eastern', 'Northern', 'Southern'],
@@ -92,10 +97,26 @@ var REALM = {
         'Ironoaks', 'Redfort', 'Gulltown', 'Wolfswood', 'Frostfangs', 'Oxcross', 'Silverhill', 'Goldtooth']
 };
 
+// Marks a pattern as only for towns beside the sea, or beside the sea or a
+// river (see placeSetting in terrain.js)
+function coast(pattern) {
+    pattern.fits = ['coast'];
+    return pattern;
+}
+
+function water(pattern) {
+    pattern.fits = ['coast', 'river'];
+    return pattern;
+}
+
 var STYLES = {
     pirate: {
         city: [
-            function () {return 'Port ' + choose(PIRATE.starts) + choose(PIRATE.endings)},
+            water(function () {return 'Port ' + choose(PIRATE.starts) + choose(PIRATE.endings)}),
+            coast(function () {return choose(PIRATE.things) + ' ' + choose(PIRATE.shores)}),
+            coast(function () {return choose(PIRATE.adjectives) + ' ' + choose(PIRATE.shores)}),
+            water(function () {return choose(PIRATE.owners) + ' ' + choose(PIRATE.harbours)}),
+            water(function () {return choose(PIRATE.adjectives) + ' ' + choose(PIRATE.harbours)}),
             function () {return choose(PIRATE.things) + ' ' + choose(PIRATE.towns)},
             function () {return choose(PIRATE.owners) + ' ' + choose(PIRATE.towns)},
             function () {return choose(PIRATE.adjectives) + ' ' + choose(PIRATE.towns)}
@@ -128,6 +149,7 @@ var STYLES = {
         city: [
             function () {return choose(REALM.firsts) + choose(REALM.seconds)},
             function () {return choose(REALM.firsts) + choose(REALM.seconds)},
+            water(function () {return choose(REALM.firsts) + choose(REALM.waterSeconds)}),
             function () {return choose(REALM.firsts) + choose(REALM.seconds) + ' ' + choose(REALM.keeps)},
             function () {return choose(REALM.firsts) + "'s " + choose(['End', 'Rest', 'Watch', 'Gate'])}
         ],
@@ -162,9 +184,13 @@ export function hasWordNames(id) {
 }
 
 // A new name in a style that hasn't been used yet (lang.names lists those
-// that have). key is 'city' or 'region'.
-export function makeWordName(lang, key) {
-    var patterns = STYLES[lang.wordStyle][key === 'region' ? 'region' : 'city'];
+// that have). key is 'city' or 'region'; setting, if given, is where the
+// place is ('coast', 'river' or 'inland'), and leaves out patterns that
+// don't fit it.
+export function makeWordName(lang, key, setting) {
+    var patterns = STYLES[lang.wordStyle][key === 'region' ? 'region' : 'city'].filter(function (p) {
+        return !setting || !p.fits || p.fits.indexOf(setting) >= 0;
+    });
     for (var tries = 0; tries < 200; tries++) {
         var name = capitalized(choose(patterns)());
         var avoid = STYLES[lang.wordStyle].avoid || [];
