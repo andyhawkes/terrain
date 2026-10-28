@@ -69,6 +69,13 @@ export default {
     // region's land in a colour (one per region, in turn), optionally with a
     // watercolour effect (see throneish.js)
 
+    // fills: {sea: [...], land: [...], bands, shading} fills the sea and
+    // the land in colour by height, each a list of colours from the coast
+    // outwards (a single colour is a flat fill), relative to the map's
+    // deepest sea and highest point. bands: true gives steps of flat colour
+    // rather than a blend; shading (0 to 1) adds light hill shading from the
+    // north-west (see colouredrelief.js)
+
     // smoothCoast: true draws the coastline smoothed, rather than following
     // every corner of the grid (see underhill.js)
 

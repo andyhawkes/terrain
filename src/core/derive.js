@@ -90,6 +90,20 @@ export function regionShapes(h, terr, capitals) {
     return shapes;
 }
 
+// Land and sea coloured by height, for themes that fill them (see fills in
+// simple.js), as the grid's triangles grouped by colour
+export function fills(h, spec) {
+    var entry = cacheFor(h);
+    var key = JSON.stringify(spec);
+    if (!entry.fills || entry.fills.key !== key) {
+        var tris = T.meshTris(h.mesh);
+        entry.fills = {key: key, groups: T.heightFills(h, spec).map(function (g) {
+            return {color: g.color, tris: g.cells.map(function (i) {return tris[i]})};
+        })};
+    }
+    return entry.fills.groups;
+}
+
 // Lines following the coast out at sea, for themes that draw them (see
 // coastLines in simple.js); offsets are in map units
 export function coastOutlines(h, offsets) {
