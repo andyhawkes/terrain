@@ -67,6 +67,10 @@ export default {
         ]
     },
 
+    // Engraved lines of latitude and longitude, on every eighth tick of the
+    // frame's strip
+    graticule: {spacing: 96, width: 0.5, color: INK},
+
     // Coloured by hand: washes of colour under crisp ink
     compassRose: {gold: GOLD, red: RED, blue: BLUE, paper: VELLUM, ink: INK, wash: 0.85},
     cartouche: {gold: GOLD, paper: VELLUM, ink: INK, scroll: BLUE, cloth: '#d9708a', wash: 0.85},

@@ -38,18 +38,18 @@ export function setMapSize(svg, params) {
 }
 
 // Layers in drawing order; each is a <g> so redraws keep the stacking order
-var LAYERS = ['background', 'field', 'fill', 'tint', 'wood', 'contour', 'sea', 'river', 'coastLines', 'coast', 'border', 'slope', 'road', 'relief',
+var LAYERS = ['background', 'field', 'fill', 'tint', 'graticule', 'wood', 'contour', 'sea', 'river', 'coastLines', 'coast', 'border', 'slope', 'road', 'relief',
     'seaPicture', 'grid', 'city', 'wreck', 'poi', 'marker', 'route', 'label', 'frame', 'extras'];
 
 // Layers only there while the map has something in them, so maps without
 // roads or routes, and themes without fills, woodland, contours, sea
-// pictures or a frame, draw exactly as before
-var OPTIONAL_LAYERS = ['fill', 'wood', 'contour', 'road', 'route', 'seaPicture', 'frame'];
+// pictures, a graticule or a frame, draw exactly as before
+var OPTIONAL_LAYERS = ['fill', 'graticule', 'wood', 'contour', 'road', 'route', 'seaPicture', 'frame'];
 
 // Layers the user can switch off in the Style panel
 export var TOGGLE_LAYERS = [
     ['coast', 'Coastline'], ['fill', 'Land and sea colours'], ['tint', 'Region colours'], ['sea', 'Sea shading'], ['river', 'Rivers'], ['border', 'Borders'], ['slope', 'Slope shading'],
-    ['contour', 'Contours'], ['relief', 'Hills'], ['forest', 'Forests'], ['road', 'Roads'],
+    ['contour', 'Contours'], ['graticule', 'Latitude and longitude'], ['relief', 'Hills'], ['forest', 'Forests'], ['road', 'Roads'],
     ['city', 'Cities'], ['label', 'Labels'], ['wreck', 'Wrecks'], ['poi', 'Points of interest'],
     ['marker', 'Markers'], ['route', 'Routes']
 ];
@@ -375,10 +375,13 @@ function drawFrame(svg, theme) {
     // Inline, as the theme's stylesheet sets every path's fill and stroke
     washed.concat(spec.bands.filter(function (b) {return !b.wash})).forEach(function (band) {
         var out = band.at + band.width / 2;
+        if (band.dash) {
+            dashedBand(band.wash ? wash : g, band, w / 2 + out, ht / 2 + out);
+            return;
+        }
         (band.wash ? wash : g).append('rect').attr('class', 'frame-band')
             .attr('x', -w / 2 - out).attr('y', -ht / 2 - out).attr('width', w + 2 * out).attr('height', ht + 2 * out)
-            .style('fill', 'none').style('stroke', band.color).style('stroke-width', band.width + 'px')
-            .style('stroke-dasharray', band.dash ? band.dash.join(' ') : null);
+            .style('fill', 'none').style('stroke', band.color).style('stroke-width', band.width + 'px');
     });
     if (spec.corner) {
         ensureSymbols(svg, 'frame-corner', spec.corner, theme.parts);
@@ -388,6 +391,45 @@ function drawFrame(svg, theme) {
                 .attr('x', k[0] * (w / 2 + c)).attr('y', k[1] * (ht / 2 + c));
         });
     }
+}
+
+// A dashed frame band, x and y out from the centre, drawn side by side
+// with a dash centred on the middle of each side, so a graduated strip's
+// ticks meet a graticule's lines (see drawGraticule). Each side reaches
+// past the corners by half the band's width, to close them.
+function dashedBand(g, band, x, y) {
+    var e = band.width / 2;
+    var period = band.dash.reduce(function (a, b) {return a + b}, 0);
+    [['M' + (-x - e) + ',' + -y + 'H' + (x + e) + 'M' + (-x - e) + ',' + y + 'H' + (x + e), x + e],
+        ['M' + -x + ',' + (-y - e) + 'V' + (y + e) + 'M' + x + ',' + (-y - e) + 'V' + (y + e), y + e]].forEach(function (side) {
+        var offset = ((band.dash[0] / 2 - side[1]) % period + period) % period;
+        g.append('path').attr('class', 'frame-band').attr('d', side[0])
+            .style('fill', 'none').style('stroke', band.color).style('stroke-width', band.width + 'px')
+            .style('stroke-dasharray', band.dash.join(' ')).style('stroke-dashoffset', offset);
+    });
+}
+
+// Lines of latitude and longitude, for themes with a graticule (see
+// simple.js): straight, every spacing SVG units out from the centre, inside
+// the margin. With the frame's strip centred the same way, a spacing that's
+// a whole number of its dashes puts each line on a tick.
+function drawGraticule(svg, theme) {
+    var spec = theme.graticule;
+    var g = optionalLayer(svg, 'graticule', !!spec);
+    if (!g || unchanged(svg, 'graticule', [spec, SCALE, extent])) return;
+    g.selectAll('*').remove();
+    var x = EDGE * SCALE * extent.width;
+    var y = EDGE * SCALE * extent.height;
+    var d = '';
+    for (var i = (Math.ceil(x / spec.spacing) - 1) * spec.spacing; i > -x; i -= spec.spacing) {
+        d += 'M' + i + ',' + -y + 'V' + y;
+    }
+    for (i = (Math.ceil(y / spec.spacing) - 1) * spec.spacing; i > -y; i -= spec.spacing) {
+        d += 'M' + -x + ',' + i + 'H' + x;
+    }
+    // Inline, as the theme's stylesheet sets every path's fill and stroke
+    insideMargin(svg, g, 'graticule').append('path').attr('class', 'graticule').attr('d', d)
+        .style('fill', 'none').style('stroke', spec.color).style('stroke-width', spec.width + 'px');
 }
 
 // Boxes (map units) over a theme's frame, for labels to avoid
@@ -1068,6 +1110,7 @@ export function drawMap(svg, state) {
     drawBackground(svg, t.background);
     drawFills(svg, state, theme);
     drawTints(svg, state, d, theme);
+    drawGraticule(svg, theme);
     drawWoodland(svg, state, theme);
     drawContours(svg, state, theme, t.font);
     drawStrokes(svg, 'sea', function () {
