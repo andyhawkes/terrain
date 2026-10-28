@@ -8,8 +8,9 @@ import pirate from './pirate.js';
 import military from './military.js';
 import underhill from './underhill.js';
 import throneish from './throneish.js';
+import colouredrelief from './colouredrelief.js';
 
-export var THEMES = [simple, fantasy, pirate, military, underhill, throneish, plotter];
+export var THEMES = [simple, fantasy, pirate, military, underhill, throneish, colouredrelief, plotter];
 
 // Old theme ids, so earlier map files still open with the right look
 var RENAMED = {lovecraftian: 'fantasy'};

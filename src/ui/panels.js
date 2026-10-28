@@ -329,6 +329,7 @@ function stylePanel(body, ctx) {
         labels.sea.style('display', theme.seaShading ? null : 'none');
         labels.relief.style('display', theme.symbols.relief ? null : 'none');
         labels.forest.style('display', theme.symbols.relief ? null : 'none');
+        labels.fill.style('display', theme.fills ? null : 'none');
         labels.tint.style('display', theme.regionTints ? null : 'none');
         labels.slope.style('display', theme.slopeShading === false ? 'none' : null);
 

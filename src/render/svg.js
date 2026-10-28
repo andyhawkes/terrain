@@ -3,7 +3,7 @@
 // setMapSize sets before drawing; text, lines and symbols are sized in SVG
 // user units.
 import * as d3 from 'd3';
-import {derive, territories, seaShading, relief, coastOutlines, smoothCoasts, regionShapes, hachureStrokes, roadCurves} from '../core/derive.js';
+import {derive, territories, fills, seaShading, relief, coastOutlines, smoothCoasts, regionShapes, hachureStrokes, roadCurves} from '../core/derive.js';
 import {smoothLine} from '../core/roads.js';
 import {meshTris} from '../core/terrain.js';
 import {itemPos} from '../core/steps.js';
@@ -38,16 +38,16 @@ export function setMapSize(svg, params) {
 }
 
 // Layers in drawing order; each is a <g> so redraws keep the stacking order
-var LAYERS = ['background', 'field', 'tint', 'sea', 'river', 'coastLines', 'coast', 'border', 'slope', 'road', 'relief', 'grid', 'city', 'wreck', 'poi', 'marker',
+var LAYERS = ['background', 'field', 'fill', 'tint', 'sea', 'river', 'coastLines', 'coast', 'border', 'slope', 'road', 'relief', 'grid', 'city', 'wreck', 'poi', 'marker',
     'route', 'label', 'extras'];
 
 // Layers only there while the map has something in them, so maps without
-// roads or routes draw exactly as they did before there were any
-var OPTIONAL_LAYERS = ['road', 'route'];
+// roads or routes, and themes without fills, draw exactly as before
+var OPTIONAL_LAYERS = ['fill', 'road', 'route'];
 
 // Layers the user can switch off in the Style panel
 export var TOGGLE_LAYERS = [
-    ['coast', 'Coastline'], ['tint', 'Region colours'], ['sea', 'Sea shading'], ['river', 'Rivers'], ['border', 'Borders'], ['slope', 'Slope shading'],
+    ['coast', 'Coastline'], ['fill', 'Land and sea colours'], ['tint', 'Region colours'], ['sea', 'Sea shading'], ['river', 'Rivers'], ['border', 'Borders'], ['slope', 'Slope shading'],
     ['relief', 'Hills'], ['forest', 'Forests'], ['road', 'Roads'],
     ['city', 'Cities'], ['label', 'Labels'], ['wreck', 'Wrecks'], ['poi', 'Points of interest'],
     ['marker', 'Markers'], ['route', 'Routes']
@@ -301,6 +301,37 @@ export function drawCities(svg, state, theme) {
         .attr('href', function (d) {return prefix + (d.id % spec.variants.length)});
 }
 
+function cellsPath(cells) {
+    return cells.map(function (c) {
+        return 'M' + coord(c[0][0]) + ',' + coord(c[0][1]) + 'L' + coord(c[1][0]) + ',' + coord(c[1][1]) +
+            'L' + coord(c[2][0]) + ',' + coord(c[2][1]) + 'Z';
+    }).join('');
+}
+
+// Land and sea filled in colour by height, for themes that fill them. The
+// sea's farthest colour covers the whole map first, so there's no paper
+// showing past the grid's edge.
+function drawFills(svg, state, theme) {
+    var spec = theme.fills;
+    var g = optionalLayer(svg, 'fill', !!spec);
+    if (!g || unchanged(svg, 'fill', [state.h, spec, SCALE])) return;
+    g.selectAll('*').remove();
+    if (spec.sea && spec.sea.length) {
+        var w = SCALE * extent.width;
+        var ht = SCALE * extent.height;
+        g.append('rect').attr('x', -w / 2).attr('y', -ht / 2).attr('width', w).attr('height', ht)
+            .style('fill', spec.sea[spec.sea.length - 1]).style('stroke', 'none');
+    }
+    fills(state.h, spec).forEach(function (group) {
+        // Each cell outlined in its own colour closes the hairline gaps
+        // between cells; inline, as the theme's stylesheet sets every path's
+        // fill and stroke
+        g.append('path').attr('class', 'fill').attr('d', cellsPath(group.tris))
+            .style('fill', group.color).style('stroke', group.color).style('stroke-width', '0.8px')
+            .style('stroke-linejoin', 'round');
+    });
+}
+
 // Each region's land washed in a colour, for themes that tint regions. The
 // layer as a whole is see-through, so where cells meet they don't show
 // darker; each cell is outlined in its own colour to close the hairline
@@ -319,10 +350,7 @@ function drawTints(svg, state, d, theme) {
     regionShapes(state.h, d.terr, capitals).forEach(function (cells, k) {
         var color = spec.colors[k % spec.colors.length];
         wash.append('path').attr('class', 'region-tint')
-            .attr('d', cells.map(function (c) {
-                return 'M' + coord(c[0][0]) + ',' + coord(c[0][1]) + 'L' + coord(c[1][0]) + ',' + coord(c[1][1]) +
-                    'L' + coord(c[2][0]) + ',' + coord(c[2][1]) + 'Z';
-            }).join(''))
+            .attr('d', cellsPath(cells))
             // Inline, as the theme's stylesheet sets every path's fill and stroke
             .style('fill', color).style('stroke', color).style('stroke-width', '0.8px').style('stroke-linejoin', 'round');
     });
@@ -829,6 +857,7 @@ export function drawMap(svg, state) {
     var theme = t.theme;
     var d = derive(state, labelLayout(state, theme, t.font, t.type));
     drawBackground(svg, t.background);
+    drawFills(svg, state, theme);
     drawTints(svg, state, d, theme);
     drawStrokes(svg, 'sea', function () {
         return theme.seaShading ? seaShading(state.h) : [];

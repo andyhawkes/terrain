@@ -942,6 +942,80 @@ function coastLines(h, offsets) {
     });
 }
 
+// Land and sea filled in colour by height, for themes that fill them (see
+// fills in simple.js). Heights are taken relative to the map's highest
+// point and deepest sea, so every map uses the whole range of colours.
+// spec.sea and spec.land list colours ('#rrggbb') from the coast outwards,
+// evenly spaced; either can be left out, and a single colour is a flat fill.
+// bands fills each step in one colour, otherwise they blend. shading (0 to
+// 1) lightens slopes facing the light, from the north-west, and darkens
+// those facing away. Returns the vertices grouped by colour: [{color, cells}].
+var BLEND_STEPS = 12;
+var SHADE_STEPS = 6;
+
+function hexRGB(c) {
+    var n = parseInt(c.slice(1), 16);
+    return [n >> 16, (n >> 8) & 255, n & 255];
+}
+
+function rgbHex(rgb) {
+    return '#' + rgb.map(function (x) {
+        return Math.round(Math.max(0, Math.min(255, x))).toString(16).padStart(2, '0');
+    }).join('');
+}
+
+// A colour t (0 to 1) of the way along a list of colours
+function colourAt(colours, t, bands) {
+    var n = colours.length;
+    if (bands || n === 1) return hexRGB(colours[Math.min(n - 1, Math.floor(t * n))]);
+    var x = Math.round(t * (n - 1) * BLEND_STEPS) / BLEND_STEPS;
+    var i = Math.min(n - 2, Math.floor(x));
+    var a = hexRGB(colours[i]);
+    var b = hexRGB(colours[i + 1]);
+    return a.map(function (v, k) {return v + (b[k] - v) * (x - i)});
+}
+
+function hillShade(h, i) {
+    // Averaged over the neighbours, as one cell's slope is noisy
+    var nbs = neighbours(h.mesh, i).concat([i]);
+    var gx = 0, gy = 0;
+    nbs.forEach(function (j) {
+        var s = trislope(h, j);
+        gx += s[0];
+        gy += s[1];
+    });
+    // Lit when the ground rises away from the light, i.e. towards the south-east
+    var lit = (gx + gy) / Math.SQRT2 / nbs.length;
+    return Math.round(Math.tanh(lit / 3) * SHADE_STEPS) / SHADE_STEPS;
+}
+
+function heightFills(h, spec) {
+    var top = Math.max(1e-9, max(h));
+    var deep = Math.max(1e-9, -min(h));
+    var groups = {};
+    for (var i = 0; i < h.length; i++) {
+        // Cells on the grid's edge take a neighbour's height, as their own
+        // isn't kept like the rest
+        var z = h[i];
+        if (isedge(h.mesh, i)) {
+            var inner = neighbours(h.mesh, i).find(function (j) {return !isedge(h.mesh, j)});
+            if (inner !== undefined) z = h[inner];
+        }
+        var land = z > 0;
+        var colours = land ? spec.land : spec.sea;
+        if (!colours || !colours.length) continue;
+        var t = Math.min(1, land ? z / top : -z / deep);
+        var rgb = colourAt(colours, t, spec.bands);
+        if (land && spec.shading) {
+            var s = hillShade(h, i) * spec.shading;
+            rgb = rgb.map(function (v) {return s > 0 ? v + (255 - v) * s : v * (1 + s)});
+        }
+        var color = rgbHex(rgb);
+        (groups[color] = groups[color] || []).push(i);
+    }
+    return Object.keys(groups).map(function (color) {return {color: color, cells: groups[color]}});
+}
+
 // Hachures: short strokes down the fall line, in rows between contour
 // lines across the high ground, the way survey maps engraved relief. Each
 // stroke starts on a contour and runs downhill about as far as the next
@@ -1134,5 +1208,5 @@ export {
     setSeaLevel, cleanCoast, trislope, dropEdge, generateCoast, coastHeightmap,
     cityScore, wreckScore, POIScore, pickCity, pickWreck, pickPOI,
     contour, getRivers, getTerritories, getBorders, mergeSegments, relaxPath,
-    terrCenter, slopeStrokes, seaStrokes, reliefSymbols, coastLines, hachures
+    terrCenter, slopeStrokes, seaStrokes, reliefSymbols, coastLines, hachures, heightFills
 };

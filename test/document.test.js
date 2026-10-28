@@ -589,3 +589,27 @@ test('region names keep clear of each other, obstacles and the edge, on their ow
         });
     });
 });
+
+test('fills colour land and sea by height', async function () {
+    var {fills} = await import('../src/core/derive.js');
+    var doc = new MapDocument();
+    doc.dispatch('generate', {params: small}, 'abc123');
+    var h = doc.state.h;
+    var count = function (groups) {return groups.reduce(function (n, g) {return n + g.tris.length}, 0)};
+    // A single colour is a flat fill, of the sea only when there's no land
+    var flat = fills(h, {sea: ['#0000ff']});
+    assert.equal(flat.length, 1);
+    var land = h.length - count(flat);
+    assert.ok(land > 0 && land < h.length);
+    // Bands give one colour per step; each cell is drawn once
+    var banded = fills(h, {sea: ['#000001', '#000002'], land: ['#010000', '#020000', '#030000'], bands: true});
+    assert.deepEqual(banded.map(function (g) {return g.color}).sort(),
+        ['#000001', '#000002', '#010000', '#020000', '#030000']);
+    assert.equal(count(banded), h.length);
+    // Blends and shading stay within a modest number of colours, and are cached
+    var spec = {land: ['#00ff00', '#ffffff'], shading: 0.4};
+    var shaded = fills(h, spec);
+    assert.equal(count(shaded), land);
+    assert.ok(shaded.length > 10 && shaded.length < 300, shaded.length + ' colours');
+    assert.equal(fills(h, spec), shaded);
+});

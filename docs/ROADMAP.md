@@ -81,7 +81,7 @@ The order among these is still open. Several need the same new drawing features,
 - **Contour lines:** lines at fixed height intervals, optionally labelled. The coastline is already a contour at sea level.
 - **Woodland areas:** forests drawn as filled shapes as well as, or instead of, tree symbols.
 
-Status: Not started
+Status: In progress. Sea and land fills and colour by height are done (`fills`); contour lines and woodland areas aren't.
 
 ### Illuminated atlas
 
@@ -102,7 +102,7 @@ A physical atlas or video-game world map:
 - Blue seas, deeper offshore.
 - Clean modern lettering, rivers in blue, and light hill shading.
 
-Status: Not started
+Status: Complete
 
 ### Ordnance Survey style
 
