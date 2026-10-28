@@ -100,6 +100,12 @@ export default {
     // inside it, labels keep off it, and regionTints stop at it (see
     // illuminated.js)
 
+    // graticule: {spacing, width, color} draws straight lines of latitude
+    // and longitude every spacing SVG units out from the map's centre,
+    // inside the margin, in that colour and width. The frame's dashed bands
+    // are centred on each side, so a spacing that's a whole number of a
+    // band's dashes puts each line on a tick (see illuminated.js)
+
     // compassRose: {gold, red, blue, paper, ink} draws an ornate compass
     // rose in those colours instead of the plain one; cartouche: {gold,
     // paper, ink, scroll, cloth} draws the title in a cartouche with scrolls

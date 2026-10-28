@@ -330,6 +330,7 @@ function stylePanel(body, ctx) {
         labels.relief.style('display', theme.symbols.relief ? null : 'none');
         labels.forest.style('display', theme.symbols.relief || theme.woodland ? null : 'none');
         labels.contour.style('display', theme.contours ? null : 'none');
+        labels.graticule.style('display', theme.graticule ? null : 'none');
         labels.fill.style('display', theme.fills ? null : 'none');
         labels.tint.style('display', theme.regionTints ? null : 'none');
         labels.slope.style('display', theme.slopeShading === false ? 'none' : null);
