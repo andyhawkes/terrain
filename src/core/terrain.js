@@ -163,12 +163,16 @@ function area(mesh) {
     return mesh.extent.width * mesh.extent.height;
 }
 
+// The map is drawn inside a margin: nothing within (0.5 - EDGE) of the
+// map's width or height from its edge
+var EDGE = 0.45;
+
 function isnearedge(mesh, i) {
     var x = mesh.vxs[i][0];
     var y = mesh.vxs[i][1];
     var w = mesh.extent.width;
     var h = mesh.extent.height;
-    return x < -0.45 * w || x > 0.45 * w || y < -0.45 * h || y > 0.45 * h;
+    return x < -EDGE * w || x > EDGE * w || y < -EDGE * h || y > EDGE * h;
 }
 
 function neighbours(mesh, i) {
@@ -575,6 +579,80 @@ function contour(h, level) {
         }
     }
     return mergeSegments(edges);
+}
+
+// Like mergeSegments, but in time proportional to the number of segments,
+// for when there are many (contours across the whole map). Segments share
+// end points by identity, as contour's do.
+function linkSegments(segs) {
+    var at = new Map();
+    segs.forEach(function (seg, i) {
+        seg.forEach(function (p) {
+            if (!at.has(p)) at.set(p, []);
+            at.get(p).push(i);
+        });
+    });
+    var used = new Uint8Array(segs.length);
+    // The next segment on from p, if the line carries straight on there
+    function onward(p) {
+        var here = at.get(p);
+        if (here.length !== 2) return -1;
+        return !used[here[0]] ? here[0] : !used[here[1]] ? here[1] : -1;
+    }
+    var paths = [];
+    for (var i = 0; i < segs.length; i++) {
+        if (used[i]) continue;
+        used[i] = 1;
+        var path = [segs[i][0], segs[i][1]];
+        [false, true].forEach(function (back) {
+            var p = back ? path[0] : path[path.length - 1];
+            for (var k = onward(p); k >= 0; k = onward(p)) {
+                used[k] = 1;
+                p = segs[k][0] === p ? segs[k][1] : segs[k][0];
+                if (back) path.unshift(p);
+                else path.push(p);
+            }
+        });
+        paths.push(path);
+    }
+    return paths;
+}
+
+// The pieces of a contour, as contour finds them, unjoined
+function contourSegments(h, level) {
+    var e = h.mesh.edges;
+    var segs = [];
+    for (var k = 0; k < e.length; k += 4) {
+        var v0 = e[k];
+        var v1 = e[k + 1];
+        if (e[k + 3] < 0) continue;
+        if ((h[v0] > level) === (h[v1] > level)) continue;
+        if (isnearedge(h.mesh, v0) || isnearedge(h.mesh, v1)) continue;
+        segs.push([h.mesh.sites[e[k + 2]], h.mesh.sites[e[k + 3]]]);
+    }
+    return segs;
+}
+
+// Contour lines above sea level at regular intervals, for themes that draw
+// them. The map's highest point stands for spec.top (in metres, say), with
+// a contour every spec.interval, and every spec.index-th one an index
+// contour. smooth is how many times each line is smoothed. Scraps of a few
+// cells are left out, as they're mostly noise in the heightmap. Returns
+// [{height, index, lines}], lowest first.
+var CONTOUR_SCRAP = 6;
+
+function contourLevels(h, spec) {
+    var top = max(h);
+    var levels = [];
+    if (!(top > 0)) return levels;
+    for (var n = 1; n * spec.interval < spec.top; n++) {
+        var lines = linkSegments(contourSegments(h, n * spec.interval / spec.top * top))
+            .filter(function (line) {return line.length > CONTOUR_SCRAP});
+        if (!lines.length) continue;
+        for (var s = 0; s < (spec.smooth || 0); s++) lines = lines.map(relaxPath);
+        levels.push({height: n * spec.interval, index: !!spec.index && n % spec.index === 0, lines: lines});
+    }
+    return levels;
 }
 
 function getRivers(h, limit) {
@@ -1121,6 +1199,44 @@ function hachures(h, scale, options) {
 // Returns [{kind, x, y, size, variant, cold}], back to front so nearer
 // symbols overlap those behind. cold (0 to 1) is how far north and how high
 // a symbol is, for themes that draw different trees by climate.
+// Forests clump where a smooth random field is high: trees grow where
+// forest(v) is over FOREST
+var FOREST = 1.2;
+
+function forestField() {
+    var woods = [];
+    for (var k = 0; k < Math.round(30 * WORLD * WORLD); k++) {
+        woods.push([WORLD * (random() - 0.5), WORLD * (random() - 0.5)]);
+    }
+    return function (v) {
+        var f = 0;
+        for (var k = 0; k < woods.length; k++) {
+            var dx = v[0] - woods[k][0];
+            var dy = v[1] - woods[k][1];
+            f += Math.exp(-(dx * dx + dy * dy) / (2 * 0.06 * 0.06));
+        }
+        return f;
+    };
+}
+
+// The land under woodland, as a list of vertices, for themes that draw
+// forests as areas. Drawn from the same forest field as relief's trees
+// (given the same random numbers), but on any land below the peaks.
+function woodlandCells(h) {
+    var forest = forestField();
+    var heights = [];
+    for (var i = 0; i < h.length; i++) {
+        if (h[i] > 0) heights.push(h[i]);
+    }
+    if (!heights.length) return [];
+    var peaks = quantileSorted(heights.sort(ascending), 0.88);
+    var cells = [];
+    for (var i = 0; i < h.length; i++) {
+        if (h[i] > 0 && h[i] < peaks && !isnearedge(h.mesh, i) && forest(h.mesh.vxs[i]) > FOREST) cells.push(i);
+    }
+    return cells;
+}
+
 function reliefSymbols(h, scale, spacing) {
     var mesh = h.mesh;
     var flux = getFlux(h);
@@ -1142,20 +1258,7 @@ function reliefSymbols(h, scale, spacing) {
     var peaks = quantileSorted(heights, 0.88);
     var top = heights[heights.length - 1];
 
-    // Forests clump where a smooth random field is high
-    var woods = [];
-    for (var k = 0; k < Math.round(30 * WORLD * WORLD); k++) {
-        woods.push([WORLD * (random() - 0.5), WORLD * (random() - 0.5)]);
-    }
-    function forest(v) {
-        var f = 0;
-        for (var k = 0; k < woods.length; k++) {
-            var dx = v[0] - woods[k][0];
-            var dy = v[1] - woods[k][1];
-            f += Math.exp(-(dx * dx + dy * dy) / (2 * 0.06 * 0.06));
-        }
-        return f;
-    }
+    var forest = forestField();
 
     // Accept symbols in a random order, each far enough from those taken
     var cell = Math.max(spacing.mountain, spacing.hill, spacing.tree) / scale;
@@ -1179,7 +1282,7 @@ function reliefSymbols(h, scale, spacing) {
     }
     shuffled(land).forEach(function (i) {
         var v = mesh.vxs[i];
-        var kind = h[i] >= peaks ? 'mountain' : h[i] >= hills ? 'hill' : forest(v) > 1.2 ? 'tree' : null;
+        var kind = h[i] >= peaks ? 'mountain' : h[i] >= hills ? 'hill' : forest(v) > FOREST ? 'tree' : null;
         if (!kind) return;
         // Higher peaks are bigger, and every symbol varies a little
         var size = (kind === 'mountain' ? 1 + 0.5 * (h[i] - peaks) / (top - peaks || 1) : 1) * runif(0.85, 1.15);
@@ -1202,11 +1305,12 @@ function reliefSymbols(h, scale, spacing) {
 
 export {
     generatePoints, improvePoints, generateGoodPoints, makeMesh, generateGoodMesh, meshTris,
-    isedge, isnearedge, neighbours, distance, quantile,
+    EDGE, isedge, isnearedge, neighbours, distance, quantile,
     zero, slope, cone, map, normalize, peaky, add, mountains, relax,
     downhill, fillSinks, getFlux, getSlope, erosionRate, erode, doErosion,
     setSeaLevel, cleanCoast, trislope, dropEdge, generateCoast, coastHeightmap,
     cityScore, wreckScore, POIScore, pickCity, pickWreck, pickPOI,
     contour, getRivers, getTerritories, getBorders, mergeSegments, relaxPath,
-    terrCenter, slopeStrokes, seaStrokes, reliefSymbols, coastLines, hachures, heightFills
+    terrCenter, slopeStrokes, seaStrokes, reliefSymbols, coastLines, hachures, heightFills,
+    contourSegments, linkSegments, contourLevels, woodlandCells
 };

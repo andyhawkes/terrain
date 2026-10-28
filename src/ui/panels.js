@@ -325,10 +325,11 @@ function stylePanel(body, ctx) {
         TOGGLE_LAYERS.forEach(function (l) {
             boxes[l[0]].property('checked', style.hidden.indexOf(l[0]) < 0);
         });
-        // Only some themes shade the sea, or draw hills and forests
+        // Only some themes shade the sea, or draw hills, forests and contours
         labels.sea.style('display', theme.seaShading ? null : 'none');
         labels.relief.style('display', theme.symbols.relief ? null : 'none');
-        labels.forest.style('display', theme.symbols.relief ? null : 'none');
+        labels.forest.style('display', theme.symbols.relief || theme.woodland ? null : 'none');
+        labels.contour.style('display', theme.contours ? null : 'none');
         labels.fill.style('display', theme.fills ? null : 'none');
         labels.tint.style('display', theme.regionTints ? null : 'none');
         labels.slope.style('display', theme.slopeShading === false ? 'none' : null);
@@ -346,7 +347,8 @@ function stylePanel(body, ctx) {
         gridSizeUnits.text(extras.units.name);
         extrasBoxes.gridLabels.property('checked', !!extras.gridLabels)
             .property('disabled', extras.grid === 'none');
-        gridLabelText.text(extras.grid === 'hex' ? 'Number the hexes' : 'Label the grid edges');
+        gridLabelText.text(extras.grid === 'hex' ? 'Number the hexes' : extras.grid === 'numbered' ? 'Number the lines' :
+            'Label the grid edges');
         extrasBoxes.scaleBar.property('checked', !!extras.scaleBar);
         extrasBoxes.compass.property('checked', !!extras.compass);
         compassRow.style('display', extras.compass ? null : 'none');

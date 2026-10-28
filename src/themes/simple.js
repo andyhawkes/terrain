@@ -76,6 +76,18 @@ export default {
     // rather than a blend; shading (0 to 1) adds light hill shading from the
     // north-west (see colouredrelief.js)
 
+    // woodland: {color, outline, width} draws forests as filled areas, where
+    // relief's trees would grow (and on hills too), optionally with a line
+    // around them in outline. It hides with the forests; leave relief's
+    // tree out to draw the areas instead of trees (see surveyor.js)
+
+    // contours: {interval, top, index, smooth, labels} draws contour lines.
+    // The map's highest point stands for top (say, in metres), with a line
+    // every interval and every index-th line heavier; smooth is how many
+    // times to smooth them, and labels numbers the heavier ones with their
+    // height. Colour colors.contour, widths widths.contour and
+    // widths.contourIndex (see surveyor.js)
+
     // smoothCoast: true draws the coastline smoothed, rather than following
     // every corner of the grid (see underhill.js)
 
@@ -89,8 +101,8 @@ export default {
 
     // Defaults for extras drawn over the map, used until the map sets its
     // own (see render/extras.js): units ('miles', 'km', 'leagues'), perUnit
-    // (units across one map unit), grid ('none', 'square', 'hex'),
-    // gridLabels, scaleBar, compass, and gridOpacity for the grid's lines
+    // (units across one map unit), grid ('none', 'square', 'numbered',
+    // 'hex'), gridLabels, scaleBar, compass, and gridOpacity for the grid's lines
     extras: {units: 'miles', perUnit: 100},
 
     labels: {

@@ -12,6 +12,7 @@ export var UNITS = [
 export var GRIDS = [
     {id: 'none', name: 'None'},
     {id: 'square', name: 'Square'},
+    {id: 'numbered', name: 'Numbered'},
     {id: 'hex', name: 'Hex'}
 ];
 
@@ -101,6 +102,27 @@ export function squareGrid(extent, size) {
         if (y + size / 2 < -top) rows.push({y: y + size / 2, text: String(j + 1)});
     }
     return {lines: lines, columns: columns, rows: rows};
+}
+
+// A survey grid: the square grid's lines, numbered by their distance in
+// units (perUnit to a map unit) from the bottom-left corner, eastings along
+// the top for the lines across and northings down the left for the lines
+// up, two digits at least, like a national grid
+export function numberedGrid(extent, size, perUnit) {
+    var left = -extent.width / 2;
+    var bottom = extent.height / 2;
+    var lines = squareGrid(extent, size).lines;
+    var number = function (map) {
+        var n = Math.round(map * perUnit * 100) / 100;
+        return n < 10 && n === Math.round(n) ? '0' + n : formatDistance(n);
+    };
+    var eastings = [];
+    var northings = [];
+    lines.forEach(function (l) {
+        if (l[0][0] === l[1][0]) eastings.push({x: l[0][0], text: number(l[0][0] - left)});
+        else northings.push({y: l[0][1], text: number(bottom - l[0][1])});
+    });
+    return {lines: lines, eastings: eastings, northings: northings};
 }
 
 // Flat-topped hexes, size across from flat side to flat side (in map

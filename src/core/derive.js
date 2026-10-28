@@ -104,6 +104,37 @@ export function fills(h, spec) {
     return entry.fills.groups;
 }
 
+// Contour lines at regular heights, for themes that draw them (see
+// contours in simple.js)
+export function contours(h, spec) {
+    var entry = cacheFor(h);
+    var key = [spec.interval, spec.top, spec.index, spec.smooth].join(' ');
+    if (!entry.contours || entry.contours.key !== key) {
+        entry.contours = {key: key, levels: T.contourLevels(h, spec)};
+    }
+    return entry.contours.levels;
+}
+
+// Forests as areas, for themes that draw them (see woodland in simple.js):
+// the grid's triangles under woodland, and the line around them. The
+// forest field comes from the same seed as relief's trees, so the two agree.
+export function woodland(h) {
+    var entry = cacheFor(h);
+    if (!entry.woodland) {
+        var cells = withSeed('relief', function () {return T.woodlandCells(h)});
+        var tris = T.meshTris(h.mesh);
+        // The outline is the contour of a field that's 1 in the woods
+        var inside = new Float64Array(h.length);
+        cells.forEach(function (i) {inside[i] = 1});
+        inside.mesh = h.mesh;
+        entry.woodland = {
+            tris: cells.map(function (i) {return tris[i]}),
+            outline: T.linkSegments(T.contourSegments(inside, 0.5))
+        };
+    }
+    return entry.woodland;
+}
+
 // Lines following the coast out at sea, for themes that draw them (see
 // coastLines in simple.js); offsets are in map units
 export function coastOutlines(h, offsets) {

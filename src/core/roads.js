@@ -1,14 +1,14 @@
 // Roads between cities, and the line geometry shared by roads and routes.
 // No randomness: the same heightmap and cities always give the same roads.
 import PriorityQueue from 'js-priority-queue';
-import {getFlux, neighbours, distance} from './terrain.js';
+import {getFlux, neighbours, distance, isnearedge} from './terrain.js';
 
 // Roads joining cities (vertex indices) along the easiest ground, using the
 // cost-of-travel idea of getTerritories. Cities join the network one at a
 // time, the cheapest to reach first, each by the easiest way to any road
 // already built, so roads merge rather than run side by side. Climbs cost
 // more the steeper they are; following a river or crossing one costs extra;
-// the sea can't be crossed. A city on another island starts a network of
+// the sea and the map's margin can't be crossed. A city on another island starts a network of
 // its own. Returns paths of vertex indices, each from a city to where it
 // meets the network.
 export function getRoads(h, cities) {
@@ -22,7 +22,7 @@ export function getRoads(h, cities) {
     }
     var river = 0.01 * land / n;
     function cost(u, v) {
-        if (h[v] <= 0) return Infinity;
+        if (h[v] <= 0 || isnearedge(mesh, v)) return Infinity;
         var horiz = Math.max(distance(mesh, u, v), 1e-9);
         var grade = (h[v] - h[u]) / horiz;
         var c = horiz * (1 + 20 * grade * grade + 2 * h[v]);

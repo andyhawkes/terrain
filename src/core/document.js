@@ -27,7 +27,8 @@ export var FORMAT_VERSION = 1;
 //   3: the grid is built with d3-delaunay instead of d3-voronoi
 //   4: random maps have roads unless params.roads is false (share links
 //      from version 3 and before open without them)
-export var GENERATOR_VERSION = 4;
+//   5: roads keep out of the map's margin, as coasts and rivers do
+export var GENERATOR_VERSION = 5;
 
 // Throws if saved map data needs a newer generator than this one
 export function checkGenerator(json) {

@@ -81,7 +81,7 @@ The order among these is still open. Several need the same new drawing features,
 - **Contour lines:** lines at fixed height intervals, optionally labelled. The coastline is already a contour at sea level.
 - **Woodland areas:** forests drawn as filled shapes as well as, or instead of, tree symbols.
 
-Status: In progress. Sea and land fills and colour by height are done (`fills`); contour lines and woodland areas aren't.
+Status: Complete. Sea and land fills and colour by height (`fills`), contour lines (`contours`) and woodland areas (`woodland`).
 
 ### Illuminated atlas
 
@@ -117,7 +117,7 @@ A modern British survey map:
 - **Lettering:** a clean humanist sans. The real survey fonts aren't openly licensed, so an OFL one with a similar feel.
 - **Name:** "Ordnance Survey" is a trademark, so the theme should be called something like "Surveyor".
 
-Status: Not started
+Status: In progress, as **Surveyor**. Everything above is drawn; the point-of-interest symbols are simple stand-ins awaiting a decision on their artwork.
 
 ## Deferred
 

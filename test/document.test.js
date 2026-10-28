@@ -613,3 +613,45 @@ test('fills colour land and sea by height', async function () {
     assert.ok(shaded.length > 10 && shaded.length < 300, shaded.length + ' colours');
     assert.equal(fills(h, spec), shaded);
 });
+
+test('contours rise in steps, traced like the coastline', async function () {
+    var {contours} = await import('../src/core/derive.js');
+    var doc = new MapDocument();
+    doc.dispatch('generate', {params: small}, 'abc123');
+    var h = doc.state.h;
+    var spec = {interval: 100, top: 1000, index: 5};
+    var levels = contours(h, spec);
+    assert.equal(contours(h, spec), levels);
+    assert.ok(levels.length > 3);
+    levels.forEach(function (l, i) {
+        if (i) assert.ok(l.height > levels[i - 1].height);
+        assert.equal(l.index, l.height % 500 === 0);
+        // Scraps of a few cells are left out
+        assert.ok(l.lines.length && l.lines.every(function (line) {return line.length > 6}));
+    });
+    // Unsmoothed, each level is traced as contour traces the coastline, its
+    // pieces joined up the same way
+    var top = Math.max.apply(null, h);
+    var level = levels[0].height / spec.top * top;
+    var lengths = function (lines) {return lines.map(function (l) {return l.length}).sort()};
+    assert.deepEqual(lengths(levels[0].lines), lengths(contour(h, level).filter(function (l) {return l.length > 6})));
+});
+
+test('woodland grows on land, where relief draws its trees', async function () {
+    var {woodland, relief} = await import('../src/core/derive.js');
+    var doc = new MapDocument();
+    doc.dispatch('generate', {params: small}, 'abc123');
+    var h = doc.state.h;
+    var wood = woodland(h);
+    assert.equal(woodland(h), wood);
+    assert.ok(wood.tris.length > 0 && wood.outline.length > 0);
+    // Every tree symbol stands in the woods
+    var tris = new Set(wood.tris);
+    var cells = h.mesh.tris;
+    var trees = relief(h, 1000, {mountain: 30, hill: 20, tree: 10}).filter(function (s) {return s.kind === 'tree'});
+    assert.ok(trees.length > 0);
+    trees.forEach(function (t) {
+        var i = h.mesh.vxs.findIndex(function (v) {return v[0] === t.x && v[1] === t.y});
+        assert.ok(h[i] > 0 && tris.has(cells[i]), 'tree at ' + i + ' is in the woods');
+    });
+});
