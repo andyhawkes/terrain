@@ -42,7 +42,9 @@ export var ROLES = [
     {id: 'note', name: 'Your text', from: 'label'},
     {id: 'title', name: 'Title', from: 'region'},
     {id: 'grid', name: 'Grid labels', from: 'label'},
-    {id: 'scale', name: 'Scale bar', from: 'label'}
+    {id: 'scale', name: 'Scale bar', from: 'label'},
+    {id: 'legendTitle', name: 'Legend title', from: 'region'},
+    {id: 'legend', name: 'Legend entries', from: 'label'}
 ];
 
 export var TYPE_SIZES = [

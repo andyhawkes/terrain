@@ -31,7 +31,7 @@ export var TOOLS = [
 var DRAGGABLE = '.layer-city .city, .layer-city .capital-symbol, .layer-wreck .wreck, .layer-poi .poi, .layer-marker .placedMarker, ' +
     '.city-label, .region-label, .note-label, .layer-extras .ornament';
 
-var ORNAMENT_NAMES = {scaleBar: 'the scale bar', compass: 'the compass rose', title: 'the title'};
+var ORNAMENT_NAMES = {scaleBar: 'the scale bar', compass: 'the compass rose', title: 'the title', legend: 'the legend'};
 
 function isLabel(d) {
     return d && (d.kind === 'cityLabel' || d.kind === 'regionLabel');
@@ -60,6 +60,7 @@ function editable(d) {
     if (d.kind === 'note') return {kind: 'note', text: d.item.text};
     if (d.kind === 'city') return {kind: 'city', text: d.item.name};
     if (d.kind === 'ornament' && d.id === 'title') return {kind: 'title', text: d.text};
+    if (d.kind === 'ornament' && d.entry) return {kind: 'legend', text: d.text};
     if (d.kind === 'route' || d.kind === 'routeLabel') return {kind: 'route', text: d.item.label || ''};
     return null;
 }
@@ -348,11 +349,22 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
         }
         editText(stage.node(), anchor.getBoundingClientRect(), target.text, function (text) {
             if (target.kind === 'title') doc.dispatch('setStyle', {title: text.trim()});
+            else if (target.kind === 'legend') nameLegendEntry(d.entry, text.trim(), d.text);
             else if (target.kind === 'route') doc.dispatch('setRoute', {id: d.id, label: text, what: nameOf(d)});
             else if (target.kind === 'note' && !text) doc.dispatch('deleteItem', {id: d.id, what: nameOf(d)});
             else doc.dispatch('editLabel', {id: d.id, kind: target.kind, text: text, what: nameOf(d)});
         }, {hide: anchor === node && d.kind !== 'city' ? node : null, label: 'Edit text'});
         return true;
+    }
+
+    // A legend entry's own name; '' leaves it out. was is its name before.
+    function nameLegendEntry(entry, name, was) {
+        var quoted = function (text) {return '“' + text + '”'};
+        var names = Object.assign({}, doc.state.style.legendNames);
+        names[entry] = name;
+        var what = name ? (entry === 'heading' ? 'Legend heading: ' + quoted(name) : 'Rename ' + quoted(was) + ' in the legend') :
+            entry === 'heading' ? 'Hide legend heading' : 'Leave ' + quoted(was) + ' out of the legend';
+        doc.dispatch('setStyle', {legendNames: names, what: what});
     }
 
     svg.on('click', function (event) {
@@ -385,6 +397,9 @@ export function createTools(doc, svg, stage, strip, optionsBar, onChange) {
             editText(stage.node(), {x: event.clientX, y: event.clientY}, '', function (text) {
                 if (text) doc.dispatch('addNote', {pos: pos, text: text});
             }, {placeholder: 'Type, then press Enter', label: 'New text'});
+        } else if (active === 'delete' && d && d.kind === 'ornament' && d.entry && d.entry !== 'heading') {
+            // An entry is left out of the legend; the rest removes it
+            nameLegendEntry(d.entry, '', d.text);
         } else if (active === 'delete' && d && d.kind === 'ornament') {
             var off = {what: nameOf(d)};
             off[d.id] = d.id === 'title' ? '' : false;

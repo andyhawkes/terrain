@@ -135,6 +135,19 @@ export function roadCurves(roads, scale) {
     return lastRoads.lines;
 }
 
+// Which region each cell is in, and the borders between them. Cached for
+// the places they're worked out from, so the legend can ask before labels
+// are placed (see derive).
+export function territories(state) {
+    var h = state.h;
+    var vxs = state.cities.map(function (c) {return c.vx});
+    var nterrs = state.params.nterrs;
+    return lastFor(cacheFor(h), 'territories', nterrs + '|' + vxs.join(','), function () {
+        var terr = T.getTerritories(h, vxs, nterrs);
+        return {terr: terr, borders: T.getBorders(h, terr)};
+    });
+}
+
 // Everything drawn from a map state. layout (optional, see placeLabels)
 // says how labels will be drawn, so they can be placed to fit: key names it
 // (e.g. the theme and lettering), for caching. The same state with the same
@@ -154,10 +167,7 @@ export function derive(state, layout) {
     var nterrs = state.params.nterrs;
     var layers = terrainLayers(h);
     var placesKey = nterrs + '|' + vxs.join(',');
-    var regions = lastFor(entry, 'territories', placesKey, function () {
-        var terr = T.getTerritories(h, vxs, nterrs);
-        return {terr: terr, borders: T.getBorders(h, terr)};
-    });
+    var regions = territories(state);
     var terr = regions.terr;
     var borders = regions.borders;
     var cityNames = cities.map(function (c) {return c.name});

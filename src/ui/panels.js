@@ -225,7 +225,8 @@ function stylePanel(body, ctx) {
 
     // Extras drawn over the map. Inputs apply when changed (Enter or leaving
     // the field), so typing doesn't add a step per key.
-    s = section(body, 'Extras', 'Drawn over the map. Drag them with the Move tool; Delete removes them.');
+    s = section(body, 'Extras', 'Drawn over the map. Drag them with the Move tool; Delete removes them. ' +
+        'Rename a legend entry with Edit text, or Delete it to leave it out.');
     row = s.append('div').attr('class', 'control-row');
     row.append('label').attr('for', 'mapWidth').text('Map width');
     var widthInput = row.append('input').attr('id', 'mapWidth').attr('type', 'number').attr('min', 1).attr('step', 'any')
@@ -255,7 +256,7 @@ function stylePanel(body, ctx) {
     var extrasList = s.append('div').attr('class', 'check-list');
     var extrasBoxes = {};
     var gridLabelText;
-    [['gridLabels', 'Grid labels'], ['scaleBar', 'Scale bar'], ['compass', 'Compass rose']].forEach(function (x) {
+    [['gridLabels', 'Grid labels'], ['scaleBar', 'Scale bar'], ['compass', 'Compass rose'], ['legend', 'Legend']].forEach(function (x) {
         var label = extrasList.append('label');
         extrasBoxes[x[0]] = label.append('input').attr('type', 'checkbox')
             .on('change', function () {
@@ -283,6 +284,19 @@ function stylePanel(body, ctx) {
         })
         .on('change', function () {setStyle({compassSize: +this.value})});
     compassOutput = compassRow.append('output').attr('for', 'compassSize');
+
+    // Entries taken out of the legend (with Delete, or renamed to nothing)
+    // can all be put back
+    var legendRow = s.append('div').attr('class', 'control-row');
+    legendRow.append('button').text('Show all legend entries')
+        .attr('title', 'Put back entries taken out of the legend, keeping their new names')
+        .on('click', function () {
+            var names = Object.assign({}, ctx.doc.state.style.legendNames);
+            Object.keys(names).forEach(function (k) {
+                if (names[k] === '') delete names[k];
+            });
+            setStyle({legendNames: names, what: 'Show all legend entries'});
+        });
 
     row = s.append('div').attr('class', 'control-row');
     row.append('label').attr('for', 'mapTitle').text('Title');
@@ -335,6 +349,9 @@ function stylePanel(body, ctx) {
         extrasBoxes.scaleBar.property('checked', !!extras.scaleBar);
         extrasBoxes.compass.property('checked', !!extras.compass);
         compassRow.style('display', extras.compass ? null : 'none');
+        extrasBoxes.legend.property('checked', !!extras.legend);
+        var leftOut = Object.keys(extras.legendNames).some(function (k) {return extras.legendNames[k] === ''});
+        legendRow.style('display', extras.legend && leftOut ? null : 'none');
         compassInput.property('value', extras.compassSize);
         compassOutput.text('×' + extras.compassSize);
         if (document.activeElement !== titleInput.node()) titleInput.property('value', extras.title);

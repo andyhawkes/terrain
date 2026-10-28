@@ -47,6 +47,9 @@ function describeStyle(args, previous) {
     if ('compass' in args) return (args.compass ? 'Show' : 'Hide') + ' compass rose';
     if (args.compassSize) return 'Compass rose size';
     if ('title' in args) return args.title ? 'Title: ' + quoted(args.title) : 'Remove title';
+    if ('legend' in args) return (args.legend ? 'Show' : 'Hide') + ' legend';
+    // Changes to its entries say what they did
+    if (args.legendNames) return args.what || 'Change legend';
     return 'Change style';
 }
 

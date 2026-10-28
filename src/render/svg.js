@@ -3,13 +3,14 @@
 // setMapSize sets before drawing; text, lines and symbols are sized in SVG
 // user units.
 import * as d3 from 'd3';
-import {derive, seaShading, relief, coastOutlines, smoothCoasts, regionShapes, hachureStrokes, roadCurves} from '../core/derive.js';
+import {derive, territories, seaShading, relief, coastOutlines, smoothCoasts, regionShapes, hachureStrokes, roadCurves} from '../core/derive.js';
 import {smoothLine} from '../core/roads.js';
 import {meshTris} from '../core/terrain.js';
 import {itemPos} from '../core/steps.js';
 import {getTheme, fontChoice, backgroundChoice, typography} from '../themes/index.js';
 import {themeCSS, labelText, hersheyPath, hersheyBox, dashPaths} from './theme.js';
-import {extrasChoice, squareGrid, hexGrid, scaleBar, defaultPosition, formatDistance, wrapLines, COMPASS_RADIUS} from './extras.js';
+import {extrasChoice, squareGrid, hexGrid, scaleBar, defaultPosition, formatDistance, wrapLines, COMPASS_RADIUS,
+    legendEntries, legendLayout, LEGEND, LEGEND_HEADING} from './extras.js';
 
 export var SCALE = 1000;
 var extent = {width: 1, height: 1};
@@ -793,6 +794,11 @@ function extrasBoxes(state, theme, type, measure) {
         boxes.push([q[0], q[1], q[0] + (Math.min(width, maxWidth) + 2 * TITLE_PAD) / SCALE,
             q[1] + (2 * TITLE_PAD + (lines - 1) * 1.2 * size + size) / SCALE]);
     }
+    var legend = extras.legend && legendFor(state, theme, extras, type, measure);
+    if (legend) {
+        var l = at('legend');
+        boxes.push([l[0] + legend.layout.x / SCALE, l[1] + legend.layout.y / SCALE, l[0], l[1]]);
+    }
     return boxes;
 }
 
@@ -849,7 +855,7 @@ export function drawMap(svg, state) {
     drawFeatures(svg, state, theme);
     drawRoutes(svg, state, theme, t.type);
     drawLabels(svg, d.labels, state.notes, t.type);
-    drawExtras(svg, state, theme, t.type);
+    drawExtras(svg, state, theme, t.type, t.background);
     showLayers(svg, state.style.hidden);
 }
 
@@ -973,6 +979,9 @@ var ORNAMENTS = {
     }
 };
 
+// Drawn by drawLegend, which needs more of the map than the others
+ORNAMENTS.legend = null;
+
 var TITLE_SIZE = 30;
 var TITLE_PAD = 14;
 var SCALE_TEXT = 14;
@@ -1007,12 +1016,14 @@ function layoutTitle(g, title, role, maxWidth) {
     });
 }
 
-function drawExtras(svg, state, theme, type) {
+function drawExtras(svg, state, theme, type, background) {
     var extras = extrasChoice(theme, state.style, state.params);
     var extent = state.params.extent;
     drawGrid(svg, extras, extent, type);
+    // A legend with nothing to list isn't drawn
+    var legend = extras.legend && legendFor(state, theme, extras, type, null);
     var shown = Object.keys(ORNAMENTS).filter(function (id) {
-        return id === 'title' ? !!extras.title : extras[id];
+        return id === 'title' ? !!extras.title : id === 'legend' ? !!legend : extras[id];
     });
     var data = shown.map(function (id) {
         return {id: id, kind: 'ornament', text: id === 'title' ? extras.title : null,
@@ -1025,7 +1036,167 @@ function drawExtras(svg, state, theme, type) {
         });
     groups.each(function (d) {
         var g = d3.select(this);
+        if (d.id === 'legend') {
+            drawLegend(g, legend, {svg: svg, theme: theme, type: type, background: background, datum: d});
+            return;
+        }
         g.selectAll('*').remove();
         ORNAMENTS[d.id](g, extras, extent, type);
     });
+}
+
+// --- Legend: a key to what's on the map (see legendEntries) ---
+
+// The legend's entries and heading, and where they go (null if there's
+// nothing to list). measure gives text widths, or null to estimate them.
+function legendFor(state, theme, extras, type, measure) {
+    var entries = legendEntries(state, theme, extras.legendNames, territories(state).borders.length > 0);
+    if (!entries.length) return null;
+    var heading = extras.legendNames.heading == null ? LEGEND_HEADING : extras.legendNames.heading;
+    measure = measure || function (role, text, size) {return 0.6 * size * text.length};
+    return {entries: entries, heading: heading,
+        layout: legendLayout(entries, heading, measure, {text: type.legend.scale, heading: type.legendTitle.scale})};
+}
+
+// Measures text as it's drawn on the map, in a role's lettering
+function textMeasurer(g, type) {
+    return function (roleId, text, size) {
+        var role = type[roleId];
+        text = labelText(role, text);
+        if (role.hershey) {
+            var b = hersheyBox(role.family.hershey, text, 0, 0, size, 'start');
+            return b.x1 - b.x0;
+        }
+        var probe = lettering(g.append('text').style('font-size', size + 'px').text(text), role);
+        // Not laid out (e.g. the map is hidden): an estimate
+        var width = probe.node().getComputedTextLength() || 0.6 * size * text.length;
+        probe.remove();
+        return width;
+    };
+}
+
+// Only redrawn when what it shows has changed, as it measures its text
+// and symbols. Drawn with its bottom-right corner at (0, 0).
+function drawLegend(g, legend, ctx) {
+    var key = JSON.stringify([legend.entries, legend.heading, ctx.theme.id, ctx.background.id,
+        ctx.type.legend, ctx.type.legendTitle]);
+    var node = g.node();
+    if (node.__legendKey === key) return;
+    node.__legendKey = key;
+    layoutLegend(g, legend, ctx);
+    // Measure again once the theme's own fonts have loaded
+    var families = [ctx.type.legend, ctx.type.legendTitle].filter(function (r) {return !r.hershey}).map(function (r) {return r.family});
+    if (families.length && typeof document !== 'undefined' && document.fonts) {
+        Promise.all(families.map(function (f) {return document.fonts.load(LEGEND.text + 'px ' + f)})).then(function () {
+            if (node.isConnected && node.__legendKey === key) layoutLegend(g, legend, ctx);
+        });
+    }
+}
+
+function layoutLegend(g, legend, ctx) {
+    g.selectAll('*').remove();
+    var type = ctx.type;
+    var layout = legendLayout(legend.entries, legend.heading, textMeasurer(g, type),
+        {text: type.legend.scale, heading: type.legendTitle.scale});
+    // Inline, as the stylesheet sets the fill of every extras-paper
+    g.append('rect').attr('class', 'extras-paper')
+        .attr('x', layout.x).attr('y', layout.y).attr('width', layout.width).attr('height', layout.height)
+        .style('fill', ctx.background.legendColor || null);
+    g.append('rect').attr('class', 'extras-line')
+        .attr('x', layout.x + 4).attr('y', layout.y + 4).attr('width', layout.width - 8).attr('height', layout.height - 8);
+    // Each entry's parts say which entry they are, for renaming and hiding
+    var named = function (entry, text) {return Object.assign({}, ctx.datum, {entry: entry, text: text})};
+    if (layout.heading) {
+        appendText(g, type.legendTitle, 'title-text legend-heading', legend.heading, layout.heading.x, layout.heading.y,
+            layout.headingSize, 'middle').datum(named('heading', legend.heading));
+    }
+    layout.rows.forEach(function (row) {
+        var e = row.entry;
+        var r = g.append('g').attr('class', 'legend-entry').datum(named(e.key, e.name));
+        var swatch = r.append('g').attr('transform', 'translate(' + row.swatch.join(',') + ')').append('g');
+        legendSwatch(swatch, e, ctx);
+        var label = appendText(r, type.legend, 'extras-label legend-label', e.name, row.text[0], row.text[1], layout.textSize, 'start');
+        // The label halo matches a box in its own colour
+        if (ctx.background.legendColor && !type.legend.hershey) label.style('stroke', ctx.background.legendColor);
+    });
+}
+
+// A line across the swatch, as a path, split into dashes for plotters
+function swatchLine(dash, theme) {
+    var half = LEGEND.swatch[0] / 2 - 2;
+    var lines = [[[-half, 0], [half, 0]]];
+    if (dash && theme.strokeOnly) lines = dashPaths(lines, Math.max(dash[0], 1.5), dash[1]);
+    return lines.map(function (l) {return 'M' + l[0].join(',') + 'L' + l[1].join(',')}).join('');
+}
+
+// Draws an entry's swatch around (0, 0) the way the map draws it
+function legendSwatch(g, e, ctx) {
+    var theme = ctx.theme;
+    var prefix = '#' + ctx.svg.attr('id') + '-';
+    if (e.kind === 'capital' || e.kind === 'town') {
+        if (e.kind === 'capital' && theme.symbols.capital) {
+            g.append('use').attr('class', 'capital-symbol').attr('href', prefix + 'capital0');
+            return fitSwatch(g);
+        }
+        g.append('circle').attr('class', 'city')
+            .attr('r', e.kind === 'capital' ? theme.cities.capitalRadius : theme.cities.townRadius);
+    } else if (e.kind === 'poi' || e.kind === 'wreck') {
+        var spec = theme.symbols[e.kind];
+        if (spec.kind === 'text') {
+            g.append('text').attr('class', e.kind).attr('y', 8)
+                .style('font-size', Math.min(spec.size, 28) + 'px').style('font-family', spec.font || null)
+                .style('text-anchor', 'middle').text(spec.chars[e.variant]);
+        } else {
+            g.append('use').attr('class', e.kind).attr('href', prefix + e.kind + e.variant);
+        }
+        fitSwatch(g);
+    } else if (e.kind === 'marker') {
+        g.append('use').attr('class', 'placedMarker ' + e.type).attr('color', e.color)
+            .attr('href', prefix + 'marker-' + e.type + '0');
+        fitSwatch(g);
+    } else if (e.kind === 'road') {
+        (theme.roads || ROAD_STYLE).lines.forEach(function (line) {
+            var color = line.color === 'paper' ? paperColor(ctx.background) : line.color;
+            strokeStyle(g.append('path').attr('d', swatchLine(line.dash, theme)), color, line.width, line.dash, theme);
+        });
+    } else if (e.kind === 'route') {
+        var route = theme.routes || ROUTE_STYLE;
+        var dash = e.style === 'dotted' ? route.dotted : e.style === 'dashed' ? route.dashed : null;
+        strokeStyle(g.append('path').attr('d', swatchLine(dash, theme)), route.color, route.width, dash, theme);
+        if (e.style === 'arrows') {
+            var x = LEGEND.swatch[0] / 2 - 2;
+            var a = route.arrowSize;
+            strokeStyle(g.append('path').attr('d', 'M' + (x - a) + ',' + (-0.55 * a) + 'L' + x + ',0L' + (x - a) + ',' + 0.55 * a),
+                route.color, route.width, null, theme);
+        }
+    } else if (e.kind === 'border') {
+        g.append('path').attr('class', 'border').attr('d', swatchLine(theme.strokeOnly ? theme.borderDash : null, theme));
+    } else if (e.kind === 'region') {
+        var w = LEGEND.swatch[0] - 6;
+        var h = LEGEND.swatch[1] - 4;
+        g.append('rect').attr('x', -w / 2).attr('y', -h / 2).attr('width', w).attr('height', h)
+            .attr('opacity', e.opacity)
+            .style('fill', e.color).style('stroke', e.color).style('stroke-width', '0.8px');
+    }
+}
+
+// Shrinks a symbol to fit its swatch (never enlarging it) and centres it.
+// Where it can't be measured (the map is hidden), a typical size.
+function fitSwatch(g) {
+    var box = null;
+    try {
+        box = g.node().getBBox();
+    } catch (e) {
+        box = null;
+    }
+    var w = LEGEND.swatch[0];
+    var h = LEGEND.swatch[1] + 4;
+    if (!box || !box.width || !box.height) {
+        g.attr('transform', 'scale(0.6)');
+        return;
+    }
+    var k = Math.min(1, w / box.width, h / box.height);
+    var cx = box.x + box.width / 2;
+    var cy = box.y + box.height / 2;
+    g.attr('transform', 'translate(' + (-cx * k) + ',' + (-cy * k) + ') scale(' + k + ')');
 }

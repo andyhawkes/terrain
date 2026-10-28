@@ -40,9 +40,10 @@ export async function shareLink(doc) {
     var style = doc.state.style;
     // Seed links only carry the theme, font and background, so maps with
     // extras (grid, scale bar...) or changed lettering get the full link
-    var extras = ['units', 'perUnit', 'grid', 'gridSize', 'gridLabels', 'scaleBar', 'compass', 'compassSize'];
+    var extras = ['units', 'perUnit', 'grid', 'gridSize', 'gridLabels', 'scaleBar', 'compass', 'compassSize', 'legend'];
     var plain = steps[0].type === 'generate' && !style.hidden.length && !style.title &&
         !Object.keys(style.positions || {}).length && !Object.keys(style.type || {}).length &&
+        !Object.keys(style.legendNames || {}).length &&
         extras.every(function (k) {return style[k] == null}) &&
         steps.slice(1).every(function (s) {return s.type === 'setStyle'});
     if (plain) {

@@ -66,7 +66,9 @@ export function newParams(given) {
 //     to suit the map; gridLabels: lettered edges, or numbered hexes
 //   scaleBar, compass: true or false; compassSize: how big the compass rose
 //     is, as a multiple of its normal size; title: text for a title box, or ''
-//   positions: where the scale bar, compass and title have been moved to,
+//   legend: true or false; legendNames: the map's own names for legend
+//     entries by key (see legendEntries), '' leaving one out
+//   positions: where the scale bar, compass, title and legend have been moved to,
 //     in map units, e.g. {compass: [0.4, -0.4]}
 export var defaultStyle = {
     theme: 'simple',
@@ -83,6 +85,8 @@ export var defaultStyle = {
     compass: null,
     compassSize: null,
     title: '',
+    legend: null,
+    legendNames: {},
     positions: {}
 };
 
@@ -163,9 +167,9 @@ function vxsOf(items) {
 }
 
 // A new map keeps the last one's style, except what belonged to that map:
-// its title, and where its extras were moved to
+// its title, its names in the legend, and where its extras were moved to
 function carriedStyle(style) {
-    return Object.assign({}, style, {title: '', positions: {}});
+    return Object.assign({}, style, {title: '', legendNames: {}, positions: {}});
 }
 
 // Lettering changes reduced to their sizes

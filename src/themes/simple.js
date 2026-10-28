@@ -20,10 +20,11 @@ export default {
     // behind the map, scaled up by imageScale and centred. halo can override
     // the label halo for this background: {color, opacity, shadow}. paper
     // sets currentColor for relief, point of interest and wreck symbols, so
-    // their fills can suit the background (see underhill.js).
+    // their fills can suit the background (see underhill.js). legendColor
+    // fills the legend's box, which is otherwise the halo colour.
     backgrounds: [
         {id: 'white', name: 'White', color: '#ffffff'},
-        {id: 'cream', name: 'Cream', color: '#f7f2e4'}
+        {id: 'cream', name: 'Cream', color: '#f7f2e4', legendColor: '#f7f2e4'}
     ],
 
     colors: {

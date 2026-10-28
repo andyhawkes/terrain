@@ -1,5 +1,5 @@
 // Extras drawn over the map: a square or hex grid, a scale bar, a compass
-// rose and a title box. This works out what to draw, in map units; svg.js
+// rose, a title box and a legend. This works out what to draw, in map units; svg.js
 // draws it. Which extras are shown is part of the map's style (see
 // defaultStyle in core/steps.js), with defaults from the theme.
 
@@ -15,8 +15,10 @@ export var GRIDS = [
     {id: 'hex', name: 'Hex'}
 ];
 
+import {MARKER_TYPES, ROUTE_STYLES} from '../core/steps.js';
+
 var DEFAULTS = {units: 'miles', perUnit: 100, grid: 'none', gridLabels: true, scaleBar: false, compass: false,
-    compassSize: 1};
+    compassSize: 1, legend: false};
 
 // The compass rose can go from subtle to a feature of the map
 export var COMPASS_SIZES = {min: 0.5, max: 6};
@@ -42,6 +44,8 @@ export function extrasChoice(theme, style, params) {
         compass: pick(style.compass, t.compass),
         compassSize: Math.min(COMPASS_SIZES.max, Math.max(COMPASS_SIZES.min, pick(style.compassSize, t.compassSize))),
         title: style.title || '',
+        legend: pick(style.legend, t.legend),
+        legendNames: style.legendNames || {},
         positions: style.positions || {}
     };
 }
@@ -155,7 +159,9 @@ export function defaultPosition(id, extent, scale, compassSize) {
         scaleBar: [-w + 0.07, h - 0.06],
         compass: [w - 0.03 - reach, -h + 0.03 + reach],
         // The title box's top-left corner
-        title: [-w + 0.04, -h + 0.04]
+        title: [-w + 0.04, -h + 0.04],
+        // The legend's bottom-right corner, so it grows away from the edges
+        legend: [w - 0.04, h - 0.04]
     }[id];
 }
 
@@ -177,4 +183,98 @@ export function wrapLines(text, measure, maxWidth) {
     });
     if (line) lines.push(line);
     return {lines: lines, widths: lines.map(measure)};
+}
+
+// --- Legend ---
+
+// How many drawings a symbol set has
+function variantCount(spec) {
+    return (spec.kind === 'text' ? spec.chars : spec.variants).length;
+}
+
+// What the legend lists: only what's on the map and showing, in order
+// (places, symbols, markers, roads, routes, borders, region colours).
+// Each entry has a key that the map's own names for entries are kept by
+// (legendNames, where '' leaves an entry out), and what its swatch draws.
+// hasBorders says whether any borders were drawn.
+export function legendEntries(state, theme, names, hasBorders) {
+    var hidden = state.style.hidden || [];
+    var shown = function (layer) {return hidden.indexOf(layer) < 0};
+    var entries = [];
+    var add = function (entry) {
+        if (entries.some(function (e) {return e.key === entry.key})) return;
+        entries.push(entry);
+    };
+    var capitals = state.cities.slice(0, state.params.nterrs);
+    if (shown('city')) {
+        if (capitals.length) add({key: 'capital', kind: 'capital', name: 'Capital'});
+        if (state.cities.length > capitals.length) add({key: 'town', kind: 'town', name: 'Town'});
+    }
+    [['poi', 'poi', 'Point of interest'], ['wreck', 'wrecks', 'Wreck']].forEach(function (s) {
+        if (!shown(s[0])) return;
+        var count = variantCount(theme.symbols[s[0]]);
+        state[s[1]].forEach(function (item) {
+            var variant = (item.variant || 0) % count;
+            add({key: s[0] + ':' + variant, kind: s[0], variant: variant, name: s[2]});
+        });
+    });
+    if (shown('marker')) {
+        state.markers.forEach(function (m) {
+            var type = MARKER_TYPES.find(function (t) {return t.id === m.type}) || MARKER_TYPES[0];
+            var color = m.color || theme.colors.marker;
+            // Markers of one type in different colours often mean different things
+            add({key: 'marker:' + type.id + ':' + color, kind: 'marker', type: type.id, color: color, name: type.name});
+        });
+    }
+    if (shown('road') && (state.roads || []).length) add({key: 'road', kind: 'road', name: 'Road'});
+    if (shown('route')) {
+        (state.routes || []).forEach(function (r) {
+            var style = ROUTE_STYLES.find(function (s) {return s.id === r.style}) || ROUTE_STYLES[0];
+            add({key: 'route:' + style.id, kind: 'route', style: style.id,
+                name: style.id === 'arrows' ? 'Route' : style.name + ' route'});
+        });
+    }
+    if (shown('border') && hasBorders) add({key: 'border', kind: 'border', name: 'Border'});
+    if (theme.regionTints && shown('tint')) {
+        var colors = theme.regionTints.colors;
+        capitals.forEach(function (c, k) {
+            add({key: 'region:' + c.id, kind: 'region', color: colors[k % colors.length],
+                opacity: theme.regionTints.opacity, name: c.regionName || 'Region ' + (k + 1)});
+        });
+    }
+    return entries.map(function (e) {
+        return names[e.key] == null ? e : Object.assign({}, e, {name: names[e.key]});
+    }).filter(function (e) {return e.name !== ''});
+}
+
+export var LEGEND_HEADING = 'Legend';
+export var LEGEND = {text: 15, heading: 20, pad: 12, swatch: [36, 22], gap: 10, row: 26};
+
+// Where everything in a legend goes, in SVG units, with its bottom-right
+// corner at (0, 0). sizes are the scales of the entries' and heading's
+// lettering; measure(role, text, size) gives a line's width.
+export function legendLayout(entries, heading, measure, sizes) {
+    var L = LEGEND;
+    var text = L.text * sizes.text;
+    var headingSize = L.heading * sizes.heading;
+    var row = Math.max(L.row, 1.6 * text);
+    var textX = L.pad + L.swatch[0] + L.gap;
+    var widest = Math.max.apply(null, [0].concat(entries.map(function (e) {return measure('legend', e.name, text)})));
+    var headingWidth = heading ? measure('legendTitle', heading, headingSize) : 0;
+    var width = Math.max(textX + widest, L.pad + headingWidth) + L.pad;
+    var top = L.pad + (heading ? 1.4 * headingSize : 0);
+    var height = top + entries.length * row + L.pad;
+    return {
+        width: width,
+        height: height,
+        x: -width,
+        y: -height,
+        textSize: text,
+        headingSize: headingSize,
+        heading: heading ? {x: -width / 2, y: -height + L.pad + 0.8 * headingSize} : null,
+        rows: entries.map(function (e, i) {
+            var cy = -height + top + (i + 0.5) * row;
+            return {entry: e, swatch: [-width + L.pad + L.swatch[0] / 2, cy], text: [-width + textX, cy + 0.35 * text]};
+        })
+    };
 }

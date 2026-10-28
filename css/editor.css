@@ -665,6 +665,7 @@ input[type=checkbox] {
 .tool-label #mapSVG .layer-city .city:hover,
 .tool-label #mapSVG .layer-city .capital-symbol:hover,
 .tool-label #mapSVG .layer-extras .title-text:hover,
+.tool-label #mapSVG .layer-extras .legend-label:hover,
 .tool-note #mapSVG .note-label:hover {
     filter: drop-shadow(0 0 3px var(--accent)) drop-shadow(0 0 2px var(--accent));
 }
@@ -715,6 +716,11 @@ input[type=checkbox] {
 .tool-delete #mapSVG .note-label:hover,
 .tool-delete #mapSVG .layer-extras .ornament:hover {
     filter: drop-shadow(0 0 3px var(--danger)) drop-shadow(0 0 2px var(--danger));
+}
+
+/* Delete leaves a single legend entry out */
+.tool-delete #mapSVG .layer-extras .legend-entry:hover {
+    filter: drop-shadow(0 0 2px var(--danger));
 }
 
 /* --- Status bar contents --- */
