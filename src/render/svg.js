@@ -210,7 +210,9 @@ function drawBackground(svg, background) {
     if (background.image) {
         // Scaled from the map's longer side, so it covers any shape
         var size = Math.max(w, h) * (background.imageScale || 1);
-        g.append('image').attr('href', background.image)
+        // xlink:href, as that's what the exporter replaces with the image's
+        // data: a plain href would win over it and point at the dev server
+        g.append('image').attr('xlink:href', background.image)
             .attr('x', -size / 2).attr('y', -size / 2).attr('width', size).attr('height', size)
             .attr('preserveAspectRatio', 'xMidYMid slice');
     }
