@@ -366,14 +366,16 @@ function exportMap(save, name, options) {
     });
 }
 
-function fileName(ext) {
+// Exports also carry the theme, as one map is often exported in several
+function fileName(ext, withTheme) {
     var start = currentStartStep();
-    return 'map' + (start && start.type === 'generate' ? '-' + start.seed : '') + '.' + ext;
+    return 'map' + (start && start.type === 'generate' ? '-' + start.seed : '') +
+        (withTheme ? '-' + doc.state.style.theme : '') + '.' + ext;
 }
 
 [
-    ['image', 'PNG image', function () {exportMap(saveSvgAsPng, fileName('png'), {scale: 2})}],
-    ['draw', 'SVG drawing', function () {exportMap(saveSvg, fileName('svg'))}]
+    ['image', 'PNG image', function () {exportMap(saveSvgAsPng, fileName('png', true), {scale: 2})}],
+    ['draw', 'SVG drawing', function () {exportMap(saveSvg, fileName('svg', true))}]
 ].forEach(function (item) {
     var b = exportMenu.append('button').on('click', item[2]);
     b.append('span').attr('class', 'icon').attr('aria-hidden', true).text(item[0]);
